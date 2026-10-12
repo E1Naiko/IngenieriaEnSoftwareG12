@@ -1,0 +1,4 @@
+# Instalar con: pip install -r requirements.txt
+Django>=5.2          # framework web (en tu PC ya esta la 6.1, se respeta)
+psycopg2-binary     # driver para conectar Django con PostgreSQL (Supabase)
+python-dotenv       # para leer las credenciales del archivo .env
