@@ -1,6 +1,6 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (app **login**) hecho con **Django** y
+Sistema de gestión de reparto de paquetes (app **core**) hecho con **Django** y
 **PostgreSQL en Supabase**. Las tablas usan el nombre exacto del diagrama de la
 base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
@@ -11,7 +11,7 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 | `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo/suspendido) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
 | `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`LOGIN-XXXXXXXX`). |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto/PDF) de la entrega. `file` es opcional según el diagrama. |
 
 ## Puesta en marcha
@@ -80,12 +80,12 @@ cargar repartidores, comercios, clientes y paquetes.
   carga cuando se entrega el paquete. `comprobante.file` es nullable, como
   en el diagrama.
 - `paquete.codSeguimiento` → único y **autogenerado** al crear
-  (`LOGIN-XXXXXXXX`, entra en el `varchar(255)` del diagrama).
+  (`SRFR-XXXXXXXX`, entra en el `varchar(255)` del diagrama).
 - `cliente.dni` y `repartidor.dni` → enteros **únicos** (un DNI identifica
   una persona; el diagrama no lo marca pero es la interpretación correcta).
 - Los campos de opciones (`tipoVehiculo`, `estado` de repartidor y paquete,
   `tamanio`) usan `choices` de Django: los valores del enum se revisan y
-  agregan fácil en `backend/login/models.py`.
+  agregan fácil en `backend/core/models.py`.
 - Nombres de **columnas** en `snake_case` (convención Django): el
   `tipoVehiculo` del diagrama es `tipo_vehiculo`, `codSeguimiento` es
   `cod_seguimiento`, etc. Las tablas conservan el nombre del diagrama vía

@@ -1,5 +1,5 @@
 """
-Modelos del sistema de reparto de paquetes (app login).
+Modelos del sistema de reparto de paquetes (app core).
 
 Esquema adaptado del diagrama de la base (ver Info/DB.md). Las tablas usan
 el nombre exacto del diagrama (repartidor, comercio, cliente, paquete,
@@ -176,7 +176,7 @@ class Paquete(models.Model):
     comprobante (opcional, uno a uno).
 
     El ``cod_seguimiento`` es único y lo genera el sistema al crearlo con
-    el formato LOGIN-XXXXXXXX. Nuevos paquetes arrancan en estado
+    el formato SRFR-XXXXXXXX. Nuevos paquetes arrancan en estado
     "pendiente"; el historial del repartidor sale de filtrar por estado.
     """
 
@@ -233,7 +233,7 @@ class Paquete(models.Model):
         max_length=255,
         unique=True,
         editable=False,
-        help_text="Código autogenerado (LOGIN-XXXXXXXX) para seguir la entrega.",
+        help_text="Código autogenerado (SRFR-XXXXXXXX) para seguir la entrega.",
     )
 
     class Meta:
@@ -251,9 +251,9 @@ class Paquete(models.Model):
         super().save(*args, **kwargs)
 
     def _generar_codigo(self):
-        """Genera un código único con el formato LOGIN-XXXXXXXX."""
+        """Genera un código único con el formato SRFR-XXXXXXXX."""
         while True:
-            codigo = f"LOGIN-{secrets.token_hex(4).upper()}"
+            codigo = f"SRFR-{secrets.token_hex(4).upper()}"
             if not Paquete.objects.filter(cod_seguimiento=codigo).exists():
                 return codigo
 

@@ -11,4 +11,4 @@ def ping(request):
     arrancar y verifica que el backend responde JSON y que el CORS
     está bien configurado.
     """
-    return JsonResponse({"status": "ok", "proyecto": "login", "grupo": 12})
+    return JsonResponse({"status": "ok", "proyecto": "core", "grupo": 12})

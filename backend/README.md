@@ -1,6 +1,6 @@
 # Backend — Django + PostgreSQL (Supabase)
 
-Backend del sistema de reparto de paquetes (app **login**, Grupo 12).
+Backend del sistema de reparto de paquetes (app **core**, Grupo 12).
 
 ## Estructura
 
@@ -10,7 +10,7 @@ backend/
 ├── requirements.txt     # dependencias
 ├── .env.example         # plantilla de credenciales → copiar como .env
 ├── config/              # configuración del proyecto (settings, urls, wsgi)
-└── login/               # app principal (modelos, admin, views)
+└── core/                # app principal (modelos, admin, views)
 ```
 
 ## Puesta en marcha

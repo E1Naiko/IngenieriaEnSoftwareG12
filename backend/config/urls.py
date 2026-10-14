@@ -11,11 +11,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 
-from login import views
+from core import views
 
 # Títulos que se ven en las pantallas del panel de administración.
-admin.site.site_header = "Login — Administración"
-admin.site.site_title = "Login Admin"
+admin.site.site_header = "SRFR — Administración"
+admin.site.site_title = "SRFR Admin"
 admin.site.index_title = "Panel de gestión"
 
 urlpatterns = [

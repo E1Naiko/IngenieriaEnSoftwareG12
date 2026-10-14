@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     # Terceros
     "corsheaders",
     # Proyecto
-    "login",
+    "core",
 ]
 
 MIDDLEWARE = [

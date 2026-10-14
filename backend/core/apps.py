@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class LoginConfig(AppConfig):
+class CoreConfig(AppConfig):
     """Configuración de la app principal del proyecto."""
 
     default_auto_field = "django.db.models.BigAutoField"
-    name = "login"
-    verbose_name = "Login — app principal"
+    name = "core"
+    verbose_name = "Core — app principal"
