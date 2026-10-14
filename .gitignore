@@ -1,8 +1,14 @@
 # Credenciales - NUNCA subir
 .env
 
-# Base de datos local de desarrollo
+# Frontend (React)
+node_modules/
+dist/
+build/
+
+# Backend — Django
 db.sqlite3
+staticfiles/
 
 # Archivos subidos en desarrollo (comprobantes)
 media/

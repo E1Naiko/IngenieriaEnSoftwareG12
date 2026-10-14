@@ -1,23 +1,25 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (app `SRFR`) hecho con **Django** y
-**PostgreSQL en Supabase**.
+Sistema de gestión de reparto de paquetes (app **core**) hecho con **Django** y
+**PostgreSQL en Supabase**. Las tablas usan el nombre exacto del diagrama de la
+base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
 ## Modelos
 
 | Modelo | Descripción |
 |---|---|
-| `Repartidor` | Quien entrega. Tiene muchos paquetes asignados (`repartidor.paquetes.all()`). |
-| `Comercio` | Comercio que despacha paquetes. |
-| `Cliente` | Destinatario (DNI único). |
-| `Paquete` | La entrega: vincula repartidor (opcional), comercio, cliente y comprobante. Código de seguimiento único y autogenerado (`SRFR-XXXXXXXX`). |
-| `Comprobante` | Archivo (foto/PDF) que acredita la entrega. |
+| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo/suspendido) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
+| `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
+| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Comprobante` | Archivo (foto/PDF) de la entrega. `file` es opcional según el diagrama. |
 
 ## Puesta en marcha
 
 ### 1. Entorno virtual e instalación
 
 ```bash
+cd backend
 python -m venv venv
 source venv/bin/activate        # en Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -34,6 +36,7 @@ pip install -r requirements.txt
 ### 3. Configurar credenciales (cada integrante)
 
 ```bash
+cd backend
 cp .env.example .env
 # y editar .env con los valores de Supabase
 ```
@@ -52,25 +55,41 @@ python manage.py runserver
 Entrar a http://127.0.0.1:8000/admin/ con el superusuario y ya se pueden
 cargar repartidores, comercios, clientes y paquetes.
 
-## Decisiones sobre el esquema original (los "// REVISAR")
+> **OJO**: si ya habías corrido `migrate` con el esquema anterior, borra tu
+> `db.sqlite3` local (o dropeá el schema `public` en Supabase) y volvé a
+> correr `migrate`: la estructura cambió y las migraciones se regeneraron.
 
-- `repartidor.listado_id_pedidos_asignados` → **no es una columna**: guardar
-  IDs en un string rompe la integridad referencial. Los paquetes de un
-  repartidor salen de la relación inversa: `repartidor.paquetes.all()`.
-- `repartidor.historial_asociado` → mismo criterio: es una consulta sobre los
-  paquetes del repartidor, no una columna. Cuando definan estados de paquete
-  (pendiente/entregado) el historial va a ser un `filter(...)`.
-- La referencia `paquete ?<>? repartidor` se modeló como **uno a muchos**
-  (un paquete tiene a lo sumo un repartidor; un repartidor, muchos paquetes),
-  que es lo que indicaba la columna `id_repartidor_asignado`.
-- `paquete.codSeguimiento` → único y **autogenerado** al crear el paquete.
-- `cliente.dni` → entero, **único**.
-- `comprobante.file` → `FileField` real (los archivos van a `media/`).
-  Próximo paso sugerido: guardarlos en **Supabase Storage** con
-  `django-storages` en lugar del disco local.
-- Los campos de opciones (`tipoVehiculo`, `estado`, `tamanio`) usan
-  `choices`: revisar que los valores del enum les sirvan (se agregan fácil
-  en `SRFR/models.py`).
+## Decisiones sobre el esquema
+
+- `repartidor.listado_id_pedidos_asignados` → **no es una columna** (campo
+  REVISAR del diagrama): guardar IDs en un string rompe la integridad
+  referencial. Es la relación inversa `repartidor.paquetes.all()`; como
+  conveniencia existe la property `listado_id_pedidos_asignados`.
+- `repartidor.historial_asociado` → mismo criterio: property que devuelve los
+  paquetes en estado `entregado` (`repartidor.paquetes.filter(...)`).
+- **Ciclo comercio ↔ cliente**: el diagrama pide `comercio.id_datos_cliente`
+  y `cliente.id_comercio` ambos `not null`, pero eso hace imposible insertar
+  el primer registro (cada tabla necesita a la otra). Se resolvió dejando
+  `comercio.id_datos_cliente` **nullable**: se crea comercio → cliente → se
+  linkea. Es el único desvío respecto al diagrama.
+- `paquete ?<>? repartidor` → FK `paquete.repartidor` opcional
+  (`SET_NULL`): un paquete tiene a lo sumo un repartidor; un repartidor,
+  muchos paquetes.
+- `paquete.id_comprobante ?>? comprobante` → **uno a uno** modelado desde
+  `Paquete` (columna `paquete.id_comprobante`), nullable: el comprobante se
+  carga cuando se entrega el paquete. `comprobante.file` es nullable, como
+  en el diagrama.
+- `paquete.codSeguimiento` → único y **autogenerado** al crear
+  (`SRFR-XXXXXXXX`, entra en el `varchar(255)` del diagrama).
+- `cliente.dni` y `repartidor.dni` → enteros **únicos** (un DNI identifica
+  una persona; el diagrama no lo marca pero es la interpretación correcta).
+- Los campos de opciones (`tipoVehiculo`, `estado` de repartidor y paquete,
+  `tamanio`) usan `choices` de Django: los valores del enum se revisan y
+  agregan fácil en `backend/core/models.py`.
+- Nombres de **columnas** en `snake_case` (convención Django): el
+  `tipoVehiculo` del diagrama es `tipo_vehiculo`, `codSeguimiento` es
+  `cod_seguimiento`, etc. Las tablas conservan el nombre del diagrama vía
+  `Meta.db_table`.
 
 ## Comandos útiles
 
