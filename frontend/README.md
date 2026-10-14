@@ -1,6 +1,6 @@
 # Frontend (React)
 
-Esta carpeta es para la aplicación **React** del proyecto SRFR.
+Esta carpeta es para la aplicación **React** del proyecto (app **login**).
 
 La configure el equipo de frontend: acá va `npm create vite@latest` (o CRA,
 el que prefieran). El backend Django ya expone `http://localhost:8000/api/`

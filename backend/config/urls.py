@@ -5,8 +5,8 @@ from django.conf.urls.static import static
 
 from login import views
 
-admin.site.site_header = "SRFR — Administración"
-admin.site.site_title = "SRFR Admin"
+admin.site.site_header = "Login — Administración"
+admin.site.site_title = "Login Admin"
 admin.site.index_title = "Panel de gestión"
 
 urlpatterns = [

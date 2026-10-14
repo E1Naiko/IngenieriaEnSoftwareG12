@@ -1,7 +1,7 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (**SRFR**, cuya app principal es
-`login`) hecho con **Django** y **PostgreSQL en Supabase**.
+Sistema de gestión de reparto de paquetes (app **login**) hecho con
+**Django** y **PostgreSQL en Supabase**.
 
 ## Modelos
 
@@ -10,7 +10,7 @@ Sistema de gestión de reparto de paquetes (**SRFR**, cuya app principal es
 | `Repartidor` | Quien entrega. Tiene muchos paquetes asignados (`repartidor.paquetes.all()`). |
 | `Comercio` | Comercio que despacha paquetes. |
 | `Cliente` | Destinatario (DNI único). |
-| `Paquete` | La entrega: vincula repartidor (opcional), comercio, cliente y comprobante. Código de seguimiento único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Paquete` | La entrega: vincula repartidor (opcional), comercio, cliente y comprobante. Código de seguimiento único y autogenerado (`LOGIN-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto/PDF) que acredita la entrega. |
 
 ## Puesta en marcha

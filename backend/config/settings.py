@@ -1,5 +1,5 @@
 """
-Configuración de Django para el proyecto SRFR (Grupo 12).
+Configuración de Django para el proyecto login (Grupo 12).
 
 - La base de datos PostgreSQL está en Supabase: las credenciales se leen
   del archivo .env (ver .env.example). Si DB_HOST está vacío se usa una

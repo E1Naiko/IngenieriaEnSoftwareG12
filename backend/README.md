@@ -1,6 +1,6 @@
 # Backend — Django + PostgreSQL (Supabase)
 
-Backend del sistema de reparto de paquetes **SRFR** (Grupo 12).
+Backend del sistema de reparto de paquetes (app **login**, Grupo 12).
 
 ## Estructura
 

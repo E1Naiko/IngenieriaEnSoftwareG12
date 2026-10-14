@@ -1,5 +1,5 @@
 """
-Modelos del sistema de reparto de paquetes (SRFR).
+Modelos del sistema de reparto de paquetes (app login).
 
 Relaciones:
 - Un paquete pertenece a un comercio y a un cliente, y tiene a lo sumo
@@ -132,9 +132,9 @@ class Paquete(models.Model):
         super().save(*args, **kwargs)
 
     def _generar_codigo(self):
-        """Genera un código único con el formato SRFR-XXXXXXXX."""
+        """Genera un código único con el formato LOGIN-XXXXXXXX."""
         while True:
-            codigo = f"SRFR-{secrets.token_hex(4).upper()}"
+            codigo = f"LOGIN-{secrets.token_hex(4).upper()}"
             if not Paquete.objects.filter(codigo_seguimiento=codigo).exists():
                 return codigo
 

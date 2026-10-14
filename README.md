@@ -1,6 +1,6 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (**SRFR**): backend en **Django**
+Sistema de gestión de reparto de paquetes (app **login**): backend en **Django**
 con base **PostgreSQL en Supabase** y frontend en **React**.
 
 ## Estructura

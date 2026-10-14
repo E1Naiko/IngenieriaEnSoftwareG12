@@ -1,4 +1,4 @@
-"""WSGI config para el proyecto SRFR."""
+"""WSGI config para el proyecto login."""
 
 import os
 

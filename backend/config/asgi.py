@@ -1,4 +1,4 @@
-"""ASGI config para el proyecto SRFR."""
+"""ASGI config para el proyecto login."""
 
 import os
 
