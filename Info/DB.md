@@ -18,6 +18,7 @@ Sistema de gestión de reparto de paquetes (app `SRFR`) hecho con **Django** y
 ### 1. Entorno virtual e instalación
 
 ```bash
+cd backend
 python -m venv venv
 source venv/bin/activate        # en Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -70,7 +71,7 @@ cargar repartidores, comercios, clientes y paquetes.
   `django-storages` en lugar del disco local.
 - Los campos de opciones (`tipoVehiculo`, `estado`, `tamanio`) usan
   `choices`: revisar que los valores del enum les sirvan (se agregan fácil
-  en `SRFR/models.py`).
+  en `backend/SRFR/models.py`).
 
 ## Comandos útiles
 
