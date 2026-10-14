@@ -21,5 +21,14 @@ __pycache__/
 venv/
 .venv/
 
+# node_modules
+frontend/node_modules/
+
+#Frontend extras
+
+frontend/public/
+frontend/src/assets/
+
 # IDE
 .idea/
+.vscode/
