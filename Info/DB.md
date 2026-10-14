@@ -1,7 +1,7 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (app `SRFR`) hecho con **Django** y
-**PostgreSQL en Supabase**.
+Sistema de gestión de reparto de paquetes (**SRFR**, cuya app principal es
+`login`) hecho con **Django** y **PostgreSQL en Supabase**.
 
 ## Modelos
 
@@ -71,7 +71,7 @@ cargar repartidores, comercios, clientes y paquetes.
   `django-storages` en lugar del disco local.
 - Los campos de opciones (`tipoVehiculo`, `estado`, `tamanio`) usan
   `choices`: revisar que los valores del enum les sirvan (se agregan fácil
-  en `backend/SRFR/models.py`).
+  en `backend/login/models.py`).
 
 ## Comandos útiles
 

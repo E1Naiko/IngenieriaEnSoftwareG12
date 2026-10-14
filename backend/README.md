@@ -10,7 +10,7 @@ backend/
 ├── requirements.txt     # dependencias
 ├── .env.example         # plantilla de credenciales → copiar como .env
 ├── config/              # configuración del proyecto (settings, urls, wsgi)
-└── SRFR/                # app principal (modelos, admin, views)
+└── login/               # app principal (modelos, admin, views)
 ```
 
 ## Puesta en marcha

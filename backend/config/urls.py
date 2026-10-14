@@ -3,7 +3,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from SRFR import views
+from login import views
 
 admin.site.site_header = "SRFR — Administración"
 admin.site.site_title = "SRFR Admin"
