@@ -22,6 +22,7 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 cd backend
 python -m venv venv
 source venv/bin/activate        # en Windows: venv\Scripts\activate
+                                # en Fish: source venv/bin/activate.fish
 pip install -r requirements.txt
 ```
 
