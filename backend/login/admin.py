@@ -5,40 +5,43 @@ from .models import Cliente, Comercio, Comprobante, Paquete, Repartidor
 
 @admin.register(Repartidor)
 class RepartidorAdmin(admin.ModelAdmin):
-    list_display = ("apellido", "nombre", "dni", "tipo_vehiculo", "activo")
-    list_filter = ("activo", "tipo_vehiculo")
-    search_fields = ("nombre", "apellido", "dni")
+    list_display = ("apellido", "nombre", "dni", "telefono", "mail", "tipo_vehiculo", "estado", "token")
+    list_filter = ("estado", "tipo_vehiculo")
+    search_fields = ("nombre", "apellido", "dni", "mail")
+    readonly_fields = ("token",)
 
 
 @admin.register(Comercio)
 class ComercioAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "cuit", "telefono", "email")
-    search_fields = ("nombre", "cuit")
+    list_display = ("nombre", "telefono", "direccion")
+    search_fields = ("nombre",)
 
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ("apellido", "nombre", "dni", "direccion")
-    search_fields = ("nombre", "apellido", "dni")
+    list_display = ("dni", "telefono", "direccion", "comercio")
+    list_filter = ("comercio",)
+    search_fields = ("dni", "direccion")
 
 
 @admin.register(Paquete)
 class PaqueteAdmin(admin.ModelAdmin):
     list_display = (
-        "codigo_seguimiento",
+        "cod_seguimiento",
+        "estado",
+        "tamanio",
         "comercio",
         "cliente",
         "repartidor",
-        "estado",
-        "tamanio",
-        "fecha_creacion",
+        "comprobante",
     )
     list_filter = ("estado", "tamanio", "comercio")
-    search_fields = ("codigo_seguimiento", "cliente__apellido", "cliente__dni", "comercio__nombre")
+    search_fields = ("cod_seguimiento", "cliente__dni", "comercio__nombre")
     autocomplete_fields = ("cliente", "comercio", "repartidor")
+    readonly_fields = ("cod_seguimiento",)
 
 
 @admin.register(Comprobante)
 class ComprobanteAdmin(admin.ModelAdmin):
-    list_display = ("paquete", "archivo", "fecha_subida")
-    search_fields = ("paquete__codigo_seguimiento",)
+    list_display = ("id", "archivo", "paquete")
+    search_fields = ("id",)
