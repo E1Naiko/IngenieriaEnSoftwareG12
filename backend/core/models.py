@@ -3,7 +3,10 @@ Modelos del sistema de reparto de paquetes (app core).
 
 Esquema adaptado del diagrama de la base (ver Info/DB.md). Las tablas usan
 el nombre exacto del diagrama (repartidor, comercio, cliente, paquete,
-comprobante) vía Meta.db_table.
+comprobante) vía Meta.db_table, y las columnas que Django no puede nombrar
+tal cual (claves foráneas y camelCase) usan db_column para conservar el
+nombre del diagrama: id_repartidor_asignado, id_comercio,
+id_datos_cliente, id_comprobante, tipoVehiculo, codSeguimiento y file.
 
 Relaciones del diagrama:
 - paquete.id_repartidor_asignado ?> repartidor   (muchos paquetes -> un repartidor)
