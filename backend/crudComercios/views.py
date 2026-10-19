@@ -1,30 +1,63 @@
 """
 API REST para el CRUD de Comercios.
 
-Expone endpoints JSON que consume el frontend React (y cualquier otro
-cliente). No usamos Django REST Framework para mantener las dependencias
+Expone endpoints JSON que consume el frontend React (``frontend/src/pages/Comercios.tsx``)
+y cualquier otro cliente. No usa Django REST Framework para mantener las dependencias
 al mínimo: las vistas leen/escriben JSON a mano con ``JsonResponse``.
 
-Rutas (ver crudComercios/urls.py):
-    GET    /api/comercios/        -> lista (con ?q= para filtrar por nombre)
-    POST   /api/comercios/        -> crea
-    GET    /api/comercios/<id>/   -> detalle
-    PUT    /api/comercios/<id>/   -> reemplaza
-    PATCH  /api/comercios/<id>/   -> actualiza parcialmente
-    DELETE /api/comercios/<id>/   -> borra
+Rutas (ver ``crudComercios/urls.py`` — prefijo global ``/api/`` en ``config/urls.py``):
+
+    GET    /api/comercios/        → lista (con ``?q=`` para filtrar por ``nombre``)
+    POST   /api/comercios/        → crea
+    GET    /api/comercios/<id>/   → detalle
+    PUT    /api/comercios/<id>/   → reemplaza (todos los campos obligatorios)
+    PATCH  /api/comercios/<id>/   → actualiza parcialmente (solo lo enviado)
+    DELETE /api/comercios/<id>/   → borra
+
+Contrato JSON (ejemplo) — producido por ``_comercio_to_dict``::
+
+    {
+        "id": 1,
+        "nombre": "Kiosco Central",
+        "telefono": "221-555-0100",
+        "direccion": "Calle 7 #123",
+        "datos_cliente": 4          // FK a Cliente.id o null
+    }
+
+Listado → ``{"results": [...], "count": N}``.
+Errores → ``400`` con la clave del campo (``{"nombre": "…"}``) o ``{"detail": "…"}``.
+
+Dependencias
+------------
+- Modelo: ``core.models.Comercio`` y ``core.models.Cliente`` (solo para validar la FK).
+- Cada helper está documentado abajo; las vistas delegan validación a ``_validar_y_aplicar``.
 """
 
 import json
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 
 from core.models import Cliente, Comercio
 
 
+# ---------------------------------------------------------------------------
+# Helpers internos
+# ---------------------------------------------------------------------------
+
 def _parse_body(request):
-    """Devuelve el dict del body JSON o None si no es JSON válido."""
+    """Decodifica el body como JSON y lo valida.
+
+    Args:
+        request: ``HttpRequest`` de Django.
+
+    Returns:
+        dict: diccionario del body si es JSON válido.
+        dict vacío ``{}`` si el body está vacío (útil para que la validación
+        posterior reporte campos faltantes en vez de un 400 genérico).
+        None si el body no es JSON válido (``JSONDecodeError``/``UnicodeDecodeError``)
+        o si el JSON no es un objeto (lista, número, etc.).
+    """
     if not request.body:
         return {}
     try:
@@ -37,6 +70,17 @@ def _parse_body(request):
 
 
 def _comercio_to_dict(comercio):
+    """Serializa un ``Comercio`` al contrato JSON de la API.
+
+    No expone el objeto ``Cliente`` completo, solo su PK como ``datos_cliente``
+    (``comercio.datos_cliente_id``). Si no hay cliente vinculado, serializa ``None``.
+
+    Args:
+        comercio: instancia ``core.models.Comercio`` (guardada o no).
+
+    Returns:
+        dict con ``id``, ``nombre``, ``telefono``, ``direccion`` y ``datos_cliente``.
+    """
     return {
         "id": comercio.id,
         "nombre": comercio.nombre,
@@ -47,11 +91,28 @@ def _comercio_to_dict(comercio):
 
 
 def _validar_y_aplicar(comercio, data, parcial=False):
-    """
-    Aplica los campos presentes en ``data`` a ``comercio``.
+    """Valida ``data`` y aplica los campos a ``comercio`` en memoria.
 
-    Devuelve (ok, error_response). Si ok es False, error_response es un
-    JsonResponse con el detalle del error.
+    La función **no guarda** en la BD; solo muta el objeto. El llamante debe
+    hacer ``comercio.save()`` si ``ok`` es ``True``.
+
+    Reglas de validación:
+
+    - ``nombre``, ``telefono``, ``direccion``: ``str`` no vacío tras ``strip()``.
+      Obligatorios si ``parcial is False`` (``POST``/``PUT``). En ``PATCH`` solo
+      se validan si vienen en ``data``.
+    - ``datos_cliente``: si no viene, no se toca. Si es ``None``/``""`` → desvincula
+      (``comercio.datos_cliente = None``). Si es un entero/ID → debe existir un
+      ``Cliente`` con ese PK; si no, ``400 {"datos_cliente": "Cliente no encontrado."}``.
+
+    Args:
+        comercio: instancia ``Comercio`` a mutar (puede ser ``Comercio()`` nuevo).
+        data: dict decodificado del body JSON.
+        parcial: si ``True``, los tres campos de texto son opcionales (``PATCH``).
+
+    Returns:
+        tuple[bool, JsonResponse|None]: ``(True, None)`` si validó;
+        ``(False, JsonResponse(status=400))`` con el detalle del primer error.
     """
     # nombre
     if "nombre" in data:
@@ -109,9 +170,33 @@ def _validar_y_aplicar(comercio, data, parcial=False):
     return True, None
 
 
+# ---------------------------------------------------------------------------
+# Vistas
+# ---------------------------------------------------------------------------
+
 @csrf_exempt
 def comercios_list(request):
-    """Lista todos los comercios o crea uno nuevo."""
+    """Lista o crea comercios.
+
+    ``GET /api/comercios/?q=<texto>``
+        Lista todos los comercios. Si se pasa ``q``, filtra con
+        ``nombre__icontains`` (búsqueda parcial, case-insensitive).
+
+        Respuesta ``200``::
+
+            {"results": [{...}, {...}], "count": N}
+
+    ``POST /api/comercios/``
+        Crea un comercio. Body JSON con ``nombre``, ``telefono``, ``direccion``
+        (obligatorios) y ``datos_cliente`` (opcional, PK de ``Cliente``).
+
+        Respuestas::
+
+            201 → comercio creado (JSON del comercio)
+            400 → falta campo / JSON inválido / cliente inexistente
+
+    Cualquier otro método → ``405 {"detail": "Método no permitido."}``.
+    """
     if request.method == "GET":
         qs = Comercio.objects.all()
         q = request.GET.get("q", "").strip()
@@ -140,7 +225,24 @@ def comercios_list(request):
 
 @csrf_exempt
 def comercio_detail(request, pk):
-    """Detalle, actualización y borrado de un comercio."""
+    """Detalle, actualización y borrado de un comercio.
+
+    ``GET /api/comercios/<pk>/``
+        Devuelve el comercio. ``404`` si no existe.
+
+    ``PUT /api/comercios/<pk>/``
+        Reemplazo total: exige ``nombre``, ``telefono``, ``direccion``.
+        ``datos_cliente`` opcional. ``200`` con el comercio actualizado o ``400``.
+
+    ``PATCH /api/comercios/<pk>/``
+        Actualización parcial: solo valida los campos enviados.
+        Ideal para ``{"datos_cliente": 3}`` o ``{"telefono": "nuevo"}``.
+
+    ``DELETE /api/comercios/<pk>/``
+        Borra. ``204`` con body ``{}``. ``404`` si no existe.
+
+    Cualquier otro método → ``405``.
+    """
     try:
         comercio = Comercio.objects.get(pk=pk)
     except Comercio.DoesNotExist:
