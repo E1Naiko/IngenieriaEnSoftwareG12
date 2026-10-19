@@ -2,6 +2,22 @@
 
 Backend del sistema de reparto de paquetes (app **core**, Grupo 12).
 
+## Que tengo que hacer la primera vez que clono el repositorio?
+Seguir guia en [DB.md](Info/DB.md).
+
+## Que tengo que hacer para arrancar a programar?
+
+SIEMPRE:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate        # en Windows: venv\Scripts\activate
+                                # en Fish: source venv/bin/activate.fish
+pip install -r requirements.txt
+```
+
+---
+
 ## Estructura
 
 ```

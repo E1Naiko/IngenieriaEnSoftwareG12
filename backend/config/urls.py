@@ -9,7 +9,7 @@ Rutas principales del backend.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from core import views
 
@@ -23,6 +23,7 @@ urlpatterns = [
     # Endpoint de prueba: confirma que la API está viva y que el frontend
     # puede comunicarse (lo usamos para verificar el CORS).
     path("api/ping/", views.ping, name="ping"),
+    path("api/", include("crudComercios.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
