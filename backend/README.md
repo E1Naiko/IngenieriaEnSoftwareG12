@@ -53,6 +53,26 @@ python manage.py runserver
 > Sin `.env` (o con `DB_HOST` vacío) Django usa una **SQLite local**, así
 > nadie queda bloqueado para desarrollar.
 
+## Errores comunes
+
+### `could not translate host name "aws-0-<region>.pooler.supabase.com"`
+
+El `.env` es la plantilla sin completar: los valores con `<...>` son de
+ejemplo, no credenciales reales. Dos opciones:
+
+- **No tenés las credenciales todavía**: dejá `DB_HOST` vacío (`DB_HOST=`) y
+  Django usa la SQLite local.
+- **Sí las tenés**: reemplazá `DB_HOST`, `DB_USER` y `DB_PASSWORD` por los de
+  Supabase (*Connect → Session pooler*).
+
+Django detecta los valores con `<...>` y avisa por consola antes de caer a
+SQLite, para que el error de arriba no vuelva a aparecer.
+
+### `ModuleNotFoundError: No module named 'django'`
+
+El entorno virtual no está activado (o `pip install` se corrió en otro
+Python). Verificar con `which python`: tiene que apuntar a `backend/venv/bin/python`.
+
 ## CORS (frontend React)
 
 El frontend puede llamar a la API sin tocar nada si corre en
