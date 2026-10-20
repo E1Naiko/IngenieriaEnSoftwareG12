@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # Proyecto
     "core",
+    "crudComercios",
 ]
 
 MIDDLEWARE = [

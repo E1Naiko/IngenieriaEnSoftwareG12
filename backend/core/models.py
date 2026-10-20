@@ -3,10 +3,7 @@ Modelos del sistema de reparto de paquetes (app core).
 
 Esquema adaptado del diagrama de la base (ver Info/DB.md). Las tablas usan
 el nombre exacto del diagrama (repartidor, comercio, cliente, paquete,
-comprobante) vía Meta.db_table, y las columnas que Django no puede nombrar
-tal cual (claves foráneas y camelCase) usan db_column para conservar el
-nombre del diagrama: id_repartidor_asignado, id_comercio,
-id_datos_cliente, id_comprobante, tipoVehiculo, codSeguimiento y file.
+comprobante) vía Meta.db_table.
 
 Relaciones del diagrama:
 - paquete.id_repartidor_asignado ?> repartidor   (muchos paquetes -> un repartidor)
@@ -42,12 +39,14 @@ class Repartidor(models.Model):
         MOTO = "moto", "Moto"
         AUTO = "auto", "Auto"
         CAMIONETA = "camioneta", "Camioneta"
+        A_PIE = "a_pie", "A pie"
 
     class Estado(models.TextChoices):
         """Estados posibles del repartidor dentro del sistema."""
 
-        OPERATIVO = "Operativo", "operativo"
-        NO_OPERATIVO = "No Operativo", "no operativo"
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        SUSPENDIDO = "suspendido", "Suspendido"
 
     # --- Datos personales -------------------------------------------------
     nombre = models.CharField(max_length=255)
