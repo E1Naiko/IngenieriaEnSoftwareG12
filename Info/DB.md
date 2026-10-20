@@ -59,6 +59,11 @@ cargar repartidores, comercios, clientes y paquetes.
 > **OJO**: si ya habías corrido `migrate` con el esquema anterior, borra tu
 > `db.sqlite3` local (o dropeá el schema `public` en Supabase) y volvé a
 > correr `migrate`: la estructura cambió y las migraciones se regeneraron.
+>
+> Si `migrate` falla con `relation "cliente" already exists`, corré primero
+> `python manage.py revisar_db`: compara las tablas existentes con los
+> modelos y te dice si alcanza con `migrate --fake-initial` o si hay que
+> recrear el esquema (ver "Errores comunes" en `backend/README.md`).
 
 ## Decisiones sobre el esquema
 
@@ -97,6 +102,7 @@ cargar repartidores, comercios, clientes y paquetes.
 ```bash
 python manage.py makemigrations   # genera migraciones tras cambiar models.py
 python manage.py migrate          # aplica migraciones a la base
+python manage.py revisar_db       # diagnostica tablas viejas vs. modelos
 python manage.py shell            # consola interactiva con el ORM
 python manage.py runserver        # levanta el servidor de desarrollo
 ```

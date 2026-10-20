@@ -73,6 +73,51 @@ SQLite, para que el error de arriba no vuelva a aparecer.
 El entorno virtual no está activado (o `pip install` se corrió en otro
 Python). Verificar con `which python`: tiene que apuntar a `backend/venv/bin/python`.
 
+### `django.db.utils.ProgrammingError: relation "cliente" already exists`
+
+La base (Supabase o tu `db.sqlite3` local) **ya tiene tablas del esquema
+anterior** y las migraciones actuales intentan crearlas de nuevo: se
+regeneraron y `django_migrations` no tiene el registro de `core.0001_initial`.
+
+Primero, para ver el estado exacto (no modifica nada):
+
+```bash
+python manage.py revisar_db
+```
+
+El comando compara las tablas que existen con las que esperan los modelos y
+dice cuál de los dos casos es:
+
+**a) Las tablas coinciden con los modelos** → solo falta registrar la
+migración, sin borrar datos:
+
+```bash
+python manage.py migrate --fake-initial
+```
+
+**b) Las tablas viejas no coinciden** → hay que recrear el esquema. En
+Supabase, *SQL Editor* del dashboard:
+
+```sql
+drop schema public cascade;
+create schema public;
+grant all on schema public to postgres;
+grant all on schema public to public;
+```
+
+Después, en la terminal:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser   # si todavía no tenés usuario
+```
+
+> ⚠️ Esto **borra los datos** de esa base. Si hay algo que quieras conservar,
+> avisá antes de dropear y se migra tabla por tabla (`rename` + copia).
+>
+> Para una SQLite local alcanza con borrar el archivo:
+> `rm db.sqlite3 && python manage.py migrate`.
+
 ## CORS (frontend React)
 
 El frontend puede llamar a la API sin tocar nada si corre en
