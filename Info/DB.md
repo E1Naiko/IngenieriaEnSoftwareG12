@@ -62,10 +62,12 @@ cargar repartidores, comercios, clientes y paquetes.
 >
 > Si `migrate` falla con `relation "cliente" already exists`, corré primero
 > `python manage.py revisar_db`: compara las tablas existentes con los
-> modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice si
-> alcanza con `migrate --fake-initial` o si hay que recrear el esquema.
-> `--fake-initial` solo funciona si las columnas ya coinciden; si no, falla
-> igual. Ver "Errores comunes" en `backend/README.md`.
+> modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice qué
+> hacer. Si las tablas de `core` están vacías, alcanza con
+> `drop table if exists paquete, comprobante, cliente, comercio, repartidor cascade;`
+> y volver a migrar (no se pierde nada de auth/admin). `migrate --fake-initial`
+> solo funciona si las columnas ya coinciden. Ver "Errores comunes" en
+> `backend/README.md`.
 
 ## Decisiones sobre el esquema
 

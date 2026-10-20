@@ -19,6 +19,9 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 from django.db.utils import OperationalError
 
+SQL_BORRAR_TABLAS = """\
+drop table if exists paquete, comprobante, cliente, comercio, repartidor cascade;"""
+
 SQL_RECREAR = """\
 drop schema public cascade;
 create schema public;
@@ -120,7 +123,7 @@ class Command(BaseCommand):
             return [fila[0] for fila in cursor.fetchall()]
 
     def _resumen_datos(self, filas_por_tabla, tablas):
-        """Cuenta lo que se perdería si se recrea el esquema."""
+        """Cuenta lo que se perdería si se recrea el esquema. Devuelve el total de core."""
         total = sum(v for v in filas_por_tabla.values() if isinstance(v, int))
         usuarios = self._contar("auth_user") if "auth_user" in tablas else 0
 
@@ -139,13 +142,14 @@ class Command(BaseCommand):
                     f"  → Hay {total} fila(s) en tablas de core: avisá antes de borrar."
                 )
             )
-        if isinstance(usuarios, int) and usuarios > 0:
+        if total > 0 and isinstance(usuarios, int) and usuarios > 0:
             self.stdout.write(
                 self.style.WARNING(
                     "  → Se van a borrar los usuarios: después hay que correr "
                     "'createsuperuser'."
                 )
             )
+        return total
 
     def _recomendar(self, colisiones, faltantes, aplicadas, filas_por_tabla, tablas):
         self.stdout.write("")
@@ -204,13 +208,26 @@ class Command(BaseCommand):
             )
         )
 
-        self._resumen_datos(filas_por_tabla, tablas)
+        filas_core = self._resumen_datos(filas_por_tabla, tablas)
 
-        if not aplicadas and tablas & {"paquete", "comercio", "cliente"}:
-            self.stdout.write("\nPara recrear el esquema, en Supabase → SQL Editor:\n")
-            self.stdout.write(self.style.SQL_KEYWORD(SQL_RECREAR))
-            self.stdout.write(
-                "\nDespués, en la terminal:\n\n"
-                "    python manage.py migrate\n"
-                "    python manage.py createsuperuser   # si perdiste el usuario\n"
-            )
+        if not aplicadas:
+            if filas_core == 0:
+                self.stdout.write(
+                    "\nComo las tablas de core están vacías, alcanza con borrar solo esas\n"
+                    "tablas (se conservan auth, admin y tu usuario de /admin). En\n"
+                    "Supabase → SQL Editor:\n"
+                )
+                self.stdout.write(self.style.SQL_KEYWORD(SQL_BORRAR_TABLAS))
+                self.stdout.write(
+                    "\nDespués, en la terminal:\n\n"
+                    "    python manage.py migrate\n"
+                    "    python manage.py revisar_db      # debería decir 'Todo en orden'\n"
+                )
+            else:
+                self.stdout.write("\nPara recrear el esquema, en Supabase → SQL Editor:\n")
+                self.stdout.write(self.style.SQL_KEYWORD(SQL_RECREAR))
+                self.stdout.write(
+                    "\nDespués, en la terminal:\n\n"
+                    "    python manage.py migrate\n"
+                    "    python manage.py createsuperuser   # si perdiste el usuario\n"
+                )

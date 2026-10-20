@@ -95,11 +95,32 @@ migración, sin borrar datos:
 python manage.py migrate --fake-initial
 ```
 
-**b) Las tablas viejas no coinciden** → hay que recrear el esquema. Ojo:
-`--fake-initial` **tampoco sirve acá** (Django solo da la migración por
-aplicada si las tablas existen *y* tienen las columnas de los `AddField`,
-como `cliente.comercio_id`; si falta alguna, vuelve a fallar con el mismo
-error). En Supabase, *SQL Editor* del dashboard:
+**b) Las tablas viejas no coinciden** → hay que borrar esas tablas y
+recrearlas. Ojo: `--fake-initial` **tampoco sirve acá** (Django solo da la
+migración por aplicada si las tablas existen *y* tienen las columnas de los
+`AddField`, como `cliente.comercio_id`; si falta alguna, vuelve a fallar con
+el mismo error).
+
+`revisar_db` informa cuántas filas hay en cada tabla de `core` y en
+`auth_user`, para saber si el borrado pierde algo.
+
+**b1) Las tablas de `core` están vacías** (lo habitual en desarrollo) → borrá
+solo esas tablas; `auth`, `admin`, `django_migrations` y tu usuario de
+`/admin` quedan intactos. En Supabase, *SQL Editor*:
+
+```sql
+drop table if exists paquete, comprobante, cliente, comercio, repartidor cascade;
+```
+
+y después:
+
+```bash
+python manage.py migrate
+python manage.py revisar_db      # debería decir "Todo en orden"
+```
+
+**b2) Hay datos que no querés perder / querés empezar de cero** → recreá todo
+el schema. ⚠️ Esto borra **todos** los datos, incluidos los usuarios:
 
 ```sql
 drop schema public cascade;
@@ -111,17 +132,12 @@ alter default privileges in schema public grant all on functions to postgres, an
 alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;
 ```
 
-Después, en la terminal:
+y después:
 
 ```bash
 python manage.py migrate
-python manage.py createsuperuser   # si todavía no tenés usuario
+python manage.py createsuperuser   # el usuario de /admin se borró
 ```
-
-`revisar_db` muestra antes cuántas filas hay en cada tabla de `core` y en
-`auth_user`, para saber si el borrado pierde algo. Si las tablas de `core`
-están vacías, no se pierde ningún dato de la app (solo los usuarios de Django,
-que se recrean con `createsuperuser`).
 
 > ⚠️ Esto **borra los datos** de esa base. Si hay algo que quieras conservar,
 > avisá antes de dropear y se migra tabla por tabla (`rename` + copia).
