@@ -66,7 +66,7 @@ class Repartidor(models.Model):
         max_length=255,
         choices=Estado.choices,
         default=Estado.ACTIVO,
-        help_text="Situación del repartidor (activo, inactivo o suspendido).",
+        help_text="Situación del repartidor (activo o inactivo).",
     )
     token = models.CharField(
         max_length=6,
