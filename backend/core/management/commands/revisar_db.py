@@ -10,13 +10,23 @@ Uso:
     python manage.py revisar_db
 
 No modifica nada: compara las tablas que existen en la base con las que
-esperan los modelos de ``core`` y sugiere el próximo paso.
+esperan los modelos de ``core``, informa cuántos datos hay y sugiere el
+próximo paso.
 """
 
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.db.utils import OperationalError
+
+SQL_RECREAR = """\
+drop schema public cascade;
+create schema public;
+grant all on schema public to postgres;
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;"""
 
 
 class Command(BaseCommand):
@@ -45,32 +55,34 @@ class Command(BaseCommand):
             return
 
         modelos = list(apps.get_app_config("core").get_models())
-        esperadas = {modelo._meta.db_table for modelo in modelos}
 
         colisiones = []
         faltantes = []
+        filas_por_tabla = {}
 
         for modelo in modelos:
             tabla = modelo._meta.db_table
-            existe = tabla in tablas
-            if not existe:
+            if tabla not in tablas:
                 faltantes.append(modelo)
                 self.stdout.write(f"  FALTA     {tabla}")
                 continue
 
             columnas_reales = self._columnas(tabla)
-            columnas_modelo = {
-                campo.column for campo in modelo._meta.concrete_fields
-            }
-            coincide = columnas_reales == columnas_modelo
-
+            columnas_modelo = {campo.column for campo in modelo._meta.concrete_fields}
             filas = self._contar(tabla)
-            detalle = f"{filas} fila(s)"
-            if coincide:
-                self.stdout.write(f"  OK        {tabla} ({detalle})")
+            filas_por_tabla[tabla] = filas
+
+            if columnas_reales == columnas_modelo:
+                self.stdout.write(f"  OK        {tabla} ({filas} fila(s))")
             else:
-                colisiones.append((tabla, columnas_modelo - columnas_reales, columnas_reales - columnas_modelo, filas))
-                self.stdout.write(f"  DISTINTA  {tabla} ({detalle})")
+                colisiones.append(
+                    (
+                        tabla,
+                        columnas_modelo - columnas_reales,
+                        columnas_reales - columnas_modelo,
+                    )
+                )
+                self.stdout.write(f"  DISTINTA  {tabla} ({filas} fila(s))")
 
         aplicadas = self._migraciones_core(tablas)
         self.stdout.write("")
@@ -81,7 +93,7 @@ class Command(BaseCommand):
                 "Migraciones core aplicadas: " + (", ".join(aplicadas) if aplicadas else "(ninguna)")
             )
 
-        self._recomendar(colisiones, faltantes, aplicadas, esperadas & tablas)
+        self._recomendar(colisiones, faltantes, aplicadas, filas_por_tabla, tablas)
 
     # ------------------------------------------------------------------ utils
 
@@ -102,58 +114,103 @@ class Command(BaseCommand):
         if "django_migrations" not in tablas:
             return None
         with connection.cursor() as cursor:
-            cursor.execute("SELECT name FROM django_migrations WHERE app = %s ORDER BY name", ["core"])
+            cursor.execute(
+                "SELECT name FROM django_migrations WHERE app = %s ORDER BY name", ["core"]
+            )
             return [fila[0] for fila in cursor.fetchall()]
 
-    def _recomendar(self, colisiones, faltantes, aplicadas, tablas_existentes):
+    def _resumen_datos(self, filas_por_tabla, tablas):
+        """Cuenta lo que se perdería si se recrea el esquema."""
+        total = sum(v for v in filas_por_tabla.values() if isinstance(v, int))
+        usuarios = self._contar("auth_user") if "auth_user" in tablas else 0
+
+        self.stdout.write("")
+        self.stdout.write(self.style.MIGRATE_HEADING("Datos que se perderían al recrear"))
+        self.stdout.write(f"  Tablas de core: {total} fila(s)")
+        self.stdout.write(f"  Usuarios de Django (auth_user): {usuarios} fila(s)")
+
+        if total == 0:
+            self.stdout.write(
+                self.style.SUCCESS("  → No hay datos de la app que se pierdan.")
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  → Hay {total} fila(s) en tablas de core: avisá antes de borrar."
+                )
+            )
+        if isinstance(usuarios, int) and usuarios > 0:
+            self.stdout.write(
+                self.style.WARNING(
+                    "  → Se van a borrar los usuarios: después hay que correr "
+                    "'createsuperuser'."
+                )
+            )
+
+    def _recomendar(self, colisiones, faltantes, aplicadas, filas_por_tabla, tablas):
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Diagnóstico"))
 
         if not faltantes and not colisiones and aplicadas:
-            self.stdout.write(self.style.SUCCESS("Todo en orden: las tablas coinciden con los modelos."))
+            self.stdout.write(
+                self.style.SUCCESS("Todo en orden: las tablas coinciden con los modelos.")
+            )
             return
 
-        if colisiones or (tablas_existentes and not aplicadas):
+        if not colisiones and not faltantes:
             self.stdout.write(
-                "La base tiene tablas de un esquema anterior, y las migraciones\n"
-                "actuales todavía no están registradas. Por eso migrate intenta\n"
-                "crearlas otra vez y falla con 'relation ... already exists'.\n"
+                "Las tablas y sus columnas ya están bien: solo falta registrar la\n"
+                "migración. No se toca ningún dato:\n\n"
+                "    python manage.py migrate --fake-initial\n"
             )
-            if colisiones:
-                self.stdout.write("Diferencias encontradas:")
-                for tabla, faltan, sobran, _ in colisiones:
-                    if faltan:
-                        self.stdout.write(f"  - {tabla}: faltan columnas {sorted(faltan)}")
-                    if sobran:
-                        self.stdout.write(f"  - {tabla}: sobran columnas {sorted(sobran)}")
-                self.stdout.write("")
-                self.stdout.write(
-                    self.style.WARNING(
-                        "Como la estructura NO coincide, 'migrate --fake-initial'\n"
-                        "dejaría la base inconsistente. Conviene recrear el esquema."
-                    )
-                )
-            else:
-                self.stdout.write(
-                    "La estructura de las tablas coincide con los modelos: podés\n"
-                    "registrar las migraciones sin recrear nada con:\n\n"
-                    "    python manage.py migrate --fake-initial\n"
-                )
-                return
+            return
 
+        if not colisiones:
             self.stdout.write(
-                "\nSi no te importan los datos que hay en Supabase, en el SQL Editor\n"
-                "del dashboard ejecutá:\n\n"
-                "    drop schema public cascade;\n"
-                "    create schema public;\n"
-                "    grant all on schema public to postgres;\n"
-                "    grant all on schema public to public;\n\n"
-                "y después, en la terminal:\n\n"
+                "Las tablas de core no existen todavía: corré\n\n"
                 "    python manage.py migrate\n"
-                "    python manage.py createsuperuser   # si todavía no tenés usuario\n"
             )
             return
 
         self.stdout.write(
-            "Faltan tablas: corré 'python manage.py migrate' para crearlas."
+            "La base tiene tablas de un esquema anterior y las migraciones actuales\n"
+            "no están registradas. Por eso migrate intenta crearlas otra vez y falla\n"
+            "con 'relation ... already exists'.\n"
         )
+        self.stdout.write("Diferencias encontradas:")
+        for tabla, faltan, sobran in colisiones:
+            if faltan:
+                self.stdout.write(f"  - {tabla}: faltan columnas {sorted(faltan)}")
+            if sobran:
+                self.stdout.write(f"  - {tabla}: sobran columnas {sorted(sobran)}")
+
+        compatible = all(not faltan for _, faltan, _ in colisiones)
+
+        if compatible:
+            self.stdout.write(
+                "\nLas columnas del modelo ya existen todas: alcanza con registrar la\n"
+                "migración sin tocar los datos:\n\n"
+                "    python manage.py migrate --fake-initial\n"
+            )
+            return
+
+        self.stdout.write("")
+        self.stdout.write(
+            self.style.WARNING(
+                "'migrate --fake-initial' NO sirve en este caso: Django solo da la\n"
+                "migración por aplicada si las tablas existen Y tienen las columnas\n"
+                "de los AddField (acá falta cliente.comercio_id), así que vuelve a\n"
+                "fallar con el mismo error.\n"
+            )
+        )
+
+        self._resumen_datos(filas_por_tabla, tablas)
+
+        if not aplicadas and tablas & {"paquete", "comercio", "cliente"}:
+            self.stdout.write("\nPara recrear el esquema, en Supabase → SQL Editor:\n")
+            self.stdout.write(self.style.SQL_KEYWORD(SQL_RECREAR))
+            self.stdout.write(
+                "\nDespués, en la terminal:\n\n"
+                "    python manage.py migrate\n"
+                "    python manage.py createsuperuser   # si perdiste el usuario\n"
+            )

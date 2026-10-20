@@ -95,14 +95,20 @@ migración, sin borrar datos:
 python manage.py migrate --fake-initial
 ```
 
-**b) Las tablas viejas no coinciden** → hay que recrear el esquema. En
-Supabase, *SQL Editor* del dashboard:
+**b) Las tablas viejas no coinciden** → hay que recrear el esquema. Ojo:
+`--fake-initial` **tampoco sirve acá** (Django solo da la migración por
+aplicada si las tablas existen *y* tienen las columnas de los `AddField`,
+como `cliente.comercio_id`; si falta alguna, vuelve a fallar con el mismo
+error). En Supabase, *SQL Editor* del dashboard:
 
 ```sql
 drop schema public cascade;
 create schema public;
 grant all on schema public to postgres;
-grant all on schema public to public;
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;
 ```
 
 Después, en la terminal:
@@ -111,6 +117,11 @@ Después, en la terminal:
 python manage.py migrate
 python manage.py createsuperuser   # si todavía no tenés usuario
 ```
+
+`revisar_db` muestra antes cuántas filas hay en cada tabla de `core` y en
+`auth_user`, para saber si el borrado pierde algo. Si las tablas de `core`
+están vacías, no se pierde ningún dato de la app (solo los usuarios de Django,
+que se recrean con `createsuperuser`).
 
 > ⚠️ Esto **borra los datos** de esa base. Si hay algo que quieras conservar,
 > avisá antes de dropear y se migra tabla por tabla (`rename` + copia).

@@ -62,8 +62,10 @@ cargar repartidores, comercios, clientes y paquetes.
 >
 > Si `migrate` falla con `relation "cliente" already exists`, corré primero
 > `python manage.py revisar_db`: compara las tablas existentes con los
-> modelos y te dice si alcanza con `migrate --fake-initial` o si hay que
-> recrear el esquema (ver "Errores comunes" en `backend/README.md`).
+> modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice si
+> alcanza con `migrate --fake-initial` o si hay que recrear el esquema.
+> `--fake-initial` solo funciona si las columnas ya coinciden; si no, falla
+> igual. Ver "Errores comunes" en `backend/README.md`.
 
 ## Decisiones sobre el esquema
 
