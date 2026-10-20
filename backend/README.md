@@ -68,6 +68,28 @@ ejemplo, no credenciales reales. Dos opciones:
 Django detecta los valores con `<...>` y avisa por consola antes de caer a
 SQLite, para que el error de arriba no vuelva a aparecer.
 
+### `Your models in app(s): 'core' have changes that are not yet reflected in a migration`
+
+`models.py` cambió (campos o `choices`) pero no se generó la migración. Es un
+aviso de `migrate`, no un error: la base sigue funcionando, pero esos cambios
+no se aplican.
+
+```bash
+python manage.py makemigrations core
+python manage.py migrate
+```
+
+`revisar_db` también lo detecta y lista las operaciones pendientes:
+
+```
+Cambios en los modelos sin migración:
+  - Alter field tipo_vehiculo on repartidor
+```
+
+> Si tocaste `choices` y el aviso no desaparece, revisá que el cambio esté
+> commiteado en `models.py`: el estado de las migraciones se compara contra el
+> archivo, no contra la base.
+
 ### `ModuleNotFoundError: No module named 'django'`
 
 El entorno virtual no está activado (o `pip install` se corrió en otro

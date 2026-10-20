@@ -10,13 +10,17 @@ Uso:
     python manage.py revisar_db
 
 No modifica nada: compara las tablas que existen en la base con las que
-esperan los modelos de ``core``, informa cuántos datos hay y sugiere el
-próximo paso.
+esperan los modelos de ``core``, avisa si hay cambios de modelo sin
+migración, informa cuántos datos hay y sugiere el próximo paso.
 """
 
 from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import connection
+from django.db.migrations.autodetector import MigrationAutodetector
+from django.db.migrations.loader import MigrationLoader
+from django.db.migrations.questioner import NonInteractiveMigrationQuestioner
+from django.db.migrations.state import ProjectState
 from django.db.utils import OperationalError
 
 SQL_BORRAR_TABLAS = """\
@@ -87,6 +91,8 @@ class Command(BaseCommand):
                 )
                 self.stdout.write(f"  DISTINTA  {tabla} ({filas} fila(s))")
 
+        pendientes = self._cambios_sin_migracion()
+
         aplicadas = self._migraciones_core(tablas)
         self.stdout.write("")
         if aplicadas is None:
@@ -96,9 +102,40 @@ class Command(BaseCommand):
                 "Migraciones core aplicadas: " + (", ".join(aplicadas) if aplicadas else "(ninguna)")
             )
 
-        self._recomendar(colisiones, faltantes, aplicadas, filas_por_tabla, tablas)
+        if pendientes:
+            self.stdout.write("")
+            self.stdout.write(
+                self.style.WARNING("Cambios en los modelos sin migración:")
+            )
+            for operacion in pendientes:
+                self.stdout.write(f"  - {operacion}")
+
+        self._recomendar(colisiones, faltantes, aplicadas, filas_por_tabla, tablas, pendientes)
 
     # ------------------------------------------------------------------ utils
+
+    def _cambios_sin_migracion(self):
+        """Operaciones que makemigrations generaría todavía (drift de modelos)."""
+        try:
+            loader = MigrationLoader(None, ignore_no_migrations=True)
+            autodetector = MigrationAutodetector(
+                loader.project_state(),
+                ProjectState.from_apps(apps),
+                NonInteractiveMigrationQuestioner(specified_apps={"core"}, dry_run=True),
+            )
+            cambios = autodetector.changes(
+                graph=loader.graph,
+                trim_to_apps={"core"},
+                convert_apps={"core"},
+                migration_name="revisar_db",
+            )
+        except Exception as exc:  # nunca romper el diagnóstico por esto
+            return [f"(no se pudo verificar: {exc})"]
+
+        operaciones = []
+        for migracion in cambios.get("core", []):
+            operaciones.extend(operacion.describe() for operacion in migracion.operations)
+        return operaciones
 
     def _columnas(self, tabla):
         with connection.cursor() as cursor:
@@ -151,13 +188,24 @@ class Command(BaseCommand):
             )
         return total
 
-    def _recomendar(self, colisiones, faltantes, aplicadas, filas_por_tabla, tablas):
+    def _recomendar(self, colisiones, faltantes, aplicadas, filas_por_tabla, tablas, pendientes):
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Diagnóstico"))
 
-        if not faltantes and not colisiones and aplicadas:
+        if not faltantes and not colisiones and aplicadas and not pendientes:
             self.stdout.write(
                 self.style.SUCCESS("Todo en orden: las tablas coinciden con los modelos.")
+            )
+            return
+
+        if pendientes and not faltantes and not colisiones and aplicadas:
+            self.stdout.write(
+                self.style.WARNING(
+                    "Las tablas de la base están bien, pero hay cambios en los modelos\n"
+                    "sin migración (los de arriba): no se van a aplicar todavía. Corré:\n\n"
+                    "    python manage.py makemigrations core\n"
+                    "    python manage.py migrate\n"
+                )
             )
             return
 

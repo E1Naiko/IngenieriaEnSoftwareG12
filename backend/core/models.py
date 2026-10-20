@@ -45,6 +45,7 @@ class Repartidor(models.Model):
 
         ACTIVO = "activo", "Activo"
         INACTIVO = "inactivo", "Inactivo"
+        SUSPENDIDO = "suspendido", "Suspendido"
 
     # --- Datos personales -------------------------------------------------
     nombre = models.CharField(max_length=255)
