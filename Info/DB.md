@@ -8,7 +8,7 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
 | Modelo | Descripción |
 |---|---|
-| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo/suspendido) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
+| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
 | `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
 | `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
