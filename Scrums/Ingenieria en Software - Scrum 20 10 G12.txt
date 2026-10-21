@@ -1,0 +1,38 @@
+Marcos:
+Objetivo: #4 Iniciar Sesion via Usuario
+Estado: comenzando a desarrollar la HU asignada
+Complicaciones: sin Complicaciones:, solo tiempo empleado a aprender sobre Python y Django
+
+Giula:
+Objetivo: #9 Inicio de sesión vía token
+Estado: comenzando a desarrollar la HU asignada
+Complicaciones: Aprendiendo a usar Django
+
+Valen:
+Objetivo: #4 Iniciar Sesion via Usuario
+Estado: Comenzando a hacer el login.
+Complicaciones: Complicación en entender cómo hacer una llamada al Backend desde el Frontend
+
+Herlan:
+Objetivo: #9 Inicio de sesión vía token
+Estado: Comenzando a desarrollar la HU
+Complicaciones: Complicación en entender el flujo de crear un componente y como enrutarlo. Complicación en entender cómo hacer una llamada al Backend desde el Frontend
+
+Jose:
+Objetivo: #34 Actualizar Estado:s del envío
+Estado: Aprendiendo a usar python
+Complicaciones: Falta de experiencia con el lenguaje.
+
+Luciano:
+Objetivo: #33 Visualizar panel de disponibilidad de la flota
+Estado: Comenzando a codear la página del panel
+Complicaciones: Dificultades para que el diseño sea agradable visualmente
+
+Nicolás:
+Objetivo: #33 Visualizar panel de disponibilidad de la flota
+Estado: comenzando a desarrollar la HU asignada
+Complicaciones: Tuvo que rehacer el modelo de datos que estamos usando como parte del ORM que conecta a Supabase, causado por cambio en las necesidades del proyecto.
+
+Bloqueos Identificados:
+Investigar enrutamiento y coneccion entre el back y front
+Falta capacitacion en HTML, Python y Django.
