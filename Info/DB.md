@@ -8,7 +8,7 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
 | Modelo | Descripción |
 |---|---|
-| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo/suspendido) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
+| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
 | `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
 | `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
@@ -59,6 +59,15 @@ cargar repartidores, comercios, clientes y paquetes.
 > **OJO**: si ya habías corrido `migrate` con el esquema anterior, borra tu
 > `db.sqlite3` local (o dropeá el schema `public` en Supabase) y volvé a
 > correr `migrate`: la estructura cambió y las migraciones se regeneraron.
+>
+> Si `migrate` falla con `relation "cliente" already exists`, corré primero
+> `python manage.py revisar_db`: compara las tablas existentes con los
+> modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice qué
+> hacer. Si las tablas de `core` están vacías, alcanza con
+> `drop table if exists paquete, comprobante, cliente, comercio, repartidor cascade;`
+> y volver a migrar (no se pierde nada de auth/admin). `migrate --fake-initial`
+> solo funciona si las columnas ya coinciden. Ver "Errores comunes" en
+> `backend/README.md`.
 
 ## Decisiones sobre el esquema
 
@@ -97,6 +106,7 @@ cargar repartidores, comercios, clientes y paquetes.
 ```bash
 python manage.py makemigrations   # genera migraciones tras cambiar models.py
 python manage.py migrate          # aplica migraciones a la base
+python manage.py revisar_db       # diagnostica tablas viejas vs. modelos
 python manage.py shell            # consola interactiva con el ORM
 python manage.py runserver        # levanta el servidor de desarrollo
 ```
