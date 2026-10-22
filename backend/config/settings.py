@@ -10,6 +10,8 @@ Configuración de Django para el proyecto login (Grupo 12).
 
 from pathlib import Path
 import os
+import re
+import warnings
 
 from dotenv import load_dotenv
 
@@ -90,6 +92,35 @@ WSGI_APPLICATION = "config.wsgi.application"
 # --------------------------------------------------------------------------
 
 DB_HOST = os.getenv("DB_HOST", "").strip()
+
+
+def _sin_completar(valor):
+    """True si el valor es una plantilla de .env.example (ej. '<region>')."""
+    return bool(re.search(r"<[^<>]*>", valor or ""))
+
+
+# Quien copia .env.example y se olvida de completarlo queda con valores como
+# "aws-0-<region>.pooler.supabase.com". Sin este chequeo, cualquier comando
+# (migrate, runserver, ...) muere con un error de DNS que no explica nada.
+# Si detectamos la plantilla, lo tratamos como "sin configurar" → SQLite.
+_valores_db = {
+    "DB_HOST": DB_HOST,
+    "DB_PORT": os.getenv("DB_PORT", ""),
+    "DB_NAME": os.getenv("DB_NAME", ""),
+    "DB_USER": os.getenv("DB_USER", ""),
+    "DB_PASSWORD": os.getenv("DB_PASSWORD", ""),
+}
+_sin_completar_en = [nombre for nombre, valor in _valores_db.items() if _sin_completar(valor)]
+
+if DB_HOST and _sin_completar_en:
+    warnings.warn(
+        "backend/.env tiene valores de ejemplo sin completar ("
+        + ", ".join(_sin_completar_en)
+        + "). Se usa la SQLite local (db.sqlite3). Completá las credenciales de "
+        "Supabase o dejá DB_HOST vacío para desarrollar con SQLite.",
+        stacklevel=1,
+    )
+    DB_HOST = ""
 
 if DB_HOST:
     # PostgreSQL en Supabase. Se recomienda la sección "Session pooler"
