@@ -59,7 +59,7 @@ actores principales: son quienes despachan paquetes. Necesitamos:
 
 Todo eso es exactamente lo que implementa `crudComercios`. Otros CRUD del sistema
 (repartidores, clientes, paquetes) siguen el mismo patrón pero viven en sus propias
-apps (`repatidoresDisponibles`, etc.).
+apps (`repartidoresDisponibles`, etc.).
 
 ---
 
@@ -83,7 +83,7 @@ Decisiones clave:
 - **Sin Django REST Framework**: las vistas usan solo `JsonResponse` y `json.loads()` para mantener
   dependencias mínimas. Si el proyecto crece, migrar a DRF es trivial porque el contrato JSON ya existe.
 - **App separada `crudComercios`**: desacopla la lógica de comercios del resto (`core`,
-  `repatidoresDisponibles`). Cada CRUD puede evolucionar sin tocar los otros.
+  `repartidoresDisponibles`). Cada CRUD puede evolucionar sin tocar los otros.
 - **Modelo en `core`**: `Comercio` vive en `core/models.py` (fuente única de verdad, `db_table = "comercio"`).
   `crudComercios/models.py` está intencionalmente vacío — ver `backend/crudComercios/README.md §3`.
 

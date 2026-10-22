@@ -39,14 +39,12 @@ class Repartidor(models.Model):
         MOTO = "moto", "Moto"
         AUTO = "auto", "Auto"
         CAMIONETA = "camioneta", "Camioneta"
-        A_PIE = "a_pie", "A pie"
 
     class Estado(models.TextChoices):
         """Estados posibles del repartidor dentro del sistema."""
 
         ACTIVO = "activo", "Activo"
         INACTIVO = "inactivo", "Inactivo"
-        SUSPENDIDO = "suspendido", "Suspendido"
 
     # --- Datos personales -------------------------------------------------
     nombre = models.CharField(max_length=255)
