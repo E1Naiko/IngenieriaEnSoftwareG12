@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     # Proyecto
     "core",
     "crudComercios",
+    "loginCoordinador",
 ]
 
 MIDDLEWARE = [
