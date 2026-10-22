@@ -96,24 +96,11 @@ cargar repartidores, comercios, clientes y paquetes.
 - Los campos de opciones (`tipoVehiculo`, `estado` de repartidor y paquete,
   `tamanio`) usan `choices` de Django: los valores del enum se revisan y
   agregan fácil en `backend/core/models.py`.
-- Las **tablas** y las **columnas** conservan el nombre del diagrama. Las
-  tablas vía `Meta.db_table` (`repartidor`, `paquete`, ...) y las columnas
-  vía `db_column` donde hace falta: `id_repartidor_asignado`, `id_comercio`,
-  `id_datos_cliente`, `id_comprobante` y `file`. Los atributos de Python
-  quedan en `snake_case` (convención del ORM) pero la base de datos ve los
-  nombres del diagrama.
-- Los dos campos que el diagrama escribe en **camelCase** van en
-  `snake_case`: `tipoVehiculo` → `tipo_vehiculo` y `codSeguimiento` →
-  `cod_seguimiento`. Motivo: en Postgres las mayúsculas obligan a citar la
-  columna entre comillas dobles en *cada* consulta SQL cruda
-  (`select "codSeguimiento" ...`), y es una fuente de errores. Con
-  snake_case el SQL crudo es directo (`select cod_seguimiento from paquete`).
-  El ORM y el admin no cambian: se sigue accediendo como
-  `paquete.cod_seguimiento`.
-- `comprobante.file` → `FileField(max_length=255)`: Django usa 100 por
-  defecto, así que se subió a 255 para respetar el `varchar(255)` del
-  diagrama. La columna se llama `file`, como en el diagrama (el atributo
-  en Python es `archivo`).
+- Nombres de **columnas** en `snake_case` (convención Django): el
+  `tipoVehiculo` del diagrama es `tipo_vehiculo`, `codSeguimiento` es
+  `cod_seguimiento`, etc. Las tablas conservan el nombre del diagrama vía
+  `Meta.db_table`.
+
 ## Comandos útiles
 
 ```bash

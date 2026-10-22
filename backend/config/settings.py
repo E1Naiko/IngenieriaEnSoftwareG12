@@ -11,6 +11,7 @@ Configuración de Django para el proyecto login (Grupo 12).
 from pathlib import Path
 import os
 import re
+import sys
 import warnings
 
 from dotenv import load_dotenv
@@ -124,7 +125,20 @@ if DB_HOST and _sin_completar_en:
     )
     DB_HOST = ""
 
-if DB_HOST:
+_ejecutando_tests = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+if _ejecutando_tests and not _env_bool("DB_TEST_REMOTA", "False"):
+    # Los tests corren contra SQLite en memoria aislada aunque .env apunte a
+    # Supabase: el Session Pooler (Supavisor) redirige las conexiones a la base
+    # compartida "postgres" (ignorando test_postgres) y retiene sesiones que
+    # hacen fallar el DROP DATABASE al finalizar ("ObjectInUse").
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+elif DB_HOST:
     # PostgreSQL en Supabase. Se recomienda la sección "Session pooler"
     # del dashboard (funciona por IPv4 desde cualquier red).
     DATABASES = {

@@ -157,7 +157,6 @@ class Comercio(models.Model):
         null=True,
         blank=True,
         related_name="+",           # sin relación inversa (no se usa desde Cliente)
-        db_column="id_datos_cliente",
     )  # id_datos_cliente del diagrama
 
     class Meta:
@@ -205,19 +204,16 @@ class Paquete(models.Model):
         null=True,
         blank=True,
         related_name="paquetes",
-        db_column="id_repartidor_asignado",
     )  # id_repartidor_asignado (opcional: el paquete puede no estar asignado aún)
     comercio = models.ForeignKey(
         Comercio,
         on_delete=models.PROTECT,   # no se puede borrar un comercio con paquetes
         related_name="paquetes",
-        db_column="id_comercio",
     )  # id_comercio
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,   # no se puede borrar un cliente con paquetes
         related_name="paquetes",
-        db_column="id_datos_cliente",
     )  # id_datos_cliente
     comprobante = models.OneToOneField(
         "Comprobante",
@@ -225,7 +221,6 @@ class Paquete(models.Model):
         null=True,
         blank=True,
         related_name="paquete",
-        db_column="id_comprobante",
     )  # id_comprobante (?>? uno a uno: se carga cuando se entrega)
     tamanio = models.CharField(
         max_length=255,
@@ -272,10 +267,8 @@ class Comprobante(models.Model):
 
     archivo = models.FileField(
         upload_to="comprobantes/%Y/%m/",  # guarda en media/comprobantes/2026/10/...
-        max_length=255,
         null=True,
         blank=True,
-        db_column="file",
     )  # file del diagrama
 
     class Meta:

@@ -3,7 +3,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Repartidor
+from core.models import Cliente, Comercio, Paquete, Repartidor
 
 
 class DashboardRepartidoresTests(TestCase):
@@ -122,3 +122,34 @@ class DashboardRepartidoresTests(TestCase):
 
         data = response.json()
         self.assertEqual(data["error"], "Método no permitido.")
+
+    def test_incluye_ids_de_paquetes_asignados(self):
+        """
+        Comprueba que listado_id_pedidos_asignados devuelva los IDs
+        de los paquetes vinculados al repartidor activo.
+        """
+        comercio = Comercio.objects.create(
+            nombre="Comercio Norte",
+            telefono="2214440000",
+            direccion="Calle 7 1234",
+        )
+        cliente = Cliente.objects.create(
+            telefono="2214441111",
+            direccion="Calle 50 567",
+            dni=34567890,
+            comercio=comercio,
+        )
+        paquete = Paquete.objects.create(
+            repartidor=self.repartidor_activo,
+            comercio=comercio,
+            cliente=cliente,
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        repartidor = response.json()["repartidores"][0]
+        self.assertEqual(
+            repartidor["listado_id_pedidos_asignados"],
+            [paquete.id],
+        )

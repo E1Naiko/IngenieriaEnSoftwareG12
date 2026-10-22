@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
             name='Comprobante',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('archivo', models.FileField(blank=True, db_column='file', max_length=255, null=True, upload_to='comprobantes/%Y/%m/')),
+                ('archivo', models.FileField(blank=True, null=True, upload_to='comprobantes/%Y/%m/')),
             ],
             options={
                 'verbose_name': 'comprobante',
@@ -64,7 +64,7 @@ class Migration(migrations.Migration):
                 ('nombre', models.CharField(max_length=255)),
                 ('telefono', models.CharField(max_length=255)),
                 ('direccion', models.CharField(max_length=255)),
-                ('datos_cliente', models.ForeignKey(blank=True, db_column='id_datos_cliente', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='core.cliente')),
+                ('datos_cliente', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='core.cliente')),
             ],
             options={
                 'verbose_name': 'comercio',
@@ -84,10 +84,10 @@ class Migration(migrations.Migration):
                 ('estado', models.CharField(choices=[('pendiente', 'Pendiente'), ('en_camino', 'En camino'), ('entregado', 'Entregado'), ('cancelado', 'Cancelado')], default='pendiente', max_length=255)),
                 ('tamanio', models.CharField(choices=[('chico', 'Chico'), ('mediano', 'Mediano'), ('grande', 'Grande')], default='chico', max_length=255)),
                 ('cod_seguimiento', models.CharField(editable=False, help_text='Código autogenerado (SRFR-XXXXXXXX) para seguir la entrega.', max_length=255, unique=True)),
-                ('cliente', models.ForeignKey(db_column='id_datos_cliente', on_delete=django.db.models.deletion.PROTECT, related_name='paquetes', to='core.cliente')),
-                ('comercio', models.ForeignKey(db_column='id_comercio', on_delete=django.db.models.deletion.PROTECT, related_name='paquetes', to='core.comercio')),
-                ('comprobante', models.OneToOneField(blank=True, db_column='id_comprobante', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paquete', to='core.comprobante')),
-                ('repartidor', models.ForeignKey(blank=True, db_column='id_repartidor_asignado', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paquetes', to='core.repartidor')),
+                ('cliente', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='paquetes', to='core.cliente')),
+                ('comercio', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='paquetes', to='core.comercio')),
+                ('comprobante', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paquete', to='core.comprobante')),
+                ('repartidor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='paquetes', to='core.repartidor')),
             ],
             options={
                 'verbose_name': 'paquete',
