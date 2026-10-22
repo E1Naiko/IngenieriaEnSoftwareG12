@@ -12,7 +12,7 @@ Info/       → documentación del dominio y del esquema de datos
 ```
 
 ## Arranque rápido
-
+#Backend
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
@@ -20,6 +20,12 @@ pip install -r requirements.txt
 cp .env.example .env          # completar con credenciales de Supabase
 python manage.py migrate
 python manage.py runserver
+```
+#Frontend
+```bash
+cd frontend
+npm install #Instalar todas las dependencias necesarias para que npm pueda ejecutar el front-end correctamente
+npm run dev
 ```
 
 Instrucciones completas en [backend/README.md](backend/README.md).
