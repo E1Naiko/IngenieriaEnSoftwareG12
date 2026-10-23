@@ -22,7 +22,7 @@ function Flota() {
     setError("");
 
     try {
-      const res = await fetch("/api/flota/");
+      const res = await fetch("/api/dashboard/repartidores_disponibles/");
       if (!res.ok) {
         throw new Error("No se pudo cargar la flota");
       }
