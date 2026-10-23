@@ -1,0 +1,30 @@
+"""Tests de la HU #9: login del repartidor"""
+
+from django.test import TestCase
+from django.urls import reverse
+from core.models import Repartidor
+
+
+class LoginRepartidorTests(TestCase):
+    def setUp(self):
+        self.url = reverse("login-repartidor")
+        # El token se genera solo al crear el repartidor
+        self.repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=11111111,
+            telefono="123", mail="ana@mail.com",
+        )
+
+    def _post(self, payload):
+        return self.client.post(
+            self.url, data=json.dumps(payload), content_type="application/json"
+        )
+
+    def test_escenario_1_login_exitoso(self):
+        r = self._post({"token": self.repartidor.token})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["id"], self.repartidor.id)
+
+    def test_escenario_2_token_invalido(self):
+        r = self._post({"token": "ZZZZ"})
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.json()["message"], "token invalido")
