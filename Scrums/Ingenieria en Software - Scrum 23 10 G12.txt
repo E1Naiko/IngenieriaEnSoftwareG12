@@ -1,0 +1,40 @@
+Marcos:
+Objetivo: #37 Ingresar pedido
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: El ingreso de fecha y hora de un pedido puede ser asignado automaticamente o por el coordinador, planteamos que sea ingresado por coordinador, a su vez para simplificar la implementacion de la HU se decidio quitar el vinculo entre comercio y cliente en el modelo.
+
+Valen:
+Objetivo: #37 Ingresar pedido
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: El ingreso de fecha y hora de un pedido puede ser asignado automaticamente o por el coordinador, planteamos que sea ingresado por coordinador, a su vez para simplificar la implementacion de la HU se decidio quitar el vinculo entre comercio y cliente en el modelo.
+
+Giula:
+Objetivo: #9 Inicio de sesión vía token y #25 Dar de alta a un repartidor
+Estado: Esperando correccion de HU#9 y comenzando a desarrollar la HU#25.
+Complicaciones: Falta el estado "BAJA" en la tabla de repartidores de la db
+
+Herlan:
+Objetivo: #9 Inicio de sesión vía token y #25 Dar de alta a un repartidor
+Estado: Esperando correccion de HU#9 y comenzando a desarrollar la HU#25.
+Complicaciones: Falta el estado "BAJA" en la tabla de repartidores de la db
+
+Jose:
+Objetivo: #34 Actualizar Estados del envío
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Nunca publico la branch al git, y los cambios quedaron "en otra maquina".
+
+Luciano:
+Objetivo: #40 Visualizar panel de paquetes en curso
+Estado: #33 terminada y comenzando a desarrollar la HU#40.
+Complicaciones: Falta terminar la UX UI.
+
+Nicolás: 
+Objetivo: #40 Visualizar panel de paquetes en curso
+Estado: Corrigiendo la DB (se decidio quitar campos de comercio y de cliente), implementando la db para desarrollo y terminando la HU#33.
+Complicaciones: el URL de la HU#33 esta mal formateado, es "repartidores_disponibles" y deberia ser "repartidores-disponibles"
+
+Bloqueos Identificados:
+ - Decidimos quitar el vinculo entre Cliente y Comercio desde la base de datos, hay que actualizar el modelado.
+ - Falta el estado "BAJA" en la tabla de repartidores.
+ - Falta una DB para desarrollo.
+ - Falta mejorar las UX UI.
