@@ -1,4 +1,4 @@
-
+import loginImage from "../../assets/logo.png.jpeg";   
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
@@ -8,8 +8,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  
+  const [loggedIn, setLoggedIn] = useState(false);  
   const navigate = useNavigate();
   
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -20,7 +19,7 @@ function Login() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/login/",
+        "http://127.0.0.1:8000/api/login-coordinador/",
         {
           method: "POST",
           headers: {
@@ -56,54 +55,62 @@ function Login() {
 
   return (
     <main className="login-container">
-      <form className="login-card" onSubmit={handleLogin}>
-        <h1>{loggedIn ? "¡Bienvenido!" : "Iniciar sesión"}</h1>
+      <div className="login-wrapper">
+        {/* Panel con la imagen al costado */}
+        <div className="login-image-panel">
+          <img src={loginImage} alt="ApexCode" className="login-image-side" />
+        </div>
 
-        {loggedIn ? (
-          <>
-            <p>{message}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setLoggedIn(false);
-                setUsername("");
-                setPassword("");
-                setMessage("");
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </>
-        ) : (
-          <>
-            <label htmlFor="username">Usuario</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Ingresá tu usuario"
-              required
-            />
+        {/* Panel del formulario */}
+        <form className="login-card" onSubmit={handleLogin}>
+          <h1>{loggedIn ? "¡Bienvenido!" : "Iniciar sesión"}</h1>
 
-            <label htmlFor="password">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Ingresá tu contraseña"
-              required
-            />
+          {loggedIn ? (
+            <>
+              <p>{message}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoggedIn(false);
+                  setUsername("");
+                  setPassword("");
+                  setMessage("");
+                }}
+              >
+                Cerrar sesión
+              </button>
+            </>
+          ) : (
+            <>
+              <label htmlFor="username">Usuario</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Ingresá tu usuario"
+                required
+              />
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Conectando..." : "Ingresar"}
-            </button>
+              <label htmlFor="password">Contraseña</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Ingresá tu contraseña"
+                required
+              />
 
-            {message && <p className="error-message">{message}</p>}
-          </>
-        )}
-      </form>
+              <button type="submit" disabled={loading}>
+                {loading ? "Conectando..." : "Ingresar"}
+              </button>
+
+              {message && <p className="error-message">{message}</p>}
+            </>
+          )}
+        </form>
+      </div>
     </main>
   );
 }
