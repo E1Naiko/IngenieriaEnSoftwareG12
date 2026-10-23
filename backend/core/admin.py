@@ -31,15 +31,14 @@ class ComercioAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    """Clientes (destinatarios). Ya no dependen de un comercio: se ve
-    con qué paquetes se los relaciona."""
+    """Clientes (destinatarios): contacto y dirección de entrega."""
 
     list_display = ("dni", "telefono", "direccion", "paquetes_asociados")
     search_fields = ("dni", "direccion", "telefono")
 
     @admin.display(description="Paquetes")
     def paquetes_asociados(self, obj):
-        """Cantidad de paquetes que apuntan a este cliente."""
+        """Cuántos paquetes apuntan a este cliente (FK `paquete.id_datos_cliente`)."""
         return obj.paquetes.count()
 
 
@@ -69,5 +68,7 @@ class PaqueteAdmin(admin.ModelAdmin):
 class ComprobanteAdmin(admin.ModelAdmin):
     """Comprobantes de entrega (foto/PDF)."""
 
-    list_display = ("id", "archivo", "paquete")
+    # `file` es la columna del diagrama; se muestra la ruta relativa guardada.
+    list_display = ("id", "file", "paquete")
     search_fields = ("id",)
+

@@ -122,10 +122,9 @@ Definido en `core/models.py`:
 
 Meta: `db_table = "comercio"`, `ordering = ["nombre"]`.
 
-> **Comercio ↔ cliente:** desde el cambio de esquema del 23/10 **no hay FK directa** entre
-> `comercio` y `cliente` (salieron `comercio.id_datos_cliente` y `cliente.id_comercio`), lo que
-> eliminó el deadlock de FK circulares que obligaba a crear los registros en un orden especial.
-> El vínculo se infiere por `Paquete`, que apunta a ambos. Ver `Info/DB.md` y
+> **Comercio ↔ cliente:** no hay FK entre las dos tablas, así que el CRUD no valida FK ni
+> necesita importar `Cliente`: un comercio se crea con sus tres datos, en cualquier orden.
+> El par comercio-cliente solo convive en `Paquete`, que apunta a ambos. Ver `Info/DB.md` y
 > `backend/crudComercios/README.md §7`.
 
 ### 3.4. Endpoints REST
@@ -139,7 +138,7 @@ Prefijo global `/api/` definido en `config/urls.py`.
 | 3 | `GET` | `/api/comercios/<id>/` | `comercio_detail` | **Read** (detalle) | Devuelve uno por PK |
 | 4 | `PUT` | `/api/comercios/<id>/` | `comercio_detail` | **Update** (total) | Reemplaza: exige `nombre`, `telefono`, `direccion` |
 | 5 | `PATCH` | `/api/comercios/<id>/` | `comercio_detail` | **Update** (parcial) | Solo valida los campos enviados |
-| 6 | `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | **Delete** | Borra |
+| 6 | `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | **Delete** | Borra → `204` sin body |
 
 > Nota: las rutas Django se definen como `comercios/<int:pk>/`; en la tabla se usa `<id>` como alias genérico del PK.
 

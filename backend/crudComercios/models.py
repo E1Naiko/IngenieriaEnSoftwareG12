@@ -9,9 +9,9 @@ Razones para no duplicar el modelo aquí:
 
 1. **Fuente única de verdad**: una sola clase = una sola tabla = una sola
    migración. Duplicar generaría dos tablas o conflictos de ``db_table``.
-2. **Comercio ↔ cliente**: el vínculo directo se borró del esquema (el
-   diagrama ya no tiene ``comercio.id_datos_cliente`` ni ``cliente.id_comercio``);
-   la relación se infiere por ``Paquete``. Ver ``Info/DB.md``.
+2. **Comercio ↔ cliente**: no hay FK directa entre las dos tablas; el par
+   solo convive en ``Paquete``. Esa regla vive en ``core`` y se prueba ahí.
+   Ver ``Info/DB.md``.
 3. **Admin centralizado**: ``core.admin.ComercioAdmin`` ya registra el modelo.
 
 Si se necesita lógica exclusiva del CRUD (managers, querysets), crear

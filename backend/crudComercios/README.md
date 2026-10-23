@@ -72,7 +72,8 @@ Definido en `core/models.py`:
 | `telefono` | `CharField(255)` | Obligatorio |
 | `direccion` | `CharField(255)` | Obligatorio |
 
-> El modelo **no** tiene más campos: el vínculo con `Cliente` salió del diagrama (ver § 7).
+> No hay más campos ni FK en el modelo: `comercio` es una tabla de tres datos.
+> Cómo se relaciona con `Cliente` → § 7.
 
 ```python
 from core.models import Comercio
@@ -97,7 +98,7 @@ Prefijo global: `/api/` (definido en `config/urls.py`).
 | `GET` | `/api/comercios/<id>/` | `comercio_detail` | Detalle |
 | `PUT` | `/api/comercios/<id>/` | `comercio_detail` | Reemplazo total (todos los campos obligatorios) |
 | `PATCH` | `/api/comercios/<id>/` | `comercio_detail` | Actualización parcial (solo lo enviado) |
-| `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | Borrado |
+| `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | Borrado → `204` **sin body** |
 
 > Nota: en `crudComercios/urls.py` las rutas se definen como `comercios/<int:pk>/`; en la documentación se usa `<id>` como alias genérico.
 
@@ -116,8 +117,8 @@ Prefijo global: `/api/` (definido en `config/urls.py`).
 }
 ```
 
-Son las **únicas** claves del contrato. `datos_cliente` ya no existe (ver § 7) y, si un
-cliente lo sigue enviando, se ignora en silencio — la API nunca rechazó campos extra.
+Son las **únicas** cuatro claves, sin objetos anidados ni consultas extra por fila.
+Cualquier otra clave que envíe el llamador se ignora en silencio (ver § 6).
 
 **Listado:**
 
@@ -159,7 +160,7 @@ Implementadas en `_validar_y_aplicar(comercio, data, parcial)`:
 | `telefono` | idem | 400 `{"telefono": ...}` |
 | `direccion` | idem | 400 `{"direccion": ...}` |
 
-Claves desconocidas (incluido el `datos_cliente` del esquema viejo) se ignoran.
+Cualquier clave que no sea una columna del modelo se ignora: no se guarda y no devuelve `400`.
 
 - `PUT` exige los tres campos; `PATCH` solo valida los presentes.
 - Todos los valores se guardan con `strip()` para evitar espacios accidentales.
@@ -168,28 +169,23 @@ Claves desconocidas (incluido el `datos_cliente` del esquema viejo) se ignoran.
 
 ---
 
-## 7. Comercio ↔ cliente: ya no hay FK directa
+## 7. Comercio y cliente: dos tablas independientes
 
-Hasta el 20/10 el diagrama tenía `comercio.id_datos_cliente → cliente` y
-`cliente.id_comercio → comercio`. Como ambos eran `NOT NULL`, nadie podía
-crearse primero (deadlock de FK) y el proyecto lo había resuelto con un
-`datos_cliente` **nullable**.
+`comercio` no referencia a `cliente` ni al revés: no hay ninguna FK entre las
+dos tablas. Por eso el CRUD es tan simple: no valida FK, no importa `Cliente`
+y un comercio se da de alta con sus tres datos, en cualquier orden.
 
-**Scrum 23/10 (HU #37 "Ingresar pedido"): se quitó el vínculo de la base.**
-Los modelos ya no tienen ninguna de las dos FK, así que:
-
-- Un comercio y un cliente se crean de forma independiente y en cualquier orden.
-- Qué clientes atiende un comercio (y viceversa) se infiere por `Paquete`,
-  que guarda `id_comercio` e `id_datos_cliente`:
+El par comercio ↔ cliente solo convive dentro de un `Paquete`, que guarda
+`id_comercio` e `id_datos_cliente` al ingresarse el pedido (HU #37). Se consulta así:
 
 ```python
 Paquete.objects.filter(comercio=comercio, cliente=cliente)   # pedidos de ese par
 cliente.paquetes.values_list("comercio__nombre", flat=True)  # comercios del cliente
 ```
 
-El endpoint `/api/comercios/` por lo tanto serializa y valida solo
-`nombre`, `telefono` y `direccion`. El campo `datos_cliente` se sigue
-ignorando si llega, para no romper llamadores viejos.
+El endpoint expone exactamente lo que hay en la tabla: `nombre`, `telefono` y
+`direccion` además del `id`. Agregar un campo implica tocar `core/models.py`,
+generar su migración, `_comercio_to_dict()` y `_validar_y_aplicar()`.
 
 ---
 
@@ -229,9 +225,8 @@ Suite de integración con `django.test.TestCase` (`ComercioAPITests`):
 | `test_actualizar_patch` | `PATCH` parcial mantiene no enviados |
 | `test_borrar` | `DELETE` → 204 y borra |
 | `test_filtro_q` | `GET ?q=Otro` filtra por `nombre` |
-| `test_sin_datos_cliente_en_el_contrato` | la respuesta trae solo las 4 claves del esquema nuevo |
-| `test_datos_cliente_se_ignora` | `PATCH {datos_cliente: ...}` no rompe: se ignora |
-| `test_cliente_se_crea_sin_comercio` | `Cliente` se da de alto sin comercio (FK eliminada) |
+| `test_contrato_cuatro_claves` | la respuesta trae `id`, `nombre`, `telefono`, `direccion` y nada más |
+| `test_clave_desconocida_se_ignora` | una clave que el modelo no tiene no rompe ni se guarda |
 
 Ejecutar:
 
@@ -256,8 +251,8 @@ PUT    /api/comercios/<id>/     → guardar edición
 DELETE /api/comercios/<id>/     → botón Eliminar
 ```
 
-El form envía `{nombre, telefono, direccion}` con `Content-Type: application/json`
-(salen las claves del vínculo con cliente que existía antes del cambio de esquema).
+El form envía las tres claves del modelo —`{nombre, telefono, direccion}`— con
+`Content-Type: application/json`; el `id` lo asigna la base.
 
 Si el backend devuelve `4xx/5xx`, la UI muestra `JSON.stringify(data)` en rojo.
 
