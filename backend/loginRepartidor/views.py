@@ -9,6 +9,9 @@ from core.models import Repartidor
 
 #Mensaje que pide la HU para el escenario 2
 MSG_TOKEN_INVALIDO = "Token inválido"
+MSG_REPARTIDOR_BAJA = (
+    "El repartidor no se encuentra habilitado. Comuníquese con el coordinador"
+)
 
 @csrf_exempt  # antes de iniciar sesión el front no tiene token CSRF
 @require_POST  # cualquier otro método responde 405
@@ -29,7 +32,11 @@ def login_repartidor(request):
         repartidor = Repartidor.objects.get(token=token)
     except Repartidor.DoesNotExist:
         return JsonResponse({"message": MSG_TOKEN_INVALIDO}, status=404)
-                    
+
+
+    """# Escenario 3: el repartidor fue dado de baja por el coordinador
+    if repartidor.estado == "baja":
+        return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)"""
 
     #Si el token existe devuelve todos los datos el repartidor
     return JsonResponse(                                                 

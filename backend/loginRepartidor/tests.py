@@ -4,6 +4,11 @@ from django.test import TestCase
 from django.urls import reverse
 from core.models import Repartidor
 
+MSG_TOKEN_INVALIDO = "Token inválido"
+MSG_REPARTIDOR_BAJA = (
+    "El repartidor no se encuentra habilitado. Comuníquese con el coordinador"
+)
+
 
 class LoginRepartidorTests(TestCase):
     def setUp(self):
@@ -27,4 +32,13 @@ class LoginRepartidorTests(TestCase):
     def test_escenario_2_token_invalido(self):
         r = self._post({"token": "ZZZZ"})
         self.assertEqual(r.status_code, 404)
-        self.assertEqual(r.json()["message"], "Token inválido")
+        self.assertEqual(r.json()["message"], MSG_TOKEN_INVALIDO )
+
+
+"""
+    def test_escenario_3_repartidor_dado_de_baja(self):
+        self.repartidor.estado = "baja"
+        self.repartidor.save()
+        r = self._post({"token": self.repartidor.token})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["message"], MSG_REPARTIDOR_BAJA)"""
