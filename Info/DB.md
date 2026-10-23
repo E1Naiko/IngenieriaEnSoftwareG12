@@ -8,11 +8,11 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
 | Modelo | Descripción |
 |---|---|
-| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
-| `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
-| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
+| `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
+| `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
+| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
 | `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
-| `Comprobante` | Archivo (foto/PDF) de la entrega. `file` es opcional según el diagrama. |
+| `Comprobante` | Archivo (foto/PDF) de la entrega. La columna se llama `file`, como en el diagrama, y es opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ## Puesta en marcha
 
@@ -56,11 +56,14 @@ python manage.py runserver
 Entrar a http://127.0.0.1:8000/admin/ con el superusuario y ya se pueden
 cargar repartidores, comercios, clientes y paquetes.
 
-> **OJO**: si ya habías corrido `migrate` con el esquema anterior, borra tu
-> `db.sqlite3` local (o dropeá el schema `public` en Supabase) y volvé a
-> correr `migrate`: la estructura cambió y las migraciones se regeneraron.
+> **La base de cada uno tiene que estar al día con `core/migrations/`**:
+> corré `python manage.py migrate` antes de programar y `python manage.py
+> revisar_db` para comprobar que las tablas coinciden con los modelos. Las
+> migraciones de `core` son incrementales y no borran datos, así que no hace
+> falta dropear tablas al actualizar.
 >
-> Si `migrate` falla con `relation "cliente" already exists`, corré primero
+> Si `migrate` falla con `relation "cliente" already exists` (base creada a
+> mano o con las migraciones anteriores borradas), corré primero
 > `python manage.py revisar_db`: compara las tablas existentes con los
 > modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice qué
 > hacer. Si las tablas de `core` están vacías, alcanza con
@@ -77,11 +80,17 @@ cargar repartidores, comercios, clientes y paquetes.
   conveniencia existe la property `listado_id_pedidos_asignados`.
 - `repartidor.historial_asociado` → mismo criterio: property que devuelve los
   paquetes en estado `entregado` (`repartidor.paquetes.filter(...)`).
-- **Ciclo comercio ↔ cliente**: el diagrama pide `comercio.id_datos_cliente`
-  y `cliente.id_comercio` ambos `not null`, pero eso hace imposible insertar
-  el primer registro (cada tabla necesita a la otra). Se resolvió dejando
-  `comercio.id_datos_cliente` **nullable**: se crea comercio → cliente → se
-  linkea. Es el único desvío respecto al diagrama.
+- **Comercio y cliente son tablas independientes**: no hay FK entre ellas, así
+  que cada una se da de alta sola, en cualquier orden. El par comercio ↔
+  cliente solo existe dentro de un `Paquete`, que apunta a ambos, y ahí se
+  consulta: `Paquete.objects.filter(comercio=c, cliente=k)` (o
+  `cliente.paquetes.all()`). Es la forma más simple de modelar "quién le
+  despacha a quién" sin atar las dos tablas (HU #37, Ingresar pedido).
+- `repartidor.estado` → `activo` / `inactivo` / `baja`. El diagrama deja
+  `estado varchar(255)` sin enumerar valores; los tres son los que usa el
+  sistema (`baja` es la baja definitiva de la HU #25). Django valida los
+  `choices` en los formularios, no en la base, así que la BD acepta cualquier
+  varchar(255).
 - `paquete ?<>? repartidor` → FK `paquete.repartidor` opcional
   (`SET_NULL`): un paquete tiene a lo sumo un repartidor; un repartidor,
   muchos paquetes.
@@ -98,8 +107,9 @@ cargar repartidores, comercios, clientes y paquetes.
   agregan fácil en `backend/core/models.py`.
 - Nombres de **columnas** en `snake_case` (convención Django): el
   `tipoVehiculo` del diagrama es `tipo_vehiculo`, `codSeguimiento` es
-  `cod_seguimiento`, etc. Las tablas conservan el nombre del diagrama vía
-  `Meta.db_table`.
+  `cod_seguimiento`, etc. La única excepción es `comprobante.file`, que se
+  escribe igual que en el diagrama. Las tablas conservan el nombre del
+  diagrama vía `Meta.db_table`.
 
 ## Comandos útiles
 

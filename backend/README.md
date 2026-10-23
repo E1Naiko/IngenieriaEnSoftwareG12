@@ -169,10 +169,23 @@ python manage.py createsuperuser   # el usuario de /admin se borró
 
 ## CORS (frontend React)
 
-El frontend puede llamar a la API sin tocar nada si corre en
-`http://localhost:5173` (Vite) o `http://localhost:3000` (CRA), ya que con
-`DEBUG=True` se acepta cualquier origen. Para restringirlo, completar
-`CORS_ALLOWED_ORIGINS` en el `.env`.
+Con `DEBUG=True` y `CORS_ALLOWED_ORIGINS` vacío en el `.env`, Django acepta
+cualquier origen: alcanza para llamar la API desde Vite, desde la IP de la
+red de un compañero o desde un túnel, sin configurar nada.
+
+Si el front usa rutas relativas (`/api/...`, como hace este proyecto), las
+llamadas las proxifica Vite (`server.proxy` en `vite.config.ts`) y son
+**mismo origen**: ni siquiera interviene CORS. La allowlist solo importa
+cuando alguien llama a `http://127.0.0.1:8000/...` directamente.
+
+Para producción (`DEBUG=False`): listar en el `.env` el dominio del frontend,
+separado por coma:
+
+```
+CORS_ALLOWED_ORIGINS=https://mi-front.vercel.app,https://www.mi-front.com
+```
+
+Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 
 ## Variables del `.env`
 
