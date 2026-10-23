@@ -24,7 +24,7 @@ function LoginRepartidor() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_URL}/login-repartidores/`, {
+      const response = await fetch(`${API_URL}/login-repartidor/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
