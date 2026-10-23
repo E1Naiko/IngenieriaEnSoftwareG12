@@ -30,7 +30,7 @@ crudComercios/
 ├── views.py           # toda la lógica del CRUD (2 vistas + 3 helpers)
 ├── urls.py            # 2 rutas REST
 ├── admin.py           # sin registro propio (Comercio se administra en core)
-├── tests.py           # 10 tests de integración sobre la API
+├── tests.py           # 12 tests de integración sobre la API
 ├── migrations/        # vacío (sin modelos propios no hay migraciones)
 └── README.md          # este archivo
 ```
@@ -39,7 +39,6 @@ crudComercios/
 
 ```
 crudComercios.views  →  core.models.Comercio
-                     →  core.models.Cliente   (solo para validar FK datos_cliente)
 config/urls.py       →  crudComercios.urls    (include bajo /api/)
 ```
 
@@ -72,7 +71,8 @@ Definido en `core/models.py`:
 | `nombre` | `CharField(255)` | Obligatorio |
 | `telefono` | `CharField(255)` | Obligatorio |
 | `direccion` | `CharField(255)` | Obligatorio |
-| `datos_cliente` | `FK → Cliente` | **Opcional** (`null=True`, `SET_NULL`, `related_name="+"`). Ver § 7 sobre el ciclo |
+
+> El modelo **no** tiene más campos: el vínculo con `Cliente` salió del diagrama (ver § 7).
 
 ```python
 from core.models import Comercio
@@ -112,12 +112,12 @@ Prefijo global: `/api/` (definido en `config/urls.py`).
   "id": 1,
   "nombre": "Kiosco Central",
   "telefono": "221-555-0100",
-  "direccion": "Calle 7 #123, La Plata",
-  "datos_cliente": 4
+  "direccion": "Calle 7 #123, La Plata"
 }
 ```
 
-`datos_cliente` es el **ID** del `Cliente` vinculado o `null` si no hay.
+Son las **únicas** claves del contrato. `datos_cliente` ya no existe (ver § 7) y, si un
+cliente lo sigue enviando, se ignora en silencio — la API nunca rechazó campos extra.
 
 **Listado:**
 
@@ -132,7 +132,6 @@ Prefijo global: `/api/` (definido en `config/urls.py`).
 
 ```json
 { "nombre": "El nombre es obligatorio." }
-{ "datos_cliente": "Cliente no encontrado." }
 { "detail": "El cuerpo debe ser JSON válido." }
 ```
 
@@ -159,7 +158,8 @@ Implementadas en `_validar_y_aplicar(comercio, data, parcial)`:
 | `nombre` | `str` no vacío (tras `strip()`). Obligatorio si `parcial=False` (POST/PUT) | 400 `{"nombre": ...}` |
 | `telefono` | idem | 400 `{"telefono": ...}` |
 | `direccion` | idem | 400 `{"direccion": ...}` |
-| `datos_cliente` | `null`, `""` → `None`. Entero → debe existir `Cliente` con ese PK | 400 `{"datos_cliente": ...}` |
+
+Claves desconocidas (incluido el `datos_cliente` del esquema viejo) se ignoran.
 
 - `PUT` exige los tres campos; `PATCH` solo valida los presentes.
 - Todos los valores se guardan con `strip()` para evitar espacios accidentales.
@@ -168,22 +168,28 @@ Implementadas en `_validar_y_aplicar(comercio, data, parcial)`:
 
 ---
 
-## 7. FK `datos_cliente` y el ciclo `comercio ↔ cliente`
+## 7. Comercio ↔ cliente: ya no hay FK directa
 
-El diagrama exige `comercio.id_datos_cliente → cliente` y `cliente.id_comercio → comercio`.
-Si ambos fueran `NOT NULL` nadie podría crearse primero (deadlock de FK).
+Hasta el 20/10 el diagrama tenía `comercio.id_datos_cliente → cliente` y
+`cliente.id_comercio → comercio`. Como ambos eran `NOT NULL`, nadie podía
+crearse primero (deadlock de FK) y el proyecto lo había resuelto con un
+`datos_cliente` **nullable**.
 
-Decisión del proyecto (`Info/DB.md`): `Comercio.datos_cliente` es **nullable**.
+**Scrum 23/10 (HU #37 "Ingresar pedido"): se quitó el vínculo de la base.**
+Los modelos ya no tienen ninguna de las dos FK, así que:
 
-Flujo válido:
+- Un comercio y un cliente se crean de forma independiente y en cualquier orden.
+- Qué clientes atiende un comercio (y viceversa) se infiere por `Paquete`,
+  que guarda `id_comercio` e `id_datos_cliente`:
 
+```python
+Paquete.objects.filter(comercio=comercio, cliente=cliente)   # pedidos de ese par
+cliente.paquetes.values_list("comercio__nombre", flat=True)  # comercios del cliente
 ```
-1. POST /api/comercios/  {nombre, telefono, direccion}          → crea comercio sin cliente
-2. Crear Cliente con comercio=<id>  (vía admin o API de clientes)
-3. PATCH /api/comercios/<id>/ {datos_cliente: <cliente_id>}     → linkea
-```
 
-Enviar `{"datos_cliente": null}` o `{"datos_cliente": ""}` desvincula.
+El endpoint `/api/comercios/` por lo tanto serializa y valida solo
+`nombre`, `telefono` y `direccion`. El campo `datos_cliente` se sigue
+ignorando si llega, para no romper llamadores viejos.
 
 ---
 
@@ -192,7 +198,7 @@ Enviar `{"datos_cliente": null}` o `{"datos_cliente": ""}` desvincula.
 | Función | Firma | Rol |
 |---|---|---|
 | `_parse_body(request)` | `Request → dict \| None` | Decodifica `request.body` como UTF-8 JSON. Devuelve `{}` si vacío, `None` si inválido/no-dict |
-| `_comercio_to_dict(comercio)` | `Comercio → dict` | Serializa a JSON (expone `datos_cliente_id`, no el objeto) |
+| `_comercio_to_dict(comercio)` | `Comercio → dict` | Serializa a JSON (`id`, `nombre`, `telefono`, `direccion`) |
 | `_validar_y_aplicar(comercio, data, parcial)` | `(Comercio, dict, bool) → (bool, JsonResponse\|None)` | Valida y muta **en memoria** el objeto; no guarda. Devuelve `(True, None)` o `(False, error_response)` |
 
 Las vistas solo llaman a `comercio.save()` / `comercio.delete()` si la validación pasó.
@@ -223,7 +229,9 @@ Suite de integración con `django.test.TestCase` (`ComercioAPITests`):
 | `test_actualizar_patch` | `PATCH` parcial mantiene no enviados |
 | `test_borrar` | `DELETE` → 204 y borra |
 | `test_filtro_q` | `GET ?q=Otro` filtra por `nombre` |
-| `test_datos_cliente_fk` | `PATCH {datos_cliente: id}` linkea Cliente |
+| `test_sin_datos_cliente_en_el_contrato` | la respuesta trae solo las 4 claves del esquema nuevo |
+| `test_datos_cliente_se_ignora` | `PATCH {datos_cliente: ...}` no rompe: se ignora |
+| `test_cliente_se_crea_sin_comercio` | `Cliente` se da de alto sin comercio (FK eliminada) |
 
 Ejecutar:
 
@@ -248,8 +256,8 @@ PUT    /api/comercios/<id>/     → guardar edición
 DELETE /api/comercios/<id>/     → botón Eliminar
 ```
 
-El form envía `{nombre, telefono, direccion, datos_cliente}` con `Content-Type: application/json`.
-`datos_cliente` se envía como `number | null` (el input opcional se convierte con `Number()`).
+El form envía `{nombre, telefono, direccion}` con `Content-Type: application/json`
+(salen las claves del vínculo con cliente que existía antes del cambio de esquema).
 
 Si el backend devuelve `4xx/5xx`, la UI muestra `JSON.stringify(data)` en rojo.
 
@@ -277,10 +285,10 @@ curl -s -X PUT http://127.0.0.1:8000/api/comercios/1/ \
   -H "Content-Type: application/json" \
   -d '{"nombre":"Kiosco Editado","telefono":"221-999-0000","direccion":"Calle 8 #456"}' | jq
 
-# PATCH (parcial + link cliente)
+# PATCH (parcial)
 curl -s -X PATCH http://127.0.0.1:8000/api/comercios/1/ \
   -H "Content-Type: application/json" \
-  -d '{"datos_cliente": 3}' | jq
+  -d '{"telefono": "221-999-0000"}' | jq
 
 # DELETE
 curl -s -X DELETE http://127.0.0.1:8000/api/comercios/1/ -i

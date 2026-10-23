@@ -31,11 +31,17 @@ class ComercioAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    """Clientes (destinatarios), filtrables por su comercio."""
+    """Clientes (destinatarios). Ya no dependen de un comercio: se ve
+    con qué paquetes se los relaciona."""
 
-    list_display = ("dni", "telefono", "direccion", "comercio")
-    list_filter = ("comercio",)
-    search_fields = ("dni", "direccion")
+    list_display = ("dni", "telefono", "direccion", "paquetes_asociados")
+    search_fields = ("dni", "direccion", "telefono")
+
+    @admin.display(description="Paquetes")
+    def paquetes_asociados(self, obj):
+        """Cantidad de paquetes que apuntan a este cliente."""
+        return obj.paquetes.count()
+
 
 
 @admin.register(Paquete)

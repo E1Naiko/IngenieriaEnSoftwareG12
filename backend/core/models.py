@@ -6,12 +6,15 @@ el nombre exacto del diagrama (repartidor, comercio, cliente, paquete,
 comprobante) vía Meta.db_table.
 
 Relaciones del diagrama:
-- paquete.id_repartidor_asignado ?> repartidor   (muchos paquetes -> un repartidor)
+- paquete.id_repartidor_asignado ?<>? repartidor (muchos paquetes -> un repartidor, opcional)
 - paquete.id_comercio          ?> comercio       (muchos paquetes -> un comercio)
 - paquete.id_datos_cliente     ?> cliente        (muchos paquetes -> un cliente)
 - paquete.id_comprobante       ?>? comprobante   (uno a uno)
-- comercio.id_datos_cliente    ?> cliente
-- cliente.id_comercio          ?> comercio
+
+Comercio y Cliente ya NO se relacionan directamente: el diagrama quitó
+``comercio.id_datos_cliente`` y ``cliente.id_comercio`` (scrum 23/10). El
+vínculo comercio ↔ cliente se infiere a través de ``Paquete``, que apunta a
+ambos. Ver Info/DB.md.
 
 Los campos "listado_id_pedidos_asignados" e "historial_asociado" del
 diagrama NO son columnas: se resuelven con la relación inversa
@@ -45,6 +48,7 @@ class Repartidor(models.Model):
 
         ACTIVO = "activo", "Activo"
         INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"  # pedido del scrum 23/10 (HU #25)
 
     # --- Datos personales -------------------------------------------------
     nombre = models.CharField(max_length=255)
@@ -64,7 +68,7 @@ class Repartidor(models.Model):
         max_length=255,
         choices=Estado.choices,
         default=Estado.ACTIVO,
-        help_text="Situación del repartidor (activo o inactivo).",
+        help_text="Situación del repartidor (activo, inactivo o baja).",
     )
     token = models.CharField(
         max_length=6,
@@ -112,18 +116,16 @@ class Cliente(models.Model):
     Datos de contacto del destinatario de un paquete.
 
     Según el diagrama no guarda nombre/apellido: solo cómo contactarlo y
-    dónde entregarle. Cada cliente pertenece a un comercio (id_comercio)
-    y se identifica por su DNI único.
+    dónde entregarle. Se identifica por su DNI único.
+
+    Ya no pertenece a un comercio (``cliente.id_comercio`` salió del
+    diagrama): saber qué comercios atiende un cliente se consulta por los
+    paquetes (``cliente.paquetes.values_list("comercio", flat=True)``).
     """
 
     telefono = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255)  # dónde entregar los paquetes
     dni = models.PositiveIntegerField(unique=True)
-    comercio = models.ForeignKey(
-        "Comercio",
-        on_delete=models.PROTECT,   # no se puede borrar un comercio con clientes
-        related_name="clientes",
-    )  # id_comercio del diagrama
 
     class Meta:
         db_table = "cliente"        # nombre de tabla del diagrama
@@ -131,33 +133,21 @@ class Cliente(models.Model):
         ordering = ["dni"]
 
     def __str__(self):
-        return f"Cliente {self.dni} ({self.comercio})"
+        return f"Cliente {self.dni}"
 
 
 class Comercio(models.Model):
     """
     Comercio que despacha paquetes.
 
-    Del lado "envía" tiene clientes propios (cliente.id_comercio) y
-    paquetes (paquete.id_comercio). El campo ``datos_cliente``
-    (id_datos_cliente del diagrama) apunta a un cliente de contacto.
-
-    Nota sobre el ciclo del diagrama: cliente.id_comercio y
-    comercio.id_datos_cliente no pueden ser ambos obligatorios (nadie
-    podría crearse primero). Se resolvió dejando ``datos_cliente``
-    opcional: se crea comercio -> cliente -> se linkea. Ver Info/DB.md.
+    El diagrama lo dejó como tabla simple: nombre, teléfono y dirección.
+    El vínculo con los clientes pasa por ``Paquete`` (que guarda a la vez
+    ``id_comercio`` e ``id_datos_cliente``), así que acá no hay ninguna FK.
     """
 
     nombre = models.CharField(max_length=255)
     telefono = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255)
-    datos_cliente = models.ForeignKey(
-        "Cliente",
-        on_delete=models.SET_NULL,  # si se borra el cliente, no se borra el comercio
-        null=True,
-        blank=True,
-        related_name="+",           # sin relación inversa (no se usa desde Cliente)
-    )  # id_datos_cliente del diagrama
 
     class Meta:
         db_table = "comercio"       # nombre de tabla del diagrama

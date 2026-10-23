@@ -12,7 +12,8 @@ Qué se cubre
 - Detalle (200) y 404
 - PUT (reemplazo total) y PATCH (parcial)
 - DELETE (204)
-- FK opcional ``datos_cliente`` (link, desvinculación y 400 por inexistente)
+- Contrato sin el vínculo ``datos_cliente`` (borrado del esquema): la clave se
+  ignora si llega, y ``Cliente`` se crea sin comercio
 
 Ejecutar::
 
@@ -126,18 +127,32 @@ class ComercioAPITests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["count"], 1)
 
-    # --- FK datos_cliente --------------------------------------------------
+    # --- Contrato JSON (sin el vínculo con Cliente) ------------------------
 
-    def test_datos_cliente_fk(self):
-        """PATCH {datos_cliente: id} linkea un Cliente existente."""
-        cliente = Cliente.objects.create(
-            telefono="1", direccion="d", dni=12345678, comercio=self.comercio
+    def test_sin_datos_cliente_en_el_contrato(self):
+        """El comercio ya no tiene FK a Cliente: la respuesta trae solo 4 claves."""
+        resp = self.client.get(f"/api/comercios/{self.comercio.id}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            sorted(resp.json().keys()),
+            ["direccion", "id", "nombre", "telefono"],
         )
-        # link comercio -> cliente (ciclo)
+
+    def test_datos_cliente_se_ignora(self):
+        """Enviar ``datos_cliente`` (campo borrado del esquema) no rompe: se ignora."""
         resp = self.client.patch(
             f"/api/comercios/{self.comercio.id}/",
-            data={"datos_cliente": cliente.id},
+            data={"datos_cliente": 999, "telefono": "555"},
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["datos_cliente"], cliente.id)
+        self.assertNotIn("datos_cliente", resp.json())
+        self.comercio.refresh_from_db()
+        self.assertEqual(self.comercio.telefono, "555")
+        self.assertFalse(hasattr(Comercio, "datos_cliente"))
+
+    def test_cliente_se_crea_sin_comercio(self):
+        """``Cliente`` ya no exige ``comercio``: se da de alto solo."""
+        cliente = Cliente.objects.create(telefono="1", direccion="d", dni=12345678)
+        self.assertEqual(cliente.pk, Cliente.objects.get(dni=12345678).pk)
+

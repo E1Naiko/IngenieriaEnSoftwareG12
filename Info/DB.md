@@ -8,9 +8,9 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 
 | Modelo | Descripción |
 |---|---|
-| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
-| `Comercio` | Comercio que despacha. Puede referenciar un `datos_cliente` (`id_datos_cliente` del diagrama). |
-| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único), atado a un comercio (`id_comercio`). |
+| `Repartidor` | Quien entrega. Datos + `mail`, `estado` (activo/inactivo/**baja**) y `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
+| `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tabla simple: ya no referencia clientes. |
+| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
 | `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto/PDF) de la entrega. `file` es opcional según el diagrama. |
 
@@ -56,11 +56,14 @@ python manage.py runserver
 Entrar a http://127.0.0.1:8000/admin/ con el superusuario y ya se pueden
 cargar repartidores, comercios, clientes y paquetes.
 
-> **OJO**: si ya habías corrido `migrate` con el esquema anterior, borra tu
-> `db.sqlite3` local (o dropeá el schema `public` en Supabase) y volvé a
-> correr `migrate`: la estructura cambió y las migraciones se regeneraron.
+> **OJO con este cambio (23/10)**: el esquema ya no tiene el vínculo
+> comercio ↔ cliente. Si venís de una base vieja, **alcanza con correr
+> `python manage.py migrate`**: la migración `0003_quitar_vinculo_comercio_cliente_y_estado_baja`
+> borra las columnas `cliente.id_comercio` y `comercio.id_datos_cliente` y
+> agrega el estado `baja`. No se pierden datos y no hace falta dropear nada.
 >
-> Si `migrate` falla con `relation "cliente" already exists`, corré primero
+> Si `migrate` falla con `relation "cliente" already exists` (base creada a
+> mano o con las migraciones anteriores borradas), corré primero
 > `python manage.py revisar_db`: compara las tablas existentes con los
 > modelos, cuenta filas (incluidos los usuarios de `auth_user`) y te dice qué
 > hacer. Si las tablas de `core` están vacías, alcanza con
@@ -77,11 +80,17 @@ cargar repartidores, comercios, clientes y paquetes.
   conveniencia existe la property `listado_id_pedidos_asignados`.
 - `repartidor.historial_asociado` → mismo criterio: property que devuelve los
   paquetes en estado `entregado` (`repartidor.paquetes.filter(...)`).
-- **Ciclo comercio ↔ cliente**: el diagrama pide `comercio.id_datos_cliente`
-  y `cliente.id_comercio` ambos `not null`, pero eso hace imposible insertar
-  el primer registro (cada tabla necesita a la otra). Se resolvió dejando
-  `comercio.id_datos_cliente` **nullable**: se crea comercio → cliente → se
-  linkea. Es el único desvío respecto al diagrama.
+- **Comercio ↔ cliente sin vínculo directo** (decisión del scrum 23/10, para
+  simplificar la HU #37 "Ingresar pedido"): el diagrama sacó
+  `comercio.id_datos_cliente` y `cliente.id_comercio`, así que los modelos ya
+  no tienen esas FK y desapareció el deadlock de FK circulares que obligaba a
+  crear los registros en un orden especial. Qué clientes atiende un comercio
+  se consulta por `Paquete`, que apunta a ambos:
+  `Paquete.objects.filter(comercio=c, cliente=k)` (o `cliente.paquetes.all()`).
+- `repartidor.estado` → `activo` / `inactivo` / **`baja`**. El diagrama deja
+  `estado varchar(255)` sin enumerar; el valor extra lo pidió el scrum 23/10
+  para la HU #25 (dar de baja un repartidor). Django no chequea los `choices`
+  en la BD, así que no hace falta migración de datos.
 - `paquete ?<>? repartidor` → FK `paquete.repartidor` opcional
   (`SET_NULL`): un paquete tiene a lo sumo un repartidor; un repartidor,
   muchos paquetes.
