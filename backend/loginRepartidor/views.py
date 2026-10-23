@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from core.models import Repartidor 
 
 #Mensaje que pide la HU para el escenario 2
-MSG_TOKEN_INVALIDO = "token invalido"
+MSG_TOKEN_INVALIDO = "Token inválido"
 
 @csrf_exempt  # antes de iniciar sesión el front no tiene token CSRF
 @require_POST  # cualquier otro método responde 405
