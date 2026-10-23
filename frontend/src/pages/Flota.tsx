@@ -1,32 +1,37 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 
-interface Flota {
+interface Repartidor {
   id: number;
   nombre: string;
-  vehiculo: string;
+  apellido: string;
+  dni: string;
   telefono: string;
-  disponible: boolean;
+  mail: string;
+  tipo_vehiculo: string;
+  estado: string;
+  listado_id_pedidos_asignados: number[];
 }
 
-const emptyForm = { nombre: "", vehiculo: "", telefono: ""};
-
 function Flota() {
-    const [items, setItems] = useState<Flota[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [form, setForm] = useState(emptyForm);
-    const [editingId, setEditingId] = useState<number | null>(null);
+  const [items, setItems] = useState<Repartidor[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function load() {
     setLoading(true);
     setError("");
+
     try {
       const res = await fetch("/api/flota/");
-      if (!res.ok) throw new Error("No se pudo cargar la flota");
+      if (!res.ok) {
+        throw new Error("No se pudo cargar la flota");
+      }
       const data = await res.json();
-      setItems(data.results ?? data);
+      setItems(data.repartidores ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(
+        e instanceof Error ? e.message : "Error al cargar la flota"
+      );
     } finally {
       setLoading(false);
     }
@@ -36,54 +41,50 @@ function Flota() {
     load();
   }, []);
 
-    function startEdit(c: Flota) {
-    setEditingId(c.id);
-    setForm({
-      nombre: c.nombre,
-      vehiculo: c.vehiculo,
-      telefono: c.telefono,
-    });
-  }
-
-  async function handleDelete(id: number) {
-    if (!confirm("¿Eliminar este repartidor?")) return;
-    await fetch(`/api/repartidores/${id}/`, { method: "DELETE" });
-    await load();
-  }
-  
-    return (
+  return (
     <div>
-      <h1>Flota disponible:</h1>
-        <table border={1} cellPadding={6} style={{ width: "100%", borderCollapse: "collapse" }}>
+      <h1>Flota disponible</h1>
+      {loading && <p>Cargando repartidores...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {!loading && !error && (
+        <table
+          border={1}
+          cellPadding={6}
+          style={{ width: "100%", borderCollapse: "collapse" }}
+        >
           <thead>
             <tr>
               <th>ID</th>
               <th>Nombre</th>
+              <th>Apellido</th>
               <th>Vehículo</th>
-              <th>Disponibilidad</th>
+              <th>Teléfono</th>
+              <th>Estado</th>
             </tr>
           </thead>
+
           <tbody>
-            {items.map((c) => (
-              <tr key={c.id}>
-                <td>{c.id}</td>
-                <td>{c.nombre}</td>
-                <td>{c.vehiculo}</td>
-                <td>
-                  <button onClick={() => startEdit(c)}>Editar</button>{" "}
-                  <button onClick={() => handleDelete(c.id)}>Eliminar</button>
-                </td>
+            {items.map((repartidor) => (
+              <tr key={repartidor.id}>
+                <td>{repartidor.id}</td>
+                <td>{repartidor.nombre}</td>
+                <td>{repartidor.apellido}</td>
+                <td>{repartidor.tipo_vehiculo}</td>
+                <td>{repartidor.telefono}</td>
+                <td>{repartidor.estado}</td>
               </tr>
             ))}
+
             {items.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ textAlign: "center" }}>
-                  Sin repartidores
+                  No hay repartidores disponibles.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      )}
     </div>
   );
 }
