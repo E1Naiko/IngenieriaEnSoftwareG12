@@ -1,5 +1,5 @@
 """Tests de la HU #9: login del repartidor"""
-
+import json
 from django.test import TestCase
 from django.urls import reverse
 from core.models import Repartidor
@@ -27,4 +27,4 @@ class LoginRepartidorTests(TestCase):
     def test_escenario_2_token_invalido(self):
         r = self._post({"token": "ZZZZ"})
         self.assertEqual(r.status_code, 404)
-        self.assertEqual(r.json()["message"], "token invalido")
+        self.assertEqual(r.json()["message"], "Token inválido")
