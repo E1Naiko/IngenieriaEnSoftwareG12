@@ -53,6 +53,20 @@ python manage.py runserver
 > Sin `.env` (o con `DB_HOST` vacío) Django usa una **SQLite local**, así
 > nadie queda bloqueado para desarrollar.
 
+## Desarrollo con Docker
+
+Desde la raíz del repositorio también se puede levantar el backend con una
+SQLite persistida en un volumen:
+
+```bash
+docker compose up --build
+```
+
+El contenedor ejecuta `migrate` automáticamente y expone la API en el puerto
+`8000`. Los datos no se pierden al reconstruir la imagen. La configuración de
+Docker Hub, los comandos de administración y la forma de reiniciar la base están
+en [Info/Docker.md](../Info/Docker.md).
+
 ## Errores comunes
 
 ### `could not translate host name "aws-0-<region>.pooler.supabase.com"`
@@ -196,6 +210,7 @@ Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 | `DB_NAME` | Nombre de la base (postgres). |
 | `DB_USER` | Usuario (`postgres.<id-del-proyecto>`). |
 | `DB_PASSWORD` | Contraseña de la base. |
+| `DB_SQLITE_PATH` | Ruta opcional del SQLite cuando `DB_HOST` está vacío. Por defecto, `backend/db.sqlite3`. |
 | `DJANGO_SECRET_KEY` | Clave secreta (en dev hay una por defecto). |
 | `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción. |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |

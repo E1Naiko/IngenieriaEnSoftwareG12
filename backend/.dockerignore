@@ -1,0 +1,21 @@
+# Credenciales y datos locales: nunca entran en la imagen.
+.env
+*.sqlite3
+media/
+staticfiles/
+data/
+
+# Entornos y artefactos de Python.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Archivos de IDE y control de versiones.
+.git/
+.gitignore
+.idea/
+.vscode/

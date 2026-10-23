@@ -4,3 +4,4 @@ psycopg2-binary      # driver para conectar Django con PostgreSQL (Supabase)
 python-dotenv        # para leer las credenciales del archivo .env
 django-cors-headers  # permite que el frontend React llame a esta API
 PyJWT                # para crear JSON Web Tokens en python
+gunicorn             # servidor WSGI usado por la imagen Docker
