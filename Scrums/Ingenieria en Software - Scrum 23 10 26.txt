@@ -1,0 +1,38 @@
+Marcos:
+Objetivo: #37
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: El ingreso de fecha y hora de un pedido puede ser asignado automaticamente o por el coordinador, planteamos que sea ingresado por coordinador.
+
+Valen:
+Objetivo: #37
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: El ingreso de fecha y hora de un pedido puede ser asignado automaticamente o por el coordinador, planteamos que sea ingresado por coordinador.
+
+Giula:
+Objetivo: #9 y #25
+Estado: Esperando correccion de HU#9 y comenzando a desarrollar la HU#25.
+Complicaciones: Falta el estado "BAJA" en la tabla de repartidores de la db
+
+Herlan:
+Objetivo: #9 y #25
+Estado: Esperando correccion de HU#9 y comenzando a desarrollar la HU#25.
+Complicaciones: Falta el estado "BAJA" en la tabla de repartidores de la db
+
+Jose:
+Objetivo: #34 Actualizar Estados del envío
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Nunca publico la branch al git, y los cambios quedaron "en otra maquina".
+
+Luciano:
+Objetivo: #33 Visualizar panel de disponibilidad de la flota y #
+Estado: #33 terminada y comenzando a desarrollar la HU#.
+Complicaciones: .
+
+Nicolás: 
+Objetivo: #33 Visualizar panel de disponibilidad de la flota
+Estado: Corrigiendo la DB, implementando la db para desarrollo y terminando la HU#33.
+Complicaciones: el URL de la HU#33 esta mal formateado, es "repartidores_disponibles" y deberia ser "repartidores-disponibles"
+
+Bloqueos Identificados:
+ - Falta el estado "BAJA" en la tabla de repartidores.
+ - Falta una DB para desarrollo.
