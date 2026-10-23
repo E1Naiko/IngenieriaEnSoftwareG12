@@ -12,7 +12,8 @@ Qué se cubre
 - Detalle (200) y 404
 - PUT (reemplazo total) y PATCH (parcial)
 - DELETE (204)
-- FK opcional ``datos_cliente`` (link, desvinculación y 400 por inexistente)
+- El contrato JSON (cuatro claves, sin objetos anidados), que las claves que el
+  modelo no tiene se ignoren y que el ``DELETE`` responda 204 sin body
 
 Ejecutar::
 
@@ -27,7 +28,7 @@ prueba en la BD de test (SQLite en memoria / aislada por ``TestCase``).
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Cliente, Comercio
+from core.models import Comercio
 
 
 class ComercioAPITests(TestCase):
@@ -117,6 +118,14 @@ class ComercioAPITests(TestCase):
         self.assertEqual(resp.status_code, 204)
         self.assertEqual(Comercio.objects.count(), 0)
 
+    def test_borrar_sin_body(self):
+        """El 204 viene vacío: con body (aunque sea ``{}``) el proxy de Vite lo
+        no puede parsear y el navegador ve un 502 en vez del borrado."""
+        resp = self.client.delete(f"/api/comercios/{self.comercio.id}/")
+        self.assertEqual(resp.status_code, 204)
+        self.assertEqual(resp.content, b"")
+        self.assertEqual(resp.headers.get("Content-Length"), "0")
+
     # --- Filtro por nombre -------------------------------------------------
 
     def test_filtro_q(self):
@@ -126,18 +135,27 @@ class ComercioAPITests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["count"], 1)
 
-    # --- FK datos_cliente --------------------------------------------------
+    # --- Contrato JSON -----------------------------------------------------
 
-    def test_datos_cliente_fk(self):
-        """PATCH {datos_cliente: id} linkea un Cliente existente."""
-        cliente = Cliente.objects.create(
-            telefono="1", direccion="d", dni=12345678, comercio=self.comercio
+    def test_contrato_cuatro_claves(self):
+        """La respuesta es exactamente la tabla `comercio`: id + 3 columnas."""
+        resp = self.client.get(f"/api/comercios/{self.comercio.id}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            sorted(resp.json().keys()),
+            ["direccion", "id", "nombre", "telefono"],
         )
-        # link comercio -> cliente (ciclo)
+
+    def test_clave_desconocida_se_ignora(self):
+        """Una clave que el modelo no tiene no rompe: se ignora, no es 400."""
         resp = self.client.patch(
             f"/api/comercios/{self.comercio.id}/",
-            data={"datos_cliente": cliente.id},
+            data={"datos_cliente": 999, "telefono": "555"},
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["datos_cliente"], cliente.id)
+        self.assertNotIn("datos_cliente", resp.json())
+        self.comercio.refresh_from_db()
+        self.assertEqual(self.comercio.telefono, "555")
+        self.assertFalse(hasattr(Comercio, "datos_cliente"))
+
