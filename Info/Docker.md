@@ -120,7 +120,7 @@ Tiene estos jobs:
 | `Tests del backend con SQLite` | siempre | Python 3.12, `manage.py check`, `makemigrations --check --dry-run` y `manage.py test`. |
 | `Construir y probar la imagen (sin publicar)` | siempre, después de los tests | Build con Buildx, `manage.py check` dentro de la imagen y un `GET /api/ping/` real al contenedor. **No usa secretos**: por eso también funciona en PR de forks. |
 | `Publicar imagen en Docker Hub` | solo si se pidió publicación | Verifica los secretos, hace login y empuja la imagen. |
-| `Verificar credenciales de Docker Hub (sin publicar)` | ejecución manual con la casilla `check_credentials` | Comprueba que existan los secretos y valida el token con `docker login`. No publica nada. |
+| `Verificar credenciales de Docker Hub (sin publicar)` | casilla `check_credentials` en Run workflow **o** marca `[verificar-dockerhub]` en el commit | Comprueba que existan los secretos y valida el token con `docker login`. No publica nada. |
 
 ### Regla de tags
 
@@ -177,8 +177,9 @@ Tres vías, de más puntual a más automática:
 > workflow de la rama que se empuja, así que las vías 1 y 2 funcionan en ramas
 > de desarrollo aunque `main` todavía no tenga el YAML. Lo mismo aplica a
 > `check_credentials`: hasta que el workflow llegue a `main`, la verificación
-> del token se hace con una publicación de prueba (vía 1) o localmente con
-> `docker login -u <usuario>` y el access token.
+> del token se hace con la marca `[verificar-dockerhub]` en el mensaje de un
+> commit (ver más abajo) o localmente con `docker login -u <usuario>` y el
+> access token.
 
 > **Estado al hacer este cambio (2026-10-24):** el PR #26 se integró en
 > `DjangoImport`, pero `main` todavía no tenía
@@ -232,10 +233,23 @@ gh secret list --repo E1Naiko/IngenieriaEnSoftwareG12
 Solo lista nombres y fechas, nunca valores.
 
 **En CI.** El job `Verificar credenciales de Docker Hub (sin publicar)` se
-lanza con **Run workflow → `check_credentials` marcado**. Comprueba la
-presencia de ambos secretos y hace un `docker login` real (con *logout* al
-final): si el token está mal, fue revocado o el usuario no coincide, la corrida
-falla. Ningún valor se imprime en los logs.
+puede lanzar de dos maneras:
+
+- **Run workflow → `check_credentials` marcado** (cuando el YAML ya está en
+  `main`).
+- **Marca en el commit** (funciona en cualquier rama, sin botón de Actions):
+
+  ```bash
+  git commit --allow-empty -m "chore: revisar credenciales [verificar-dockerhub]"
+  git push origin mi-rama
+  ```
+
+  El commit vacío no cambia el código y no publica ninguna imagen.
+
+Comprueba la presencia de ambos secretos y hace un `docker login` real (con
+*logout* al final): si el token está mal, fue revocado o el usuario no coincide,
+la corrida falla. Ningún valor se imprime en los logs. Si falta alguno de los
+dos, el mensaje `::error::` indica cuál.
 
 Toda publicación ejecuta además un **chequeo previo** que falla con un mensaje
 explícito si falta `DOCKERHUB_USERNAME` o `DOCKERHUB_TOKEN`. Un token válido

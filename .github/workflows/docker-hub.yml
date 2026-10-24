@@ -315,7 +315,12 @@ jobs:
 
   check-credentials:
     name: Verificar credenciales de Docker Hub (sin publicar)
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.check_credentials == 'true'
+    # Dos formas de pedirlo: casilla en Run workflow, o marca en el commit.
+    # La segunda permite verificar aunque el YAML todavía no esté en main y
+    # GitHub no ofrezca el botón de ejecución manual.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.check_credentials == 'true') ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[verificar-dockerhub]'))
     runs-on: ubuntu-latest
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
