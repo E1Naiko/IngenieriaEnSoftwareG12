@@ -8,6 +8,9 @@ function Dashboard() {
       <p>
         <Link to="/comercios">Gestionar comercios</Link>
       </p>
+      <p>
+        <Link to="/ingresar-pedido">Ingresar pedido</Link>
+      </p>
     </div>
   );
 }
