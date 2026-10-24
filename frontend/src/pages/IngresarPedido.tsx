@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { ComponentType, CSSProperties, FormEvent, ReactNode } from "react";
+import type { ComponentType, FormEvent, ReactNode } from "react";
 import FormularioComercio from "../components/login/FormularioComercio";
 import FormularioCliente from "../components/login/FormularioCliente";
+import "./IngresarPedido.css";
 
 /* ---------- Tipos ---------- */
 
@@ -25,29 +26,11 @@ export interface FormularioAltaProps {
   onCancelar: () => void;
 }
 
-
 /* ---------- Endpoints ---------- */
 
 const URL_COMERCIOS = "/api/comercios/";
 const URL_CLIENTES = "/api/clientes/";
 const URL_PEDIDOS = "/api/pedidos/"; // a crear en el backend
-
-/* ---------- Estilos ---------- */
-
-const s: Record<string, CSSProperties> = {
-  form: { maxWidth: 420, margin: "2rem auto", display: "grid", gap: "1.25rem", fontFamily: "system-ui, sans-serif" },
-  campo: { display: "grid", gap: 6 },
-  label: { fontSize: 14, fontWeight: 600 },
-  control: { padding: "10px 12px", fontSize: 16, border: "1px solid #999", borderRadius: 6, background: "#fff", textAlign: "left", cursor: "pointer" },
-  fondo: { position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 50 },
-  popup: { background: "#fff", borderRadius: 10, width: "100%", maxWidth: 440, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" },
-  popupHead: { padding: "14px 16px", borderBottom: "1px solid #ddd", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  lista: { listStyle: "none", margin: 0, padding: 0, overflowY: "auto", flex: 1 },
-  item: { width: "100%", padding: "12px 16px", border: 0, borderBottom: "1px solid #eee", background: "none", textAlign: "left", fontSize: 16, cursor: "pointer" },
-  popupFoot: { padding: 12, borderTop: "1px solid #ddd" },
-  primario: { padding: "10px 14px", fontSize: 16, border: 0, borderRadius: 6, background: "#1f4e8c", color: "#fff", cursor: "pointer", width: "100%" },
-  vacio: { padding: 16, color: "#666" },
-};
 
 /* ---------- Popup genérico ---------- */
 
@@ -60,14 +43,14 @@ interface PopupProps {
 
 function Popup({ titulo, onCerrar, children, pie }: PopupProps) {
   return (
-    <div style={s.fondo} onClick={onCerrar}>
-      <div style={s.popup} role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
-        <div style={s.popupHead}>
+    <div className="fondo" onClick={onCerrar}>
+      <div className="popup" role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
+        <div className="popup-head">
           <strong>{titulo}</strong>
           <button type="button" onClick={onCerrar} aria-label="Cerrar">✕</button>
         </div>
         {children}
-        <div style={s.popupFoot}>{pie}</div>
+        <div className="popup-foot">{pie}</div>
       </div>
     </div>
   );
@@ -117,9 +100,9 @@ function SelectorConPopup<T extends { id: number }>({
   const cerrar = () => { setAbierto(false); setAgregando(false); };
 
   return (
-    <div style={s.campo}>
-      <span style={s.label}>{etiqueta}</span>
-      <button type="button" style={s.control} onClick={() => setAbierto(true)}>
+    <div className="campo">
+      <span className="label">{etiqueta}</span>
+      <button type="button" className="control" onClick={() => setAbierto(true)}>
         {valor ? texto(valor) : `Seleccionar ${singular}`}
       </button>
 
@@ -129,7 +112,7 @@ function SelectorConPopup<T extends { id: number }>({
           onCerrar={cerrar}
           pie={
             agregando ? null : (
-              <button type="button" style={s.primario} onClick={() => setAgregando(true)} disabled={!FormularioAlta}>
+              <button type="button" className="primario" onClick={() => setAgregando(true)} disabled={!FormularioAlta}>
                 Agregar {singular}
               </button>
             )
@@ -140,15 +123,15 @@ function SelectorConPopup<T extends { id: number }>({
               <FormularioAlta onGuardado={() => setAgregando(false)} onCancelar={() => setAgregando(false)} />
             </div>
           ) : (
-            <ul style={s.lista}>
-              {cargando && <li style={s.vacio}>Cargando…</li>}
-              {error && <li style={s.vacio}>{error}</li>}
+            <ul className="lista">
+              {cargando && <li className="vacio">Cargando…</li>}
+              {error && <li className="vacio">{error}</li>}
               {!cargando && !error && items.length === 0 && (
-                <li style={s.vacio}>Todavía no hay {singular}s cargados.</li>
+                <li className="vacio">Todavía no hay {singular}s cargados.</li>
               )}
               {items.map((it) => (
                 <li key={it.id}>
-                  <button type="button" style={s.item} onClick={() => { onChange(it); cerrar(); }}>
+                  <button type="button" className="item" onClick={() => { onChange(it); cerrar(); }}>
                     {texto(it)}
                   </button>
                 </li>
@@ -205,14 +188,14 @@ export default function IngresarPedido() {
   }
 
   return (
-    <form style={s.form} onSubmit={guardar}>
+    <form className="form" onSubmit={guardar}>
       <h1 style={{ margin: 0, fontSize: 24 }}>Ingresar pedido</h1>
 
-      <div style={s.campo}>
-        <label style={s.label} htmlFor="tamano">Tamaño del paquete</label>
+      <div className="campo">
+        <label className="label" htmlFor="tamano">Tamaño del paquete</label>
         <select
           id="tamano"
-          style={s.control}
+          className="control"
           value={tamano}
           onChange={(e) => setTamano(e.target.value as Tamano)}
         >
@@ -248,7 +231,8 @@ export default function IngresarPedido() {
 
       <button
         type="submit"
-        style={{ ...s.primario, opacity: completo && !guardando ? 1 : 0.5 }}
+        className="primario"
+        style={{ opacity: completo && !guardando ? 1 : 0.5 }}
         disabled={!completo || guardando}
       >
         {guardando ? "Guardando…" : "Guardar pedido"}

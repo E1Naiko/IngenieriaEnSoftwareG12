@@ -1,0 +1,96 @@
+.form {
+  max-width: 420px;
+  margin: 2rem auto;
+  display: grid;
+  gap: 1.25rem;
+  font-family: system-ui, sans-serif;
+}
+
+.campo {
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.control {
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.popup {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.popup-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.item {
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid #eee;
+  background: none;
+  text-align: left;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.popup-foot {
+  padding: 12px;
+  border-top: 1px solid #ddd;
+}
+
+.primario {
+  padding: 10px 14px;
+  font-size: 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #1f4e8c;
+  color: #fff;
+  cursor: pointer;
+  width: 100%;
+}
+
+.vacio {
+  padding: 16px;
+  color: #666;
+}
