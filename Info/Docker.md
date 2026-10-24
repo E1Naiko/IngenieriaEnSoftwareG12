@@ -258,6 +258,21 @@ pero sin permiso de escritura pasa el login y falla recién en el push con
 un access token con permiso *Read, Write* en Docker Hub Security → Access
 Tokens.
 
+**Permiso de escritura.** El `docker login` solo prueba que el usuario y el
+token son correctos, no que el token pueda subir imágenes. Para comprobarlo sin
+esperar a que el workflow llegue a `main`, alcanza con pedir una publicación de
+prueba desde una rama de desarrollo:
+
+```bash
+git commit --allow-empty -m "chore: probar permiso de escritura [publicar-imagen]"
+git push origin mi-rama
+```
+
+Si el job `Publicar imagen en Docker Hub` termina bien, el token tiene permiso
+de escritura y el repositorio existe. Si falla con `denied: ...`, hay que
+revisar el scope del token (y que el repositorio
+`<usuario>/ingenieria-en-software-g12-backend` esté creado).
+
 Para ver el resultado: **Actions → Tests, build y Docker Hub →** la corrida
 correspondiente → resumen (*Summary*) y logs del job.
 
