@@ -46,8 +46,13 @@ jobs:
       SHA: ${{ github.sha }}
       COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
       DISPATCH_PUBLISH: ${{ github.event.inputs.publish || 'false' }}
-      PUBLISH_DEV: ${{ vars.DOCKERHUB_PUBLISH_DEV || 'false' }}
-      REPOSITORY_NAME: ${{ vars.DOCKERHUB_REPOSITORY || 'ingenieria-en-software-g12-backend' }}
+      # Preferimos las repository variables (no sensibles), pero aceptamos
+      # también los secrets por compatibilidad con equipos que ya los crearon
+      # en la pestaña "Secrets" en lugar de "Variables".
+      PUBLISH_DEV_VAR: ${{ vars.DOCKERHUB_PUBLISH_DEV || '' }}
+      PUBLISH_DEV_SECRET: ${{ secrets.DOCKERHUB_PUBLISH_DEV || '' }}
+      REPOSITORY_VAR: ${{ vars.DOCKERHUB_REPOSITORY || '' }}
+      REPOSITORY_SECRET: ${{ secrets.DOCKERHUB_REPOSITORY || '' }}
     steps:
       - name: Calcular
         id: decide
@@ -64,9 +69,30 @@ jobs:
           branch=$(printf '%s' "$branch" | cut -c1-80 | sed -E 's/[-.]+$//')
           sha7=$(printf '%s' "$SHA" | cut -c1-7)
 
-          if ! printf '%s' "$REPOSITORY_NAME" | grep -Eq '^[a-z0-9][a-z0-9._-]{0,99}$'; then
-            echo "::error::La variable DOCKERHUB_REPOSITORY debe contener solo minúsculas, números, '.', '_' o '-' (sin el usuario)."
+          repository="${REPOSITORY_VAR:-}"
+          repo_source="variable DOCKERHUB_REPOSITORY"
+          if [ -z "$repository" ]; then
+            repository="${REPOSITORY_SECRET:-}"
+            repo_source="secret DOCKERHUB_REPOSITORY"
+          fi
+          if [ -z "$repository" ]; then
+            repository="ingenieria-en-software-g12-backend"
+            repo_source="valor por defecto"
+          fi
+          if ! printf '%s' "$repository" | grep -Eq '^[a-z0-9][a-z0-9._-]{0,99}$'; then
+            echo "::error::DOCKERHUB_REPOSITORY debe contener solo minúsculas, números, '.', '_' o '-' (sin el usuario)."
             exit 1
+          fi
+
+          publish_dev="${PUBLISH_DEV_VAR:-}"
+          publish_dev_source="variable"
+          if [ -z "$publish_dev" ]; then
+            publish_dev="${PUBLISH_DEV_SECRET:-}"
+            publish_dev_source="secret"
+          fi
+          if [ -z "$publish_dev" ]; then
+            publish_dev=false
+            publish_dev_source="por defecto"
           fi
 
           # `latest` queda reservado para main. En las demás ramas el tag
@@ -92,11 +118,11 @@ jobs:
               elif printf '%s' "$COMMIT_MESSAGE" | grep -Eiq '\[(publicar-imagen|publish-image)\]'; then
                 publish=true
                 reason="marca [publicar-imagen] en el mensaje del commit"
-              elif [ "$(printf '%s' "$PUBLISH_DEV" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+              elif [ "$(printf '%s' "$publish_dev" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
                 # Alternativa al Run workflow, que solo existe cuando el YAML
                 # ya está en la rama por defecto.
                 publish=true
-                reason="variable de repositorio DOCKERHUB_PUBLISH_DEV=true"
+                reason="DOCKERHUB_PUBLISH_DEV=true ($publish_dev_source)"
               fi
               ;;
             workflow_dispatch)
@@ -109,7 +135,7 @@ jobs:
 
           {
             echo "publish=$publish"
-            echo "repository=$REPOSITORY_NAME"
+            echo "repository=$repository"
             echo 'tag_specs<<EOF'
             printf 'type=raw,value=%s\n' "${tags[@]}"
             echo 'EOF'
@@ -126,8 +152,14 @@ jobs:
             echo "- Commit: \`$sha7\`"
             echo "- Publicar: **$publish** ($reason)"
             echo "- Tags previstos: $(printf '\`%s\` ' "${tags[@]}")"
+            if [ "$repo_source" = "secret DOCKERHUB_REPOSITORY" ]; then
+              echo "- Repositorio Docker Hub: tomado del **secret** \`DOCKERHUB_REPOSITORY\` (GitHub enmascara su valor; conviene moverlo a Variables)."
+            else
+              echo "- Repositorio Docker Hub: \`$repository\` (origen: $repo_source)."
+            fi
+            echo "- DOCKERHUB_PUBLISH_DEV: \`$publish_dev\` (origen: $publish_dev_source)."
             if [ "$publish" = true ]; then
-              echo "- Destino: \`<usuario>/$REPOSITORY_NAME\`"
+              echo "- Destino: \`<usuario>/\` + repositorio indicado arriba."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

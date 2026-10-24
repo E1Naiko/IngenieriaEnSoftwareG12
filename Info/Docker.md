@@ -207,20 +207,33 @@ Tres vías, de más puntual a más automática:
    Los valores se cargan en GitHub; no deben enviarse por chat ni agregarse al
    código.
 
-4. Opcional: crear **repository variables** (pestaña *Variables*):
+4. Opcional: crear **repository variables** (pestaña *Variables*, no
+   *Secrets*, porque no son datos sensibles):
 
    | Nombre | Valor por defecto | Para qué sirve |
    |---|---|---|
    | `DOCKERHUB_REPOSITORY` | `ingenieria-en-software-g12-backend` | Nombre del repositorio en Docker Hub, sin el usuario. Solo minúsculas, números, `.`, `_` o `-`. |
    | `DOCKERHUB_PUBLISH_DEV` | `false` | `true` publica un tag `dev-...` en cada push de ramas que no sean `main`. |
 
+   Si ya se crearon en la pestaña **Secrets** (por ejemplo
+   `DOCKERHUB_REPOSITORY` junto a los otros dos), el workflow **también los
+   lee**: primero busca la *variable* y, si no existe, cae al *secret* del
+   mismo nombre. El resumen de cada corrida indica de dónde salió cada valor.
+   Igual conviene moverlos a *Variables*: mientras sean secrets, GitHub
+   enmascara su valor en los logs y en el resumen, lo que dificulta revisar la
+   configuración.
+
 ### Verificar `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`
 
 **En la UI de GitHub.** **Settings → Secrets and variables → Actions →
-Repository secrets** deben listar ambos nombres (con su fecha de última
-actualización). GitHub nunca muestra los valores: si hay dudas, hay que
-regenerar el access token en Docker Hub y volver a cargarlo (Update). Los
-secretos de entorno/organización no aplican acá: se usan *repository secrets*.
+Repository secrets** deben listar `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`
+(con su fecha de última actualización). GitHub nunca muestra los valores: si
+hay dudas, hay que regenerar el access token en Docker Hub y volver a cargarlo
+(Update). Los secretos de entorno/organización no aplican acá: se usan
+*repository secrets*. Ojo con la pestaña: si `DOCKERHUB_REPOSITORY` o
+`DOCKERHUB_PUBLISH_DEV` aparecen bajo **Secrets** en vez de **Variables**, el
+workflow igual los toma (ver el fallback en el paso 4), pero lo correcto es
+tenerlos como variables.
 
 **Por CLI** (requiere un token con el permiso `secrets:read`; el de integración
 de este entorno recibe `403 Resource not accessible by integration`, así que no
