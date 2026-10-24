@@ -104,44 +104,159 @@ Hay que crear el directorio destino si no existe. El archivo SQLite y los datos
 no se versionan; cualquier desarrollador puede recrear el esquema con las
 migraciones.
 
-## Publicación automática desde `main`
+## CI: tests y build en cualquier rama
 
-El workflow `.github/workflows/docker-hub.yml`:
+El workflow `.github/workflows/docker-hub.yml` se dispara en:
 
-- ejecuta los tests con SQLite en los pull requests dirigidos a `main`;
-- al hacer push o merge en `main`, vuelve a ejecutar los tests;
-- solo si los tests pasan, construye y publica el backend en Docker Hub;
-- publica los tags `latest` y `main-<sha-del-commit>`.
+- `push` a **cualquier** rama (`branches: ["**"]`);
+- `pull_request` hacia cualquier rama;
+- `workflow_dispatch` (ejecución manual con opciones, ver más abajo).
+
+Tiene estos jobs:
+
+| Job | Cuándo corre | Qué hace |
+|---|---|---|
+| `Calcular tags y decidir publicación` | siempre | Normaliza la rama, calcula el SHA corto, arma los tags y decide si se publica. Escribe la decisión en el resumen de la corrida. |
+| `Tests del backend con SQLite` | siempre | Python 3.12, `manage.py check`, `makemigrations --check --dry-run` y `manage.py test`. |
+| `Construir y probar la imagen (sin publicar)` | siempre, después de los tests | Build con Buildx, `manage.py check` dentro de la imagen y un `GET /api/ping/` real al contenedor. **No usa secretos**: por eso también funciona en PR de forks. |
+| `Publicar imagen en Docker Hub` | solo si se pidió publicación | Verifica los secretos, hace login y empuja la imagen. |
+| `Verificar credenciales de Docker Hub (sin publicar)` | ejecución manual con la casilla `check_credentials` | Comprueba que existan los secretos y valida el token con `docker login`. No publica nada. |
+
+### Regla de tags
+
+| Situación | Tags generados | ¿Publica? |
+|---|---|---|
+| Push o merge en `main` | `latest`, `main-<sha7>` | Sí, siempre |
+| Push en otra rama | `dev-<rama>-<sha7>` | Solo si se pide (ver abajo) |
+| Pull request | `dev-<rama>-<sha7>` (solo locales, para el build) | **Nunca** |
+| Ejecución manual | los que correspondan a la rama elegida | Solo si se marca `publish` |
+
+`latest` queda **reservado para `main`**; ninguna rama de desarrollo lo toca. El tag
+de desarrollo se normaliza para cumplir las reglas de Docker: minúsculas, `/` y
+cualquier carácter inválido reemplazados por `-`, y la rama se trunca a 80
+caracteres para no superar el límite de 128 del tag. Ejemplo:
+
+```text
+rama  arena/mi-rama        →  dev-arena-mi-rama-a1b2c3d
+rama  DjangoImport         →  dev-djangoimport-a1b2c3d
+main                       →  latest  +  main-a1b2c3d
+```
+
+Los pull requests nunca publican, aunque el mensaje del commit incluya la marca
+de publicación: el código de un PR (sobre todo de un fork) no se ejecuta con
+credenciales de Docker Hub.
+
+### Cómo pedir una publicación desde una rama de desarrollo
+
+Tres vías, de más puntual a más automática:
+
+1. **Marca en el commit** (recomendada para una imagen suelta). Incluir
+   `[publicar-imagen]` (también se acepta `[publish-image]`) en el mensaje:
+
+   ```bash
+   git commit -m "feat: ajustes de API [publicar-imagen]"
+   git push origin mi-rama
+   ```
+
+   Se publica `<usuario>/ingenieria-en-software-g12-backend:dev-mi-rama-<sha7>`.
+
+2. **Variable de repositorio `DOCKERHUB_PUBLISH_DEV=true`**. En
+   **Settings → Secrets and variables → Actions → Variables**, crear esa
+   *repository variable* para que **todo** push en ramas que no sean `main`
+   publique su tag `dev-...`. Borrarla o ponerla en `false` vuelve al
+   comportamiento por defecto (solo build). Es la opción práctica mientras el
+   workflow no está en la rama por defecto y el botón *Run workflow* no existe.
+
+3. **Ejecución manual**. En **Actions → Tests, build y Docker Hub → Run
+   workflow**, elegir la rama y marcar `publish`. Con `publish` desmarcado la
+   corrida hace solo tests y build, incluso en `main`.
+
+> **Limitación de GitHub:** el botón *Run workflow* y el evento
+> `workflow_dispatch` solo están disponibles cuando el archivo del workflow
+> existe en la **rama por defecto**. Los eventos `push`, en cambio, usan el
+> workflow de la rama que se empuja, así que las vías 1 y 2 funcionan en ramas
+> de desarrollo aunque `main` todavía no tenga el YAML. Lo mismo aplica a
+> `check_credentials`: hasta que el workflow llegue a `main`, la verificación
+> del token se hace con una publicación de prueba (vía 1) o localmente con
+> `docker login -u <usuario>` y el access token.
+
+> **Estado al hacer este cambio (2026-10-24):** el PR #26 se integró en
+> `DjangoImport`, pero `main` todavía no tenía
+> `.github/workflows/docker-hub.yml` (la API de GitHub devolvía 0 workflows y
+> 0 corridas). Hasta que el archivo llegue a `main` no se publica `latest` ni
+> aparece el botón *Run workflow*. Mientras tanto, los push en `DjangoImport` y
+> en las ramas de trabajo sí ejecutan tests y build, porque los eventos `push`
+> leen el workflow de la rama que se empuja.
 
 ### Configuración única
 
 1. Crear en Docker Hub el repositorio
    `<usuario>/ingenieria-en-software-g12-backend`.
-2. Crear un **access token de Docker Hub con permiso de escritura**. No usar ni
-   guardar la contraseña de la cuenta en GitHub Actions.
+2. Crear un **access token de Docker Hub con permiso de escritura**
+   (*Read, Write*). No usar ni guardar la contraseña de la cuenta en GitHub
+   Actions.
 3. En GitHub, abrir **Settings → Secrets and variables → Actions** del
    repositorio y crear estos **repository secrets**:
 
    | Nombre | Valor |
    |---|---|
    | `DOCKERHUB_USERNAME` | Usuario de Docker Hub. |
-   | `DOCKERHUB_TOKEN` | Access token de Docker Hub. |
+   | `DOCKERHUB_TOKEN` | Access token de Docker Hub con permiso de escritura. |
 
    Los valores se cargan en GitHub; no deben enviarse por chat ni agregarse al
    código.
 
-4. Opcional: si el repositorio de Docker Hub tiene otro nombre, crear la
-   **repository variable** `DOCKERHUB_REPOSITORY` con ese nombre (sin incluir
-   el usuario). Por defecto se usa `ingenieria-en-software-g12-backend`.
+4. Opcional: crear **repository variables** (pestaña *Variables*):
 
-Después, al integrar cambios en `main`, la publicación aparece en la pestaña
-**Actions → Tests y Docker Hub**. También se puede ejecutar manualmente desde
-esa pestaña usando **Run workflow** sobre `main`.
+   | Nombre | Valor por defecto | Para qué sirve |
+   |---|---|---|
+   | `DOCKERHUB_REPOSITORY` | `ingenieria-en-software-g12-backend` | Nombre del repositorio en Docker Hub, sin el usuario. Solo minúsculas, números, `.`, `_` o `-`. |
+   | `DOCKERHUB_PUBLISH_DEV` | `false` | `true` publica un tag `dev-...` en cada push de ramas que no sean `main`. |
 
-La imagen resultante se puede descargar con:
+### Verificar `DOCKERHUB_USERNAME` y `DOCKERHUB_TOKEN`
+
+**En la UI de GitHub.** **Settings → Secrets and variables → Actions →
+Repository secrets** deben listar ambos nombres (con su fecha de última
+actualización). GitHub nunca muestra los valores: si hay dudas, hay que
+regenerar el access token en Docker Hub y volver a cargarlo (Update). Los
+secretos de entorno/organización no aplican acá: se usan *repository secrets*.
+
+**Por CLI** (requiere un token con el permiso `secrets:read`; el de integración
+de este entorno recibe `403 Resource not accessible by integration`, así que no
+se pudo comprobar desde acá):
+
+```bash
+gh secret list --repo E1Naiko/IngenieriaEnSoftwareG12
+```
+
+Solo lista nombres y fechas, nunca valores.
+
+**En CI.** El job `Verificar credenciales de Docker Hub (sin publicar)` se
+lanza con **Run workflow → `check_credentials` marcado**. Comprueba la
+presencia de ambos secretos y hace un `docker login` real (con *logout* al
+final): si el token está mal, fue revocado o el usuario no coincide, la corrida
+falla. Ningún valor se imprime en los logs.
+
+Toda publicación ejecuta además un **chequeo previo** que falla con un mensaje
+explícito si falta `DOCKERHUB_USERNAME` o `DOCKERHUB_TOKEN`. Un token válido
+pero sin permiso de escritura pasa el login y falla recién en el push con
+`denied: requested access to the resource is denied`; en ese caso hay que crear
+un access token con permiso *Read, Write* en Docker Hub Security → Access
+Tokens.
+
+Para ver el resultado: **Actions → Tests, build y Docker Hub →** la corrida
+correspondiente → resumen (*Summary*) y logs del job.
+
+La imagen `latest` se descarga con:
 
 ```bash
 docker pull <usuario>/ingenieria-en-software-g12-backend:latest
+```
+
+Y una imagen de desarrollo, con el tag que muestra el resumen de la corrida:
+
+```bash
+docker pull <usuario>/ingenieria-en-software-g12-backend:dev-mi-rama-a1b2c3d
 ```
 
 ## Uso de la imagen publicada
