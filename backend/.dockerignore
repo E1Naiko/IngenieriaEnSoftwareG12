@@ -19,3 +19,13 @@ __pycache__/
 .gitignore
 .idea/
 .vscode/
+
+# Credenciales y datos locales: nunca entran en la imagen.
+# Ojo: `.env` a secas NO alcanza; con `.env*` cubrimos .env.supabase,
+# .env.local, .env.prod, etc. que si no viajarían dentro de la imagen
+# publicada en Docker Hub.
+.env*
+*.sqlite3
+media/
+staticfiles/
+data/

@@ -34,3 +34,8 @@ frontend/public/
 # IDE
 .idea/
 .vscode/
+
+# Credenciales
+.env*
+!.env.example
+!.env.supabase.example
