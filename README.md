@@ -11,7 +11,7 @@ frontend/       → app React
 backend/        → API Django + Supabase/SQLite (ver backend/README.md)
 Info/           → documentación del dominio y del esquema de datos
 compose.yaml    → backend de desarrollo con SQLite persistente
-.github/        → tests y publicación de la imagen desde main
+.github/        → tests y build en todas las ramas; publicación en Docker Hub
 ```
 
 ## Arranque rápido con Docker
@@ -64,13 +64,22 @@ npm run dev
 Instrucciones completas en [backend/README.md](backend/README.md).
 Documentación de modelos y decisiones de diseño en [Info/DB.md](Info/DB.md).
 
-## Publicación en Docker Hub
+## CI y publicación en Docker Hub
 
-Los pull requests a `main` ejecutan los tests del backend. Cada push o merge a
-`main` vuelve a probar el código y, si está verde, publica
-`<usuario>/ingenieria-en-software-g12-backend:latest` y un tag identificado por
-el SHA del commit.
+El workflow de GitHub Actions corre **tests y build en cualquier rama** y en
+todos los pull requests. La build además se prueba levantando el contenedor y
+consultando `/api/ping/`.
+
+La publicación es automática solo en `main` (`latest` y `main-<sha>`). En ramas
+de desarrollo es **opcional**: se pide con `[publicar-imagen]` en el mensaje
+del commit, con la variable `DOCKERHUB_PUBLISH_DEV=true` o ejecutando el
+workflow a mano; en ese caso publica únicamente `dev-<rama>-<sha>` y nunca
+toca `latest`. Los pull requests jamás publican.
 
 Hay que configurar una sola vez los secretos `DOCKERHUB_USERNAME` y
-`DOCKERHUB_TOKEN` en GitHub Actions. El paso a paso está en
-[Info/Docker.md](Info/Docker.md#publicación-automática-desde-main).
+`DOCKERHUB_TOKEN` en GitHub Actions. El detalle de los tags, las formas de
+publicar y cómo verificar esas credenciales está en
+[Info/Docker.md](Info/Docker.md#ci-tests-y-build-en-cualquier-rama).
+
+> Nota: el PR #26 se integró en `DjangoImport`; hasta que el workflow llegue a
+> `main` no se publica `latest` ni aparece el botón *Run workflow* en Actions.
