@@ -157,7 +157,11 @@ jobs:
             else
               echo "- Repositorio Docker Hub: \`$repository\` (origen: $repo_source)."
             fi
-            echo "- DOCKERHUB_PUBLISH_DEV: \`$publish_dev\` (origen: $publish_dev_source)."
+            if [ "$publish_dev_source" = "secret" ]; then
+              echo "- DOCKERHUB_PUBLISH_DEV: valor tomado del **secret** (GitHub lo enmascara; conviene moverlo a Variables)."
+            else
+              echo "- DOCKERHUB_PUBLISH_DEV: \`$publish_dev\` (origen: $publish_dev_source)."
+            fi
             if [ "$publish" = true ]; then
               echo "- Destino: \`<usuario>/\` + repositorio indicado arriba."
             fi
@@ -313,7 +317,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/${{ needs.config.outputs.repository }}
+          # Se resuelve acá también (y no solo desde el output de `config`)
+          # para que el destino real no dependa de cómo GitHub enmascare un
+          # valor que viene de un secret.
+          images: ${{ env.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || secrets.DOCKERHUB_REPOSITORY || 'ingenieria-en-software-g12-backend' }}
           tags: ${{ needs.config.outputs.tag_specs }}
           flavor: latest=false
 
