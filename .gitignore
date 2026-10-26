@@ -27,7 +27,6 @@ frontend/node_modules/
 #Frontend extras
 
 frontend/public/
-frontend/src/assets/
 
 # IDE
 .idea/

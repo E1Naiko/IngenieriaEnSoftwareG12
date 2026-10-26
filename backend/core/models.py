@@ -1,21 +1,24 @@
 """
 Modelos del sistema de reparto de paquetes (app core).
 
-Esquema adaptado del diagrama de la base (ver Info/DB.md). Las tablas usan
-el nombre exacto del diagrama (repartidor, comercio, cliente, paquete,
-comprobante) vía Meta.db_table.
+Cada modelo es una tabla del diagrama de la base y conserva su nombre exacto
+vía ``Meta.db_table``: ``repartidor``, ``comercio``, ``cliente``, ``paquete``
+y ``comprobante``. Las columnas se escriben en ``snake_case`` (convención de
+Django), así que el diagrama y la base quedan con los mismos nombres.
 
-Relaciones del diagrama:
-- paquete.id_repartidor_asignado ?> repartidor   (muchos paquetes -> un repartidor)
-- paquete.id_comercio          ?> comercio       (muchos paquetes -> un comercio)
-- paquete.id_datos_cliente     ?> cliente        (muchos paquetes -> un cliente)
-- paquete.id_comprobante       ?>? comprobante   (uno a uno)
-- comercio.id_datos_cliente    ?> cliente
-- cliente.id_comercio          ?> comercio
+Mapa de relaciones (5 tablas, 4 FK — todas viven en ``paquete``):
 
-Los campos "listado_id_pedidos_asignados" e "historial_asociado" del
-diagrama NO son columnas: se resuelven con la relación inversa
-(repartidor.paquetes.all()) y consultas por estado. Ver Info/DB.md.
+    paquete.id_repartidor_asignado  →  repartidor.id   opcional  (SET_NULL)
+    paquete.id_comercio             →  comercio.id      obligatorio (PROTECT)
+    paquete.id_datos_cliente        →  cliente.id       obligatorio (PROTECT)
+    paquete.id_comprobante          →  comprobante.id   opcional, 1 a 1 (SET_NULL)
+
+``comercio`` y ``cliente`` no se referencian entre sí: el único punto donde
+ambos aparecen juntos es ``paquete``, así que el vínculo se consulta ahí.
+
+``repartidor.listado_id_pedidos_asignados`` y
+``repartidor.historial_asociado`` no son columnas: son relaciones inversas
+sobre ``paquete`` (ver las properties al final de ``Repartidor``).
 """
 
 import secrets
@@ -28,9 +31,9 @@ class Repartidor(models.Model):
     """
     Quien entrega los paquetes.
 
-    Un repartidor puede tener muchos paquetes asignados (relación inversa:
-    ``repartidor.paquetes.all()``) y se identifica por su DNI único.
-    El ``token`` de 6 caracteres lo genera el sistema al crearlo.
+    Se identifica por su DNI (único) y recibe un ``token`` de 6 caracteres
+    autogenerado. Puede tener muchos paquetes asignados, y eso se lee con la
+    relación inversa ``repartidor.paquetes.all()``.
     """
 
     class TipoVehiculo(models.TextChoices):
@@ -41,16 +44,17 @@ class Repartidor(models.Model):
         CAMIONETA = "camioneta", "Camioneta"
 
     class Estado(models.TextChoices):
-        """Estados posibles del repartidor dentro del sistema."""
+        """Situación del repartidor dentro del sistema."""
 
-        ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
+        ACTIVO = "activo", "Activo"        # disponible para recibir paquetes
+        INACTIVO = "inactivo", "Inactivo"  # temporalmente fuera de la flota
+        BAJA = "baja", "Baja"              # baja definitiva (HU #25)
 
     # --- Datos personales -------------------------------------------------
     nombre = models.CharField(max_length=255)
     apellido = models.CharField(max_length=255)
     dni = models.PositiveIntegerField(unique=True)  # integer(8) único
-    telefono = models.CharField(max_length=16)      # varchar(16) del diagrama
+    telefono = models.CharField(max_length=16)      # varchar(16)
     mail = models.EmailField(max_length=255)
 
     # --- Datos del rol ------------------------------------------------------
@@ -64,7 +68,7 @@ class Repartidor(models.Model):
         max_length=255,
         choices=Estado.choices,
         default=Estado.ACTIVO,
-        help_text="Situación del repartidor (activo o inactivo).",
+        help_text="Situación del repartidor (activo, inactivo o baja).",
     )
     token = models.CharField(
         max_length=6,
@@ -82,7 +86,7 @@ class Repartidor(models.Model):
         return f"{self.apellido}, {self.nombre} ({self.estado})"
 
     def save(self, *args, **kwargs):
-        # Genera el token una sola vez, antes del primer guardado.
+        # El token se genera una sola vez, antes del primer guardado.
         if not self.token:
             self.token = self._generar_token()
         super().save(*args, **kwargs)
@@ -95,15 +99,15 @@ class Repartidor(models.Model):
             if not Repartidor.objects.filter(token=token).exists():
                 return token
 
-    # --- Campos "REVISAR" del diagrama, resueltos como properties ----------
+    # --- Paquetes del repartidor (relación inversa sobre Paquete) ----------
     @property
     def listado_id_pedidos_asignados(self):
-        """IDs de los paquetes asignados actualmente."""
+        """IDs de los paquetes que tiene asignados ahora mismo."""
         return list(self.paquetes.values_list("id", flat=True))
 
     @property
     def historial_asociado(self):
-        """Paquetes ya entregados por este repartidor."""
+        """Queryset de paquetes que ya entregó (estado ``entregado``)."""
         return self.paquetes.filter(estado=Paquete.Estado.ENTREGADO)
 
 
@@ -111,19 +115,15 @@ class Cliente(models.Model):
     """
     Datos de contacto del destinatario de un paquete.
 
-    Según el diagrama no guarda nombre/apellido: solo cómo contactarlo y
-    dónde entregarle. Cada cliente pertenece a un comercio (id_comercio)
-    y se identifica por su DNI único.
+    No guarda nombre ni apellido: solo cómo contactarlo (``telefono``) y
+    dónde entregarle (``direccion``). Se identifica por su DNI, único.
+    Los comercios con los que trabaja se ven por sus paquetes:
+    ``cliente.paquetes.values_list("comercio", flat=True)``.
     """
 
     telefono = models.CharField(max_length=255)
-    direccion = models.CharField(max_length=255)  # dónde entregar los paquetes
+    direccion = models.CharField(max_length=255)  # dirección de entrega
     dni = models.PositiveIntegerField(unique=True)
-    comercio = models.ForeignKey(
-        "Comercio",
-        on_delete=models.PROTECT,   # no se puede borrar un comercio con clientes
-        related_name="clientes",
-    )  # id_comercio del diagrama
 
     class Meta:
         db_table = "cliente"        # nombre de tabla del diagrama
@@ -131,33 +131,21 @@ class Cliente(models.Model):
         ordering = ["dni"]
 
     def __str__(self):
-        return f"Cliente {self.dni} ({self.comercio})"
+        return f"Cliente {self.dni}"
 
 
 class Comercio(models.Model):
     """
     Comercio que despacha paquetes.
 
-    Del lado "envía" tiene clientes propios (cliente.id_comercio) y
-    paquetes (paquete.id_comercio). El campo ``datos_cliente``
-    (id_datos_cliente del diagrama) apunta a un cliente de contacto.
-
-    Nota sobre el ciclo del diagrama: cliente.id_comercio y
-    comercio.id_datos_cliente no pueden ser ambos obligatorios (nadie
-    podría crearse primero). Se resolvió dejando ``datos_cliente``
-    opcional: se crea comercio -> cliente -> se linkea. Ver Info/DB.md.
+    Tres datos de contacto: ``nombre``, ``telefono`` y ``direccion``. No
+    tiene FK propias; los clientes y paquetes del comercio se consultan por
+    ``comercio.paquetes.all()`` / ``comercio.paquetes.values_list("cliente")``.
     """
 
     nombre = models.CharField(max_length=255)
     telefono = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255)
-    datos_cliente = models.ForeignKey(
-        "Cliente",
-        on_delete=models.SET_NULL,  # si se borra el cliente, no se borra el comercio
-        null=True,
-        blank=True,
-        related_name="+",           # sin relación inversa (no se usa desde Cliente)
-    )  # id_datos_cliente del diagrama
 
     class Meta:
         db_table = "comercio"       # nombre de tabla del diagrama
@@ -170,12 +158,13 @@ class Comercio(models.Model):
 
 class Paquete(models.Model):
     """
-    La entrega: vincula repartidor (opcional), comercio, cliente y
-    comprobante (opcional, uno a uno).
+    La entrega. Es la tabla que une todo: un repartidor (opcional porque el
+    paquete puede nacer sin asignar), un comercio que despacha, un cliente
+    que recibe y un comprobante (opcional, uno a uno, se carga al entregar).
 
-    El ``cod_seguimiento`` es único y lo genera el sistema al crearlo con
-    el formato SRFR-XXXXXXXX. Nuevos paquetes arrancan en estado
-    "pendiente"; el historial del repartidor sale de filtrar por estado.
+    Arranca en estado ``pendiente`` y ``cod_seguimiento`` se autogenera con el
+    formato SRFR-XXXXXXXX. El historial de un repartidor sale de filtrar estos
+    estados, no hace falta guardarlo en otra tabla.
     """
 
     class Estado(models.TextChoices):
@@ -200,11 +189,11 @@ class Paquete(models.Model):
     )
     repartidor = models.ForeignKey(
         Repartidor,
-        on_delete=models.SET_NULL,  # si se borra el repartidor, el paquete queda sin asignar
+        on_delete=models.SET_NULL,  # sin repartidor: el paquete vuelve a estar sin asignar
         null=True,
         blank=True,
         related_name="paquetes",
-    )  # id_repartidor_asignado (opcional: el paquete puede no estar asignado aún)
+    )  # id_repartidor_asignado
     comercio = models.ForeignKey(
         Comercio,
         on_delete=models.PROTECT,   # no se puede borrar un comercio con paquetes
@@ -217,11 +206,11 @@ class Paquete(models.Model):
     )  # id_datos_cliente
     comprobante = models.OneToOneField(
         "Comprobante",
-        on_delete=models.SET_NULL,  # si se borra el comprobante, el paquete no se toca
+        on_delete=models.SET_NULL,  # se borra el comprobante, el paquete sigue en pie
         null=True,
         blank=True,
         related_name="paquete",
-    )  # id_comprobante (?>? uno a uno: se carga cuando se entrega)
+    )  # id_comprobante
     tamanio = models.CharField(
         max_length=255,
         choices=Tamanio.choices,
@@ -243,7 +232,7 @@ class Paquete(models.Model):
         return f"{self.cod_seguimiento} ({self.estado})"
 
     def save(self, *args, **kwargs):
-        # Genera el código de seguimiento una sola vez, antes del primer guardado.
+        # El código de seguimiento se genera una sola vez, antes del primer guardado.
         if not self.cod_seguimiento:
             self.cod_seguimiento = self._generar_codigo()
         super().save(*args, **kwargs)
@@ -258,18 +247,19 @@ class Paquete(models.Model):
 
 class Comprobante(models.Model):
     """
-    Archivo (foto/PDF) que acredita la entrega de un paquete.
+    Archivo (foto o PDF) que acredita la entrega de un paquete.
 
-    Se relaciona uno a uno con Paquete desde el lado del paquete
-    (paquete.id_comprobante), así que acá no va ninguna FK.
-    ``archivo`` es opcional según el diagrama.
+    La relación uno a uno la sostiene ``Paquete`` con su columna
+    ``id_comprobante``, así que acá no hay ninguna FK: se accede al revés,
+    ``comprobante.paquete``. ``file`` puede quedar vacío (``null``), que es el
+    caso del comprobante creado antes de subir la foto.
     """
 
-    archivo = models.FileField(
-        upload_to="comprobantes/%Y/%m/",  # guarda en media/comprobantes/2026/10/...
+    file = models.FileField(
+        upload_to="comprobantes/%Y/%m/",  # queda en media/comprobantes/2026/10/...
         null=True,
         blank=True,
-    )  # file del diagrama
+    )
 
     class Meta:
         db_table = "comprobante"    # nombre de tabla del diagrama

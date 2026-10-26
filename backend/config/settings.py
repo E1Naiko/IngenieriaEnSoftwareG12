@@ -198,13 +198,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS: qué orígenes (el frontend React) pueden llamar a esta API.
 # --------------------------------------------------------------------------
-
+# Se lee del .env (CORS_ALLOWED_ORIGINS, separados por coma). Si está vacío:
+#   - entran los puertos clásicos de Vite (localhost y 127.0.0.1), y
+#   - con DEBUG=True se acepta cualquier origen, para no bloquear a nadie que
+#     prueba desde el tunnel de otro o una IP de la red.
+# Con la allowlist vacía y DEBUG=False no se acepta ningún origen cross-site:
+# en producción hay que listar el dominio del frontend explícitamente.
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
-if not CORS_ALLOWED_ORIGINS and DEBUG:
-    # Solo para desarrollo: cualquier origen puede llamar a la API.
-    CORS_ALLOW_ALL_ORIGINS = True
+if not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    if DEBUG:
+        CORS_ALLOW_ALL_ORIGINS = True
 
-# Si el frontend necesita enviar cookies/sesiones, descomentar:
+# El frontend llama con rutas relativas (/api/...) proxificadas por Vite, o
+# sea mismo origen: la cookie de sesión viaja sin esta opción. Habilitarla
+# solo hace falta si algún día el front queda en otro dominio y necesita
+# cookies; con CORS_ALLOW_ALL_ORIGINS no se puede combinar (el navegador
+# rechaza `Access-Control-Allow-Credentials` junto con `*`).
 # CORS_ALLOW_CREDENTIALS = True

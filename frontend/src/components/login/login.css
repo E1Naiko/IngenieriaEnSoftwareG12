@@ -1,12 +1,12 @@
-
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   background: #f1f5f9;
+  color: #0f172a;
 }
 
 .login-container {
@@ -17,51 +17,123 @@ body {
   padding: 20px;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 360px;
-  padding: 30px;
+/* Contenedor principal de dos columnas */
+.login-wrapper {
+  display: flex;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  overflow: hidden; /* Corta los bordes de la imagen para que acompañen el rounded del contenedor */
+  max-width: 800px;
+  width: 100%;
+}
+
+/* Panel de la imagen (Costado) */
+.login-image-panel {
+  flex: 1;
+  background: #ebf3ff; /* Un tono suave de azul que combine, podés cambiarlo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.login-image-side {
+  max-width: 80%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Panel del formulario (La tarjeta original adaptada) */
+.login-card {
+  flex: 1;
+  padding: 40px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  justify-content: center;
 }
 
 .login-card h1 {
   text-align: center;
-  margin: 0 0 15px;
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.login-card label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: -4px;
 }
 
 .login-card input {
-  padding: 12px;
+  padding: 12px 16px;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.login-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .login-card button {
   padding: 12px;
   margin-top: 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #2563eb;
   color: white;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.login-card button:hover:not(:disabled) {
+  background: #1d4ed8;
 }
 
 .login-card button:disabled {
   opacity: 0.6;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 .error-message {
   color: #dc2626;
+  font-size: 14px;
   text-align: center;
+  margin: 0;
 }
 
 .login-card p:not(.error-message) {
   text-align: center;
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Responsivo para móviles */
+@media (max-width: 650px) {
+  .login-wrapper {
+    flex-direction: column-reverse; /* El form arriba o la imagen arriba */
+  }
+  
+  .login-image-panel {
+    padding: 20px;
+  }
+  
+  .login-image-side {
+    max-width: 120px; /* Se achica en móviles */
+  }
+
+  .login-card {
+    padding: 24px;
+  }
 }
