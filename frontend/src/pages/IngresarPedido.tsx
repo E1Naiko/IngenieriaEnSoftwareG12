@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
+import "./IngresarPedido.css";
 import FormularioComercio from "../components/login/FormularioComercio";
 import FormularioCliente from "../components/login/FormularioCliente";
-import "./IngresarPedido.css";
 
 /* ---------- Tipos ---------- */
 
@@ -26,6 +26,7 @@ export interface FormularioAltaProps {
   onCancelar: () => void;
 }
 
+
 /* ---------- Endpoints ---------- */
 
 const URL_COMERCIOS = "/api/comercios/";
@@ -43,14 +44,14 @@ interface PopupProps {
 
 function Popup({ titulo, onCerrar, children, pie }: PopupProps) {
   return (
-    <div className="fondo" onClick={onCerrar}>
-      <div className="popup" role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
-        <div className="popup-head">
+    <div className="pedido-fondo" onClick={onCerrar}>
+      <div className="pedido-popup" role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
+        <div className="pedido-popup-head">
           <strong>{titulo}</strong>
           <button type="button" onClick={onCerrar} aria-label="Cerrar">✕</button>
         </div>
         {children}
-        <div className="popup-foot">{pie}</div>
+        <div className="pedido-popup-foot">{pie}</div>
       </div>
     </div>
   );
@@ -100,9 +101,9 @@ function SelectorConPopup<T extends { id: number }>({
   const cerrar = () => { setAbierto(false); setAgregando(false); };
 
   return (
-    <div className="campo">
-      <span className="label">{etiqueta}</span>
-      <button type="button" className="control" onClick={() => setAbierto(true)}>
+    <div className="pedido-campo">
+      <span className="pedido-label">{etiqueta}</span>
+      <button type="button" className="pedido-control" onClick={() => setAbierto(true)}>
         {valor ? texto(valor) : `Seleccionar ${singular}`}
       </button>
 
@@ -112,26 +113,26 @@ function SelectorConPopup<T extends { id: number }>({
           onCerrar={cerrar}
           pie={
             agregando ? null : (
-              <button type="button" className="primario" onClick={() => setAgregando(true)} disabled={!FormularioAlta}>
+              <button type="button" className="pedido-primario" onClick={() => setAgregando(true)} disabled={!FormularioAlta}>
                 Agregar {singular}
               </button>
             )
           }
         >
           {agregando && FormularioAlta ? (
-            <div style={{ padding: 16, overflowY: "auto" }}>
+            <div className="pedido-popup-alta">
               <FormularioAlta onGuardado={() => setAgregando(false)} onCancelar={() => setAgregando(false)} />
             </div>
           ) : (
-            <ul className="lista">
-              {cargando && <li className="vacio">Cargando…</li>}
-              {error && <li className="vacio">{error}</li>}
+            <ul className="pedido-lista">
+              {cargando && <li className="pedido-vacio">Cargando…</li>}
+              {error && <li className="pedido-vacio">{error}</li>}
               {!cargando && !error && items.length === 0 && (
-                <li className="vacio">Todavía no hay {singular}s cargados.</li>
+                <li className="pedido-vacio">Todavía no hay {singular}s cargados.</li>
               )}
               {items.map((it) => (
                 <li key={it.id}>
-                  <button type="button" className="item" onClick={() => { onChange(it); cerrar(); }}>
+                  <button type="button" className="pedido-item" onClick={() => { onChange(it); cerrar(); }}>
                     {texto(it)}
                   </button>
                 </li>
@@ -150,11 +151,12 @@ export default function IngresarPedido() {
   const [tamano, setTamano] = useState<Tamano | "">("");
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [fecha, setFecha] = useState(""); // formato AAAA-MM-DD
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
 
-  const completo = tamano !== "" && comercio !== null && cliente !== null;
+  const completo = tamano !== "" && comercio !== null && cliente !== null && fecha !== "";
 
   async function guardar(e: FormEvent) {
     e.preventDefault();
@@ -170,6 +172,7 @@ export default function IngresarPedido() {
           tamano,
           comercio: comercio.id,
           cliente: cliente.id,
+          fecha,
         }),
       });
       if (!res.ok) {
@@ -180,6 +183,7 @@ export default function IngresarPedido() {
       setTamano("");
       setComercio(null);
       setCliente(null);
+      setFecha("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
@@ -188,14 +192,14 @@ export default function IngresarPedido() {
   }
 
   return (
-    <form className="form" onSubmit={guardar}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>Ingresar pedido</h1>
+    <form className="pedido-form" onSubmit={guardar}>
+      <h1 className="pedido-titulo">Ingresar pedido</h1>
 
-      <div className="campo">
-        <label className="label" htmlFor="tamano">Tamaño del paquete</label>
+      <div className="pedido-campo">
+        <label className="pedido-label" htmlFor="tamano">Tamaño del paquete</label>
         <select
           id="tamano"
-          className="control"
+          className="pedido-control"
           value={tamano}
           onChange={(e) => setTamano(e.target.value as Tamano)}
         >
@@ -226,13 +230,25 @@ export default function IngresarPedido() {
         FormularioAlta={FormularioCliente}
       />
 
-      {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
-      {ok && <p style={{ color: "green", margin: 0 }}>Pedido guardado.</p>}
+      <div className="pedido-campo">
+        <label className="pedido-label" htmlFor="fecha">Fecha</label>
+        <input
+          id="fecha"
+          type="date"
+          className="pedido-control"
+          value={fecha}
+          onChange={(e) => setFecha(e.target.value)}
+          onClick={(e) => e.currentTarget.showPicker?.()}
+          required
+        />
+      </div>
+
+      {error && <p className="pedido-error">{error}</p>}
+      {ok && <p className="pedido-ok">Pedido guardado.</p>}
 
       <button
         type="submit"
-        className="primario"
-        style={{ opacity: completo && !guardando ? 1 : 0.5 }}
+        className="pedido-primario"
         disabled={!completo || guardando}
       >
         {guardando ? "Guardando…" : "Guardar pedido"}
