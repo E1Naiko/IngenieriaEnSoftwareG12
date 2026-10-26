@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/ping/", views.ping, name="ping"),
     path("api/", include("crudComercios.urls")),
     path("api/", include("loginCoordinador.urls")),
+    path("api/", include("loginRepartidor.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
