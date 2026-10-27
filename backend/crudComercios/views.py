@@ -3,7 +3,8 @@ API REST para el CRUD de Comercios.
 
 Expone endpoints JSON que consume el frontend React (``frontend/src/pages/Comercios.tsx``)
 y cualquier otro cliente. No usa Django REST Framework para mantener las dependencias
-al mínimo: las vistas leen/escriben JSON a mano con ``JsonResponse``.
+al mínimo: las vistas leen/escriben JSON a mano con ``JsonResponse``
+(``HttpResponse`` vacío para el borrado).
 
 Rutas (ver ``crudComercios/urls.py`` — prefijo global ``/api/`` en ``config/urls.py``):
 
@@ -12,7 +13,7 @@ Rutas (ver ``crudComercios/urls.py`` — prefijo global ``/api/`` en ``config/ur
     GET    /api/comercios/<id>/   → detalle
     PUT    /api/comercios/<id>/   → reemplaza (todos los campos obligatorios)
     PATCH  /api/comercios/<id>/   → actualiza parcialmente (solo lo enviado)
-    DELETE /api/comercios/<id>/   → borra
+    DELETE /api/comercios/<id>/   → borra (204 sin body)
 
 Contrato JSON (ejemplo) — producido por ``_comercio_to_dict``::
 
@@ -20,25 +21,28 @@ Contrato JSON (ejemplo) — producido por ``_comercio_to_dict``::
         "id": 1,
         "nombre": "Kiosco Central",
         "telefono": "221-555-0100",
-        "direccion": "Calle 7 #123",
-        "datos_cliente": 4          // FK a Cliente.id o null
+        "direccion": "Calle 7 #123"
     }
+
+La respuesta tiene exactamente las cuatro columnas de la tabla ``comercio``: ``comercio``
+no referencia a ningún cliente, así que no hay FK que serializar.
 
 Listado → ``{"results": [...], "count": N}``.
 Errores → ``400`` con la clave del campo (``{"nombre": "…"}``) o ``{"detail": "…"}``.
+Los campos que el modelo no tiene se ignoran en silencio (nunca fueron error).
 
 Dependencias
 ------------
-- Modelo: ``core.models.Comercio`` y ``core.models.Cliente`` (solo para validar la FK).
+- Modelo: ``core.models.Comercio`` (única fuente de verdad del esquema).
 - Cada helper está documentado abajo; las vistas delegan validación a ``_validar_y_aplicar``.
 """
 
 import json
 
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from core.models import Cliente, Comercio
+from core.models import Comercio
 
 
 # ---------------------------------------------------------------------------
@@ -72,21 +76,21 @@ def _parse_body(request):
 def _comercio_to_dict(comercio):
     """Serializa un ``Comercio`` al contrato JSON de la API.
 
-    No expone el objeto ``Cliente`` completo, solo su PK como ``datos_cliente``
-    (``comercio.datos_cliente_id``). Si no hay cliente vinculado, serializa ``None``.
+    Son las cuatro columnas de la tabla, sin anidados: el comercio no
+    referencia clientes (el vínculo se consulta por ``Paquete``), así que no
+    hay FK que resolver ni consultas extra que hacer por comercio.
 
     Args:
         comercio: instancia ``core.models.Comercio`` (guardada o no).
 
     Returns:
-        dict con ``id``, ``nombre``, ``telefono``, ``direccion`` y ``datos_cliente``.
+        dict con ``id``, ``nombre``, ``telefono`` y ``direccion``.
     """
     return {
         "id": comercio.id,
         "nombre": comercio.nombre,
         "telefono": comercio.telefono,
         "direccion": comercio.direccion,
-        "datos_cliente": comercio.datos_cliente_id,
     }
 
 
@@ -101,9 +105,7 @@ def _validar_y_aplicar(comercio, data, parcial=False):
     - ``nombre``, ``telefono``, ``direccion``: ``str`` no vacío tras ``strip()``.
       Obligatorios si ``parcial is False`` (``POST``/``PUT``). En ``PATCH`` solo
       se validan si vienen en ``data``.
-    - ``datos_cliente``: si no viene, no se toca. Si es ``None``/``""`` → desvincula
-      (``comercio.datos_cliente = None``). Si es un entero/ID → debe existir un
-      ``Cliente`` con ese PK; si no, ``400 {"datos_cliente": "Cliente no encontrado."}``.
+    - Cualquier otra clave de ``data`` se ignora: no se guarda ni se rechaza.
 
     Args:
         comercio: instancia ``Comercio`` a mutar (puede ser ``Comercio()`` nuevo).
@@ -153,20 +155,6 @@ def _validar_y_aplicar(comercio, data, parcial=False):
             {"direccion": "La dirección es obligatoria."}, status=400
         )
 
-    # datos_cliente (FK opcional)
-    if "datos_cliente" in data:
-        valor = data.get("datos_cliente")
-        if valor is None or valor == "":
-            comercio.datos_cliente = None
-        else:
-            try:
-                cliente = Cliente.objects.get(pk=valor)
-            except (Cliente.DoesNotExist, ValueError, TypeError):
-                return False, JsonResponse(
-                    {"datos_cliente": "Cliente no encontrado."}, status=400
-                )
-            comercio.datos_cliente = cliente
-
     return True, None
 
 
@@ -188,7 +176,7 @@ def comercios_list(request):
 
     ``POST /api/comercios/``
         Crea un comercio. Body JSON con ``nombre``, ``telefono``, ``direccion``
-        (obligatorios) y ``datos_cliente`` (opcional, PK de ``Cliente``).
+        (obligatorios). Cualquier otra clave se ignora.
 
         Respuestas::
 
@@ -232,14 +220,15 @@ def comercio_detail(request, pk):
 
     ``PUT /api/comercios/<pk>/``
         Reemplazo total: exige ``nombre``, ``telefono``, ``direccion``.
-        ``datos_cliente`` opcional. ``200`` con el comercio actualizado o ``400``.
+        ``200`` con el comercio actualizado o ``400``.
 
     ``PATCH /api/comercios/<pk>/``
         Actualización parcial: solo valida los campos enviados.
-        Ideal para ``{"datos_cliente": 3}`` o ``{"telefono": "nuevo"}``.
+        Ideal para ``{"telefono": "nuevo"}``.
 
     ``DELETE /api/comercios/<pk>/``
-        Borra. ``204`` con body ``{}``. ``404`` si no existe.
+        Borra. ``204`` **sin body** (así lo exige HTTP y así lo parsea el proxy de
+        Vite). ``404`` si no existe.
 
     Cualquier otro método → ``405``.
     """
@@ -266,6 +255,9 @@ def comercio_detail(request, pk):
 
     if request.method == "DELETE":
         comercio.delete()
-        return JsonResponse({}, status=204)
+        # 204 con body vacío a propósito: un "No Content" con Content-Length>0
+        # (ej. JsonResponse({})) rompe el parser HTTP del proxy de Vite y el
+        # DELETE llega al navegador como 502 aunque haya borrado.
+        return HttpResponse(status=204)
 
     return JsonResponse({"detail": "Método no permitido."}, status=405)

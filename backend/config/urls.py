@@ -24,7 +24,6 @@ urlpatterns = [
     # puede comunicarse (lo usamos para verificar el CORS).
     path("api/ping/", views.ping, name="ping"),
     path("api/", include("crudComercios.urls")),
-    
     path("api/", include("loginCoordinador.urls")),
     path("api/", include("loginRepartidor.urls")),
 ]

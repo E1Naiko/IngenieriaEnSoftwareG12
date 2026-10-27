@@ -18,19 +18,21 @@ function Login() {
     setMessage("");
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/login-coordinador/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username,
-            password,
-          }),
-        }
-      );
+      // Ruta relativa: en desarrollo Vite la proxifica a Django (server.proxy
+      // en vite.config.ts). Con la URL absoluta el pedido sale del proxy, pasa
+      // a ser cross-origin y la cookie de sesión no se guarda: el login
+      // "funciona" en la respuesta pero la sesión no queda iniciada.
+      const response = await fetch("/api/login-coordinador/", {
+        method: "POST",
+        credentials: "same-origin", // la sesión de Django vive en una cookie
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
 
       const data = await response.json();
 
