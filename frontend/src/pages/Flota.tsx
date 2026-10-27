@@ -147,7 +147,7 @@ return (
                   .toLowerCase();
 
                 const claseEstado =
-                  estado === "disponible"
+                  estado === "disponible" || estado === "activo"
                     ? "flota-estado-disponible"
                     : estado === "ocupado"
                       ? "flota-estado-ocupado"
