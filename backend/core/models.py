@@ -106,19 +106,21 @@ class Repartidor(models.Model):
     @property
     def historial_asociado(self):
         """Queryset de paquetes que ya entregó (estado ``entregado``)."""
-        return self.paquetes.filter(estado=Paquete.Estado.ENTREGADO)
+        return self.paquetes.filter(estado__iexact=Paquete.Estado.ENTREGADO)
 
 
 class Cliente(models.Model):
     """
-    Datos de contacto del destinatario de un paquete.
+    Datos personales y de contacto del destinatario de un paquete.
 
-    No guarda nombre ni apellido: solo cómo contactarlo (``telefono``) y
-    dónde entregarle (``direccion``). Se identifica por su DNI, único.
+    Guarda ``nombre``, ``apellido``, cómo contactarlo (``telefono``) y dónde
+    entregarle (``direccion``). Se identifica por su DNI, único.
     Los comercios con los que trabaja se ven por sus paquetes:
     ``cliente.paquetes.values_list("comercio", flat=True)``.
     """
 
+    nombre = models.CharField(max_length=255)
+    apellido = models.CharField(max_length=255)
     telefono = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255)  # dirección de entrega
     dni = models.PositiveIntegerField(unique=True)
@@ -129,7 +131,7 @@ class Cliente(models.Model):
         ordering = ["dni"]
 
     def __str__(self):
-        return f"Cliente {self.dni}"
+        return f"{self.apellido}, {self.nombre} ({self.dni})"
 
 
 class Comercio(models.Model):
