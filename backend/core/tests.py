@@ -16,9 +16,12 @@ Ejecutar::
 
 from datetime import date
 import importlib
+from unittest.mock import patch
 
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
+from django.db.migrations.executor import MigrationExecutor
 from django.db.models.deletion import ProtectedError
 from django.forms import modelform_factory
 from django.test import TestCase, TransactionTestCase
