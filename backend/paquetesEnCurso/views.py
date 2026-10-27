@@ -53,12 +53,9 @@ def paquetesEnCurso(request):
     # La base de producción usa "DISPONIBLE" (además del valor legado
     # "ACTIVO"). Normalizamos mayúsculas/espacios y aceptamos ambos para
     # que el contrato funcione con datos existentes y registros nuevos.
-    estados_disponibles = {
-        Paquete.Estado.,
-        "DISPONIBLE",
-    }
-
     paquetes = (
+        Paquete.objects.exclude(estado__iexact=Paquete.Estado.ENTREGADO)
+        .select_related("comercio", "cliente", "paquete", "comprobante")
     )
 
     # Comprueba si la consulta devolvió algún resultado.
@@ -72,3 +69,18 @@ def paquetesEnCurso(request):
             },
             status=200,
         )
+
+    # Convierte cada objeto paquete en un diccionario.
+    # La comprensión de listas genera una lista de diccionarios
+    # que luego podrá convertirse en JSON.
+    data = [
+        _paquete_to_dict(paquete)
+        for paquete in paquetes
+    ]
+
+    # Devuelve los datos en formato JSON con el código HTTP 200,
+    # que indica que la petición se procesó correctamente.
+    return JsonResponse(
+        {"paquetes": data},
+        status=200,
+    )
