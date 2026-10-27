@@ -18,8 +18,8 @@ Qué se cubre
 Ejecutar::
 
     cd backend
-    python manage.py test crudComercios
-    python manage.py test crudComercios.tests.ComercioAPITests.test_crear
+    DATABASE_MODE=sqlite python manage.py test crudComercios
+    DATABASE_MODE=sqlite python manage.py test crudComercios.tests.ComercioAPITests.test_crear
 
 Nota: ``Comercio`` vive en ``core.models``; los tests crean datos de
 prueba en la BD de test (SQLite en memoria / aislada por ``TestCase``).

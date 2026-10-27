@@ -31,10 +31,10 @@ class ComercioAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    """Clientes (destinatarios): contacto y dirección de entrega."""
+    """Clientes (destinatarios): datos personales, contacto y dirección de entrega."""
 
-    list_display = ("dni", "telefono", "direccion", "paquetes_asociados")
-    search_fields = ("dni", "direccion", "telefono")
+    list_display = ("apellido", "nombre", "dni", "telefono", "direccion", "paquetes_asociados")
+    search_fields = ("nombre", "apellido", "dni", "direccion", "telefono")
 
     @admin.display(description="Paquetes")
     def paquetes_asociados(self, obj):
@@ -59,7 +59,13 @@ class PaqueteAdmin(admin.ModelAdmin):
         "fecha_destino",
     )
     list_filter = ("estado", "tamanio", "comercio", "fecha_origen", "fecha_destino")
-    search_fields = ("cod_seguimiento", "cliente__dni", "comercio__nombre")
+    search_fields = (
+        "cod_seguimiento",
+        "cliente__dni",
+        "cliente__nombre",
+        "cliente__apellido",
+        "comercio__nombre",
+    )
     # En el formulario, estos campos se eligen con un buscador en vez de
     # un <select> con todos los registros (imprescindible con muchos datos):
     autocomplete_fields = ("cliente", "comercio", "repartidor")

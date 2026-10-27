@@ -1,0 +1,6 @@
+# Dependencias para desarrollo local y verificación de tipos.
+-r requirements.txt
+
+# Pyrefly reconoce los campos, managers y relaciones dinámicas de Django.
+django-stubs>=5.2.9,<7
+pyrefly>=1.4.0,<2
