@@ -168,6 +168,7 @@ class Paquete(models.Model):
     class Estado(models.TextChoices):
         """Ciclo de vida del paquete."""
 
+        RETIRADO = "retirado", "Retirado"
         PENDIENTE = "pendiente", "Pendiente"
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
