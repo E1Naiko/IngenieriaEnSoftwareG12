@@ -1,0 +1,38 @@
+name: ingenieria-software-g12
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ingenieria-en-software-g12-backend:dev
+    ports:
+      - "8000:8000"
+    environment:
+      # Sin DB_HOST se activa el fallback ya existente de Django a SQLite.
+      DB_HOST: ""
+      DB_SQLITE_PATH: /data/db.sqlite3
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: desarrollo-local-no-usar-en-produccion
+      DJANGO_ALLOWED_HOSTS: "*"
+    volumes:
+      # Los datos sobreviven a `docker compose down` y a reconstruir la imagen.
+      - sqlite_data:/data
+      - media_data:/app/media
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ping/', timeout=5)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  sqlite_data:
+  media_data:

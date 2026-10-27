@@ -35,10 +35,10 @@ class LoginRepartidorTests(TestCase):
         self.assertEqual(r.json()["message"], MSG_TOKEN_INVALIDO )
 
 
-"""
+
     def test_escenario_3_repartidor_dado_de_baja(self):
         self.repartidor.estado = "baja"
         self.repartidor.save()
         r = self._post({"token": self.repartidor.token})
         self.assertEqual(r.status_code, 403)
-        self.assertEqual(r.json()["message"], MSG_REPARTIDOR_BAJA)"""
+        self.assertEqual(r.json()["message"], MSG_REPARTIDOR_BAJA)
