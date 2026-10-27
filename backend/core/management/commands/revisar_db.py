@@ -56,7 +56,8 @@ class Command(BaseCommand):
         except OperationalError as exc:
             self.stderr.write(self.style.ERROR(f"No se pudo conectar: {exc}"))
             self.stdout.write(
-                "\nRevisá DB_HOST / DB_USER / DB_PASSWORD en backend/.env "
+                "\nRevisá DATABASE_MODE=postgres y DB_HOST / DB_USER / DB_PASSWORD "
+                "en backend/.env o en variables del hosting "
                 "(Supabase → Connect → Session pooler)."
             )
             return

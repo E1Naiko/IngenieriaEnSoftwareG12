@@ -10,7 +10,7 @@ independientes que solo se cruzan en ``paquete``.
 Ejecutar::
 
     cd backend
-    python manage.py test core
+    DATABASE_MODE=sqlite python manage.py test core
 """
 
 from django.db import IntegrityError, transaction

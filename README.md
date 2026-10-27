@@ -1,59 +1,34 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (app **core**): backend en **Django**
-con base **PostgreSQL en Supabase** y frontend en **React**. Para desarrollo,
-el backend puede usar **SQLite** sin credenciales externas.
+Sistema de gestión de reparto de paquetes (app **core**) hecho con **Django**
+y **React**. Usa dos proyectos PostgreSQL en Supabase: uno para desarrollo y
+otro para producción. SQLite queda como alternativa local offline.
 
 ## Estructura
 
 ```text
 frontend/       → app React
-backend/        → API Django + Supabase/SQLite (ver backend/README.md)
-Info/           → documentación del dominio y del esquema de datos
-compose.yaml    → backend de desarrollo con SQLite persistente
+backend/        → API Django + Supabase (proyectos separados por entorno)
+Info/           → documentación del dominio, bases y Docker
+compose.yaml    → opción para ejecutar el backend en contenedor
 .github/        → tests y build en todas las ramas; publicación en Docker Hub
 ```
 
-## Arranque rápido con Docker
-
-Con Docker y Docker Compose instalados, desde la raíz:
-
-```bash
-docker compose up --build
-```
-
-Esto crea o actualiza la base SQLite de desarrollo, aplica las migraciones y
-levanta la API en http://localhost:8000. La base se conserva en un volumen al
-detener o reconstruir el contenedor; no se sube a Git ni a Docker Hub.
-
-Para el frontend, en otra terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Ver [Info/Docker.md](Info/Docker.md) para los comandos de administración, el
-borrado de la base de desarrollo y la configuración de Docker Hub.
-
-## Arranque local sin Docker
-
-### Backend
+## Arranque rápido de desarrollo (sin Docker)
 
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Dejar DB_HOST vacío para SQLite o completar las credenciales de Supabase.
+# completar DB_HOST, DB_USER y DB_PASSWORD del proyecto Supabase de desarrollo
+python manage.py revisar_db  # verificar el destino
 python manage.py migrate
 python manage.py runserver
 ```
 
-En Windows, la activación del entorno es `venv\Scripts\activate`.
-
-### Frontend
+El backend usa el proyecto Supabase de desarrollo; producción tiene otras
+credenciales y otro proyecto. Para el frontend, en otra terminal:
 
 ```bash
 cd frontend
@@ -61,8 +36,27 @@ npm install
 npm run dev
 ```
 
+Docker Compose es opcional para ejecutar el backend en contenedor y también
+conecta a Supabase de desarrollo. Ver [Info/Docker.md](Info/Docker.md) para
+esa opción y la publicación de imágenes en Docker Hub.
+
+## Producción y pruebas
+
+En el hosting, configurar `DATABASE_MODE=postgres`, `DJANGO_DEBUG=False` y las
+credenciales del proyecto Supabase de **producción** usando
+`backend/.env.supabase.example` como plantilla. No reutilizar los valores de
+desarrollo ni subir credenciales a Git.
+
+Para ejecutar tests localmente sin crear una base de test remota, usar:
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test
+```
+
 Instrucciones completas en [backend/README.md](backend/README.md).
-Documentación de modelos y decisiones de diseño en [Info/DB.md](Info/DB.md).
+Configuración de desarrollo/producción en [Info/Ambientes.md](Info/Ambientes.md);
+documentación del esquema en [Info/DB.md](Info/DB.md).
 
 ## CI y publicación en Docker Hub
 

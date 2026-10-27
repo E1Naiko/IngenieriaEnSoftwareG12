@@ -174,7 +174,7 @@ jobs:
       run:
         working-directory: backend
     env:
-      DB_HOST: ""
+      DATABASE_MODE: sqlite
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: solo-tests-de-github-actions
 
@@ -245,7 +245,7 @@ jobs:
       - name: Verificar Django dentro de la imagen
         run: |
           docker run --rm \
-            -e DB_HOST= \
+            -e DATABASE_MODE=sqlite \
             -e DJANGO_DEBUG=False \
             -e DJANGO_SECRET_KEY=solo-build-de-github-actions \
             -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
@@ -256,7 +256,7 @@ jobs:
           set -euo pipefail
           trap 'docker rm -f backend-ci >/dev/null 2>&1 || true' EXIT
           docker run -d --name backend-ci -p 8000:8000 \
-            -e DB_HOST= \
+            -e DATABASE_MODE=sqlite \
             -e DJANGO_DEBUG=False \
             -e DJANGO_SECRET_KEY=solo-build-de-github-actions \
             -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
