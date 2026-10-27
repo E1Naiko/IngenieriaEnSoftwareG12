@@ -252,7 +252,7 @@ class Command(BaseCommand):
             self.style.WARNING(
                 "'migrate --fake-initial' NO sirve en este caso: Django solo da la\n"
                 "migración por aplicada si las tablas existen Y tienen las columnas\n"
-                "de los AddField (acá falta cliente.comercio_id), así que vuelve a\n"
+                "de los AddField; si falta alguna columna requerida, vuelve a\n"
                 "fallar con el mismo error.\n"
             )
         )

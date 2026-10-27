@@ -150,8 +150,8 @@ python manage.py migrate --fake-initial
 **b) Las tablas viejas no coinciden** → hay que borrar esas tablas y
 recrearlas. Ojo: `--fake-initial` **tampoco sirve acá** (Django solo da la
 migración por aplicada si las tablas existen *y* tienen las columnas de los
-`AddField`, como `cliente.comercio_id`; si falta alguna, vuelve a fallar con
-el mismo error).
+`AddField` de la migración inicial; si falta alguna, vuelve a fallar con el
+mismo error).
 
 `revisar_db` informa cuántas filas hay en cada tabla de `core` y en
 `auth_user`, para saber si el borrado pierde algo.
