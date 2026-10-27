@@ -1,15 +1,33 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+/**
+ * Página de gestión de comercios (CRUD completo contra /api/comercios/).
+ *
+ * Cómo funciona:
+ * 1. Al montar, `load()` pide la lista y guarda `results` en `items`.
+ * 2. El form tiene dos modos, definidos por `editingId`:
+ *    - `editingId === null`  → creación con POST.
+ *    - `editingId` con valor → reemplazo total con PUT a /api/comercios/<id>/.
+ * 3. Después de guardar o borrar se vuelve a llamar `load()`: la tabla siempre
+ *    se lee desde el backend, nunca se parchea el estado local.
+ *
+ * Las rutas son relativas (`/api/...`): en desarrollo Vite las proxifica a
+ * Django (`server.proxy` en vite.config.ts), así que no hay que configurar
+ * hosts ni depender de CORS.
+ *
+ * `Comercio` espeja la tabla `comercio` de la base: id, nombre, teléfono y
+ * dirección. El `id` lo asigna la base, por eso el form no lo envía.
+ */
+
 interface Comercio {
   id: number;
   nombre: string;
   telefono: string;
   direccion: string;
-  datos_cliente: number | null;
 }
 
-const emptyForm = { nombre: "", telefono: "", direccion: "", datos_cliente: "" };
+const emptyForm = { nombre: "", telefono: "", direccion: "" };
 
 export default function Comercios() {
   const [items, setItems] = useState<Comercio[]>([]);
@@ -18,6 +36,7 @@ export default function Comercios() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /** Lee todos los comercios. `{results, count}` o una lista plana. */
   async function load() {
     setLoading(true);
     setError("");
@@ -37,6 +56,7 @@ export default function Comercios() {
     load();
   }, []);
 
+  /** Crea (POST) o reemplaza (PUT) según haya una fila en edición. */
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -45,11 +65,6 @@ export default function Comercios() {
       telefono: form.telefono,
       direccion: form.direccion,
     };
-    if (form.datos_cliente !== "") {
-      body.datos_cliente = Number(form.datos_cliente);
-    } else {
-      body.datos_cliente = null;
-    }
     const url = editingId ? `/api/comercios/${editingId}/` : "/api/comercios/";
     const method = editingId ? "PUT" : "POST";
     try {
@@ -58,8 +73,10 @@ export default function Comercios() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      // El 204 del DELETE no trae body: se parsea solo cuando hay contenido.
+      const data = res.status === 204 ? {} : await res.json();
       if (!res.ok) {
+        // 400 viene como {"nombre": "..."} por campo; el resto como {"detail": "..."}.
         setError(JSON.stringify(data));
         return;
       }
@@ -67,24 +84,30 @@ export default function Comercios() {
       setEditingId(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(e instanceof Error ? e.message : "Error al guardar");
     }
   }
 
+  /** Carga la fila elegida en el form y lo pasa a modo edición. */
   function startEdit(c: Comercio) {
     setEditingId(c.id);
-    setForm({
-      nombre: c.nombre,
-      telefono: c.telefono,
-      direccion: c.direccion,
-      datos_cliente: c.datos_cliente ? String(c.datos_cliente) : "",
-    });
+    setForm({ nombre: c.nombre, telefono: c.telefono, direccion: c.direccion });
   }
 
+  /** Borra y recarga. Sin `catch`, un 500/502 pasaría desapercibido. */
   async function handleDelete(id: number) {
     if (!confirm("¿Eliminar este comercio?")) return;
-    await fetch(`/api/comercios/${id}/`, { method: "DELETE" });
-    await load();
+    try {
+      const res = await fetch(`/api/comercios/${id}/`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`No se pudo eliminar (${res.status})`);
+      if (editingId === id) {
+        setEditingId(null);
+        setForm(emptyForm);
+      }
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al eliminar");
+    }
   }
 
   return (
@@ -115,11 +138,6 @@ export default function Comercios() {
             onChange={(e) => setForm({ ...form, direccion: e.target.value })}
             required
           />
-          <input
-            placeholder="ID cliente de contacto (opcional)"
-            value={form.datos_cliente}
-            onChange={(e) => setForm({ ...form, datos_cliente: e.target.value })}
-          />
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button type="submit">{editingId ? "Guardar" : "Crear"}</button>
             {editingId && (
@@ -148,7 +166,6 @@ export default function Comercios() {
               <th>Nombre</th>
               <th>Teléfono</th>
               <th>Dirección</th>
-              <th>Cliente</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -159,7 +176,6 @@ export default function Comercios() {
                 <td>{c.nombre}</td>
                 <td>{c.telefono}</td>
                 <td>{c.direccion}</td>
-                <td>{c.datos_cliente ?? "-"}</td>
                 <td>
                   <button onClick={() => startEdit(c)}>Editar</button>{" "}
                   <button onClick={() => handleDelete(c.id)}>Eliminar</button>
@@ -168,7 +184,7 @@ export default function Comercios() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center" }}>
+                <td colSpan={5} style={{ textAlign: "center" }}>
                   Sin comercios
                 </td>
               </tr>

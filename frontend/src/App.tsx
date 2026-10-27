@@ -5,6 +5,8 @@ import Login from "./components/login/login";
 import Dashboard from "./pages/Dashboard";
 import Comercios from "./pages/Comercios";
 import IngresarPedido from "./pages/IngresarPedido";
+import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
+import DashboardRepartidor from "./pages/Dashboardrepartidor";
 
 import "./App.css";
 
@@ -16,6 +18,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/comercios" element={<Comercios />} />
         <Route path="/ingresar-pedido" element={<IngresarPedido />} />
+        <Route path="/loginrepartidor" element={<LoginRepartidor />} />
+        <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
       </Routes>
     </BrowserRouter>
   );
