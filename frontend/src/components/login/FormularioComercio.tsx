@@ -61,7 +61,7 @@ export default function FormularioComercio({ onGuardado, onCancelar }: Props) {
         required
       />
       <input
-        placeholder="ID cliente de contacto (opcional)"
+        placeholder="ID"
         value={form.datos_cliente}
         onChange={(e) => setForm({ ...form, datos_cliente: e.target.value })}
       />

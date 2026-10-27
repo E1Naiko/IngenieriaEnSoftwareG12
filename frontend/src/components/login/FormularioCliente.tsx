@@ -5,7 +5,7 @@ interface Props {
   onCancelar: () => void;
 }
 
-const vacio = { nombre: "", dni: "", direccion: "" };
+const vacio = { nombre: "", apellido: "", telefono: "", direccion: "", dni: "" };
 
 export default function FormularioCliente({ onGuardado, onCancelar }: Props) {
   const [form, setForm] = useState(vacio);
@@ -22,8 +22,10 @@ export default function FormularioCliente({ onGuardado, onCancelar }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre,
-          dni: Number(form.dni),
+          apellido: form.apellido,
+          telefono: form.telefono,
           direccion: form.direccion,
+          dni: Number(form.dni),
         }),
       });
       const data = await res.json();
@@ -48,17 +50,30 @@ export default function FormularioCliente({ onGuardado, onCancelar }: Props) {
         required
       />
       <input
-        placeholder="DNI"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={form.dni}
-        onChange={(e) => setForm({ ...form, dni: e.target.value })}
+        placeholder="Apellido"
+        value={form.apellido}
+        onChange={(e) => setForm({ ...form, apellido: e.target.value })}
+        required
+      />
+      <input
+        placeholder="Teléfono"
+        inputMode="tel"
+        value={form.telefono}
+        onChange={(e) => setForm({ ...form, telefono: e.target.value })}
         required
       />
       <input
         placeholder="Dirección"
         value={form.direccion}
         onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+        required
+      />
+      <input
+        placeholder="DNI"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={form.dni}
+        onChange={(e) => setForm({ ...form, dni: e.target.value })}
         required
       />
       {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}

@@ -6,7 +6,8 @@ import FormularioCliente from "../components/login/FormularioCliente";
 
 /* ---------- Tipos ---------- */
 
-export type Tamano = "pequeño" | "mediano" | "grande";
+// Valores que acepta el back (el texto que ve el usuario puede ser otro)
+export type Tamano = "chico" | "mediano" | "grande";
 
 export interface Comercio {
   id: number;
@@ -16,22 +17,40 @@ export interface Comercio {
 export interface Cliente {
   id: number;
   nombre: string;
-  dni?: number;
-  direccion?: string;
+  apellido: string;
+  dni: number;
+  direccion: string;
+  telefono?: string;
 }
 
-// Props que recibirán tus formularios de alta (el de comercio ya lo tenés).
+// Pedido que devuelve el back dentro del 409
+interface PedidoSimilar {
+  id: number;
+  cod_seguimiento: string;
+  estado: string;
+  tamanio: string;
+  comercio: number;
+  cliente: number;
+  fecha_origen: string;
+  fecha_destino: string;
+}
+
+interface AvisoSimilar {
+  detail: string;
+  similar?: PedidoSimilar;
+}
+
+// Props que reciben los formularios de alta
 export interface FormularioAltaProps {
-  onGuardado: () => void; // llamalo cuando se guarde bien
+  onGuardado: () => void; // se llama cuando se guarda bien
   onCancelar: () => void;
 }
-
 
 /* ---------- Endpoints ---------- */
 
 const URL_COMERCIOS = "/api/comercios/";
 const URL_CLIENTES = "/api/clientes/";
-const URL_PEDIDOS = "/api/pedidos/"; // a crear en el backend
+const URL_PEDIDOS = "/api/pedidos/";
 
 /* ---------- Popup genérico ---------- */
 
@@ -151,34 +170,49 @@ export default function IngresarPedido() {
   const [tamano, setTamano] = useState<Tamano | "">("");
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [fecha, setFecha] = useState(""); // formato AAAA-MM-DD
+  const [fecha, setFecha] = useState(""); // fecha de entrega, formato AAAA-MM-DD
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
+  const [aviso, setAviso] = useState<AvisoSimilar | null>(null);
 
   const completo = tamano !== "" && comercio !== null && cliente !== null && fecha !== "";
 
-  async function guardar(e: FormEvent) {
-    e.preventDefault();
-    if (!completo) return;
+  async function enviar(forzar: boolean) {
+    if (tamano === "" || !comercio || !cliente || fecha === "") return;
     setError("");
     setOk(false);
     setGuardando(true);
     try {
+      const body: Record<string, unknown> = {
+        comercio: comercio.id,
+        cliente: cliente.id,
+        tamanio: tamano,
+        fecha_destino: fecha,
+      };
+      if (forzar) body.forzar = true;
+
       const res = await fetch(URL_PEDIDOS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tamano,
-          comercio: comercio.id,
-          cliente: cliente.id,
-          fecha,
-        }),
+        body: JSON.stringify(body),
       });
+
+      // Ya existe un pedido similar: se pregunta si se carga igualmente
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setAviso({
+          detail: data.detail ?? "Hay un pedido similar ¿Desea cargarlo igualmente?",
+          similar: data.similar,
+        });
+        return;
+      }
+
       if (!res.ok) {
         setError(JSON.stringify(await res.json().catch(() => ({}))));
         return;
       }
+
       setOk(true);
       setTamano("");
       setComercio(null);
@@ -189,6 +223,16 @@ export default function IngresarPedido() {
     } finally {
       setGuardando(false);
     }
+  }
+
+  function guardar(e: FormEvent) {
+    e.preventDefault();
+    enviar(false);
+  }
+
+  function cargarIgualmente() {
+    setAviso(null);
+    enviar(true);
   }
 
   return (
@@ -204,7 +248,7 @@ export default function IngresarPedido() {
           onChange={(e) => setTamano(e.target.value as Tamano)}
         >
           <option value="" disabled>Elegir tamaño</option>
-          <option value="pequeño">Pequeño</option>
+          <option value="chico">Chico</option>
           <option value="mediano">Mediano</option>
           <option value="grande">Grande</option>
         </select>
@@ -224,14 +268,14 @@ export default function IngresarPedido() {
         etiqueta="Cliente"
         singular="cliente"
         url={URL_CLIENTES}
-        texto={(c) => (c.dni ? `${c.nombre} (DNI ${c.dni})` : c.nombre)}
+        texto={(c) => `${c.nombre} ${c.apellido} – DNI ${c.dni}`}
         valor={cliente}
         onChange={setCliente}
         FormularioAlta={FormularioCliente}
       />
 
       <div className="pedido-campo">
-        <label className="pedido-label" htmlFor="fecha">Fecha</label>
+        <label className="pedido-label" htmlFor="fecha">Fecha de entrega</label>
         <input
           id="fecha"
           type="date"
@@ -253,6 +297,41 @@ export default function IngresarPedido() {
       >
         {guardando ? "Guardando…" : "Guardar pedido"}
       </button>
+
+      {aviso && (
+        <Popup
+          titulo="Pedido similar"
+          onCerrar={() => setAviso(null)}
+          pie={
+            <div className="pedido-botones">
+              <button type="button" className="pedido-secundario" onClick={() => setAviso(null)}>
+                Cancelar
+              </button>
+              <button type="button" className="pedido-primario" onClick={cargarIgualmente}>
+                Cargar igualmente
+              </button>
+            </div>
+          }
+        >
+          <div className="pedido-similar">
+            <p className="pedido-similar-texto">{aviso.detail}</p>
+            {aviso.similar && (
+              <dl className="pedido-similar-datos">
+                <dt>Código</dt>
+                <dd>{aviso.similar.cod_seguimiento}</dd>
+                <dt>Estado</dt>
+                <dd>{aviso.similar.estado}</dd>
+                <dt>Tamaño</dt>
+                <dd>{aviso.similar.tamanio}</dd>
+                <dt>Fecha de carga</dt>
+                <dd>{aviso.similar.fecha_origen}</dd>
+                <dt>Fecha de entrega</dt>
+                <dd>{aviso.similar.fecha_destino}</dd>
+              </dl>
+            )}
+          </div>
+        </Popup>
+      )}
     </form>
   );
 }
