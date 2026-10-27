@@ -55,8 +55,10 @@ class PaqueteAdmin(admin.ModelAdmin):
         "cliente",
         "repartidor",
         "comprobante",
+        "fecha_origen",
+        "fecha_destino",
     )
-    list_filter = ("estado", "tamanio", "comercio")
+    list_filter = ("estado", "tamanio", "comercio", "fecha_origen", "fecha_destino")
     search_fields = ("cod_seguimiento", "cliente__dni", "comercio__nombre")
     # En el formulario, estos campos se eligen con un buscador en vez de
     # un <select> con todos los registros (imprescindible con muchos datos):
