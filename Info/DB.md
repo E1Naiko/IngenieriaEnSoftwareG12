@@ -10,9 +10,9 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 |---|---|
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
-| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI único). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno). `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
-| `Comprobante` | Archivo (foto/PDF) de la entrega. La columna se llama `file`, como en el diagrama, y es opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
+| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ## Puesta en marcha
 
@@ -62,6 +62,11 @@ cargar repartidores, comercios, clientes y paquetes.
 > migraciones de `core` son incrementales y no borran datos, así que no hace
 > falta dropear tablas al actualizar.
 >
+> La migración que agrega `fecha_origen` y `fecha_destino` asigna la fecha del
+> momento de la migración a paquetes preexistentes, porque el esquema anterior
+> no guardaba esas fechas. Si hay paquetes con datos históricos reales,
+> corregí esas dos fechas después de migrar.
+>
 > Si `migrate` falla con `relation "cliente" already exists` (base creada a
 > mano o con las migraciones anteriores borradas), corré primero
 > `python manage.py revisar_db`: compara las tablas existentes con los
@@ -79,7 +84,8 @@ cargar repartidores, comercios, clientes y paquetes.
   referencial. Es la relación inversa `repartidor.paquetes.all()`; como
   conveniencia existe la property `listado_id_pedidos_asignados`.
 - `repartidor.historial_asociado` → mismo criterio: property que devuelve los
-  paquetes en estado `entregado` (`repartidor.paquetes.filter(...)`).
+  paquetes en estado `entregado` (`repartidor.paquetes.filter(...)`), no una
+  lista de IDs serializada en `varchar`.
 - **Comercio y cliente son tablas independientes**: no hay FK entre ellas, así
   que cada una se da de alta sola, en cualquier orden. El par comercio ↔
   cliente solo existe dentro de un `Paquete`, que apunta a ambos, y ahí se
@@ -105,11 +111,13 @@ cargar repartidores, comercios, clientes y paquetes.
 - Los campos de opciones (`tipoVehiculo`, `estado` de repartidor y paquete,
   `tamanio`) usan `choices` de Django: los valores del enum se revisan y
   agregan fácil en `backend/core/models.py`.
-- Nombres de **columnas** en `snake_case` (convención Django): el
-  `tipoVehiculo` del diagrama es `tipo_vehiculo`, `codSeguimiento` es
-  `cod_seguimiento`, etc. La única excepción es `comprobante.file`, que se
-  escribe igual que en el diagrama. Las tablas conservan el nombre del
-  diagrama vía `Meta.db_table`.
+- Las tablas conservan el nombre del diagrama vía `Meta.db_table` y las
+  claves primarias de estas cinco tablas son enteros de 32 bits. Las columnas
+  FK en `paquete` respetan los nombres explícitos del modelo: `id_repartidor_asignado`,
+  `id_comercio`, `id_datos_cliente` e `id_comprobante` (configuradas con
+  `db_column`). Los nombres de campos de Django siguen `snake_case`; por
+  ejemplo, `tipo_vehiculo` y `cod_seguimiento`. `comprobante.file` tiene
+  longitud máxima 255.
 
 ## Comandos útiles
 

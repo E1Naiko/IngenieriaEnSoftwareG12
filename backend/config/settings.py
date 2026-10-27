@@ -155,11 +155,19 @@ elif DB_HOST:
         }
     }
 else:
-    # Fallback para desarrollar sin credenciales: SQLite local.
+    # Fallback para desarrollar sin credenciales: SQLite local. La ruta se
+    # puede mover a un volumen Docker (por ejemplo, /data/db.sqlite3) sin
+    # cambiar el valor habitual para quien ejecuta Django directamente.
+    SQLITE_PATH = Path(
+        os.getenv("DB_SQLITE_PATH") or str(BASE_DIR / "db.sqlite3")
+    ).expanduser()
+    if not SQLITE_PATH.is_absolute():
+        SQLITE_PATH = BASE_DIR / SQLITE_PATH
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": SQLITE_PATH,
         }
     }
 
