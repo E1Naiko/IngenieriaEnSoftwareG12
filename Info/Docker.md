@@ -19,7 +19,7 @@ como secretos. No se mezclan ni se suben a Git.
 cd backend
 python -m venv venv
 source venv/bin/activate       # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 # completar DB_HOST, DB_USER y DB_PASSWORD del proyecto Supabase de desarrollo
 python manage.py revisar_db    # comprobar que apunta al proyecto de desarrollo
@@ -88,7 +88,7 @@ Tiene estos jobs:
 | Job | Cuándo corre | Qué hace |
 |---|---|---|
 | `Calcular tags y decidir publicación` | siempre | Normaliza la rama, calcula el SHA corto, arma los tags y decide si se publica. Escribe la decisión en el resumen de la corrida. |
-| `Tests del backend con SQLite` | siempre | Python 3.12, `manage.py check`, `makemigrations --check --dry-run` y `manage.py test`. |
+| `Tests del backend con SQLite` | siempre | Python 3.12, `manage.py check`, Pyrefly sobre `core/models.py`, `makemigrations --check --dry-run` y `manage.py test`. |
 | `Construir y probar la imagen (sin publicar)` | siempre, después de los tests | Build con Buildx, `manage.py check` dentro de la imagen y un `GET /api/ping/` real al contenedor. **No usa secretos**: por eso también funciona en PR de forks. |
 | `Publicar imagen en Docker Hub` | solo si se pidió publicación | Verifica los secretos, hace login y empuja la imagen. |
 | `Verificar credenciales de Docker Hub (sin publicar)` | casilla `check_credentials` en Run workflow **o** marca `[verificar-dockerhub]` en el commit | Comprueba que existan los secretos y valida el token con `docker login`. No publica nada. |

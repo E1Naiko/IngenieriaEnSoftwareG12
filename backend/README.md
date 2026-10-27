@@ -13,8 +13,11 @@ cd backend
 python -m venv venv
 source venv/bin/activate        # en Windows: venv\Scripts\activate
                                 # en Fish: source venv/bin/activate.fish
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
+
+`requirements-dev.txt` incluye las dependencias de ejecución y las herramientas
+de desarrollo; la imagen Docker instala solo `requirements.txt`.
 
 ---
 
@@ -23,7 +26,8 @@ pip install -r requirements.txt
 ```
 backend/
 ├── manage.py            # comandos de Django (runserver, migrate, ...)
-├── requirements.txt     # dependencias
+├── requirements.txt     # dependencias de ejecución
+├── requirements-dev.txt # dependencias para desarrollo y análisis de tipos
 ├── .env.example         # plantilla del proyecto Supabase de desarrollo
 ├── .env.supabase.example # plantilla del proyecto Supabase de producción
 ├── config/              # configuración del proyecto (settings, urls, wsgi)
@@ -36,7 +40,7 @@ backend/
 # 1. Entorno virtual e instalación (desde esta carpeta backend/)
 python -m venv venv
 source venv/bin/activate          # en Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 # 2. Configuración local con el proyecto Supabase de DESARROLLO
 cp .env.example .env
@@ -58,6 +62,46 @@ otro proyecto y otras credenciales; no se deben mezclar. Una variable
 `DATABASE_MODE` exportada en el entorno sí tiene prioridad sobre `.env`, por
 eso conviene verificar el destino con `python manage.py revisar_db` antes de
 migrar.
+
+### Verificación de tipos con Pyrefly
+
+Django crea dinámicamente los atributos de los modelos, como `objects`, `id`
+y las relaciones inversas `paquetes`. `django-stubs` proporciona a Pyrefly
+los tipos de esos atributos y de los campos `CharField`, sin modificar el
+comportamiento de la aplicación ni la base de datos.
+
+Con el entorno virtual activado e instaladas las dependencias de desarrollo:
+
+```bash
+pip install -r requirements-dev.txt
+pyrefly check --preset default core/models.py
+```
+
+El comando verifica `core/models.py`, no todo el backend. En el IDE, seleccioná
+el mismo intérprete/entorno virtual para Python y Pyrefly. Si el complemento
+del editor usa su propia versión de Pyrefly, actualizala a 1.4.0 o posterior;
+si los avisos siguen apareciendo, recargá el proyecto o reiniciá el analizador.
+No se necesita ejecutar migraciones para corregir estos avisos de tipos.
+
+### Estado `retirado` de los paquetes
+
+`Paquete.Estado.RETIRADO` guarda el valor `retirado` y aparece como **Retirado**
+en el admin. El estado inicial sigue siendo `pendiente`; el modelo no cambia
+estados automáticamente ni valida el orden de las transiciones. El detalle de
+los cinco estados y de la validación de `choices` está en
+[Info/DB.md](../Info/DB.md#estados-de-un-paquete).
+
+La migración `core.0006_agregar_estado_retirado_paquete` registra la nueva
+opción en Django sin cambiar la columna ni los paquetes existentes. Para
+aplicarla en cada base configurada (desarrollo y, durante el despliegue,
+producción):
+
+```bash
+python manage.py revisar_db        # confirmar la base seleccionada
+python manage.py migrate --plan   # incluye cualquier otra migración pendiente
+python manage.py migrate
+python manage.py showmigrations core  # verificar [X] junto a 0006
+```
 
 ### Configurar producción con Supabase
 
