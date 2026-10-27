@@ -1,6 +1,5 @@
 import json
 
-from django.shortcuts import render
 from django.db import IntegrityError
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
@@ -8,41 +7,37 @@ from django.views.decorators.csrf import csrf_exempt
 
 from core.models import Repartidor
 
-# Create your views here.
+
 def _parse_body(request):
-    """Decodifica el body como JSON y lo valida.
+    """Intenta leer el body de la petición como un objeto JSON.
 
-    Args:
-        request: ``HttpRequest`` de Django.
-
-    Returns:
-        dict: diccionario del body si es JSON válido.
-        dict vacío ``{}`` si el body está vacío (útil para que la validación
-        posterior reporte campos faltantes en vez de un 400 genérico).
-        None si el body no es JSON válido (``JSONDecodeError``/``UnicodeDecodeError``)
-        o si el JSON no es un objeto (lista, número, etc.).
+    Devuelve:
+        dict: Los datos recibidos, si el JSON es válido y es un objeto.
+        {}: Si el body está vacío, para que la validación informe los
+            campos obligatorios que faltan.
+        None: Si el JSON es inválido o no representa un objeto
+            (por ejemplo, si es una lista o un número).
     """
+    # Si no hay body, se devuelve un diccionario vacío.
     if not request.body:
         return {}
+
     try:
+        # El body llega como bytes; se decodifica a texto y luego a JSON.
         data = json.loads(request.body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        # El contenido no tiene formato JSON válido o no está codificado en UTF-8.
         return None
+
+    # La API espera un objeto JSON, no una lista, cadena, número, etc.
     if not isinstance(data, dict):
         return None
+
     return data
 
 
-
 def _repartidor_to_dict(repartidor):
-    """Serializa un ``repartidor`` al contrato JSON de la API.
-
-    Args:
-        repartidor: instancia ``core.models.repartidor`` (guardada o no).
-
-    Returns:
-        dict con .
-    """
+    """Convierte un repartidor en un diccionario listo para devolver como JSON."""
     return {
         "id": repartidor.id,
         "nombre": repartidor.nombre,
@@ -55,30 +50,40 @@ def _repartidor_to_dict(repartidor):
         "token": repartidor.token,
     }
 
-"""Alta de repartidor (HU #25): el coordinador carga un repartidor."""
 
-# Campos que el coordinador tiene que completar (el token lo genera el sistema)
-CAMPOS_OBLIGATORIOS = ["dni", "nombre", "apellido", "telefono", "mail", "tipo_vehiculo"]
+# Campos que el coordinador debe completar al dar de alta un repartidor.
+# El token no se solicita en la petición.
+CAMPOS_OBLIGATORIOS = [
+    "dni",
+    "nombre",
+    "apellido",
+    "telefono",
+    "mail",
+    "tipo_vehiculo",
+]
 
-# Mensajes exactos que pide la HU
+# Mensajes requeridos por la historia de usuario.
 MSG_ALTA_EXITOSA = "Repartidor cargado con éxito"
 MSG_CAMPO_OBLIGATORIO = "Campo obligatorio"
 MSG_DATO_REPETIDO = "Este dato ya existe en el sistema"
 
 
 def _validar_alta(data):
-    """Revisa los datos del alta. Devuelve un dict {campo: mensaje} con los errores.
+    """Valida los datos del alta.
 
-    Si el dict vuelve vacío, los datos están bien.
+    Devuelve un diccionario con los errores encontrados, usando el nombre
+    del campo como clave. Si no hay errores, devuelve un diccionario vacío.
     """
     errores = {}
 
-    # Escenario 2: ningún campo puede estar vacío
+    # Escenario 2: comprueba que todos los campos requeridos tengan contenido.
+    # También considera vacío un texto compuesto solo por espacios.
     for campo in CAMPOS_OBLIGATORIOS:
         if not str(data.get(campo) or "").strip():
             errores[campo] = MSG_CAMPO_OBLIGATORIO
 
-    # Escenario 3: el DNI no puede repetirse
+    # Escenario 3: el DNI debe ser numérico y no debe estar registrado.
+    # No se valida de nuevo si ya se marcó como obligatorio.
     if "dni" not in errores:
         try:
             dni = int(str(data["dni"]).strip())
@@ -88,38 +93,52 @@ def _validar_alta(data):
             if Repartidor.objects.filter(dni=dni).exists():
                 errores["dni"] = MSG_DATO_REPETIDO
 
-    # Escenario 3: el mail y el teléfono tampoco
+    # Escenario 3: el mail y el teléfono tampoco pueden repetirse.
     for campo in ("mail", "telefono"):
         if campo not in errores:
             valor = str(data[campo]).strip()
+
             if Repartidor.objects.filter(**{campo: valor}).exists():
                 errores[campo] = MSG_DATO_REPETIDO
 
-    # El tipo de vehículo tiene que ser uno de los permitidos
+    # Comprueba que el tipo de vehículo coincida con una opción definida
+    # en las opciones del modelo Repartidor.
     if "tipo_vehiculo" not in errores:
         if data["tipo_vehiculo"] not in Repartidor.TipoVehiculo.values:
             errores["tipo_vehiculo"] = "Tipo de vehículo inválido"
 
     return errores
 
-@csrf_exempt  # igual que el resto de la API
-@require_POST  # cualquier otro método responde 405
+
+@csrf_exempt  # Desactiva la validación CSRF para este endpoint.
+@require_POST  # Acepta únicamente POST; los demás métodos reciben 405.
 def repartidores_alta(request):
     """POST /api/crud-repartidor/ — da de alta un repartidor.
 
-    201 → alta exitosa (el sistema genera el token y lo devuelve).
-    400 → JSON inválido, o campos en blanco / repetidos ({campo: mensaje}).
+    Devuelve:
+        201: Si el repartidor se creó correctamente.
+        400: Si el JSON es inválido o hay errores de validación.
     """
+    # Lee y decodifica los datos enviados en el body.
     data = _parse_body(request)
-    if data is None:
-        return JsonResponse({"message": "El cuerpo debe ser JSON válido."}, status=400)
 
-    # Escenarios 2 y 3: campos en blanco o datos repetidos
+    # Si el JSON no es válido o no es un objeto, devuelve un error general.
+    if data is None:
+        return JsonResponse(
+            {"message": "El cuerpo debe ser JSON válido."},
+            status=400,
+        )
+
+    # Valida campos obligatorios, duplicados y tipo de vehículo.
     errores = _validar_alta(data)
+
+    # Si hay errores, los devuelve asociados a cada campo.
     if errores:
         return JsonResponse(errores, status=400)
 
     try:
+        # Crea el repartidor usando los datos validados.
+        # Se quitan espacios al principio y al final de los textos.
         repartidor = Repartidor.objects.create(
             dni=int(str(data["dni"]).strip()),
             nombre=str(data["nombre"]).strip(),
@@ -129,10 +148,11 @@ def repartidores_alta(request):
             tipo_vehiculo=data["tipo_vehiculo"],
         )
     except IntegrityError:
-        # Dos altas con el mismo DNI al mismo tiempo: la base lo frena igual
+        # La base de datos también puede detectar datos duplicados,
+        # por ejemplo, si dos altas ocurren al mismo tiempo.
         return JsonResponse({"dni": MSG_DATO_REPETIDO}, status=400)
 
-    # Escenario 1: el repartidor se guardó y el sistema le generó su token
+    # Si se guardó correctamente, devuelve el mensaje y los datos del repartidor.
     return JsonResponse(
         {
             "message": MSG_ALTA_EXITOSA,
