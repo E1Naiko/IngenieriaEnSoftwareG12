@@ -31,11 +31,16 @@ class ComercioAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    """Clientes (destinatarios), filtrables por su comercio."""
+    """Clientes (destinatarios): contacto y dirección de entrega."""
 
-    list_display = ("dni", "telefono", "direccion", "comercio")
-    list_filter = ("comercio",)
-    search_fields = ("dni", "direccion")
+    list_display = ("dni", "telefono", "direccion", "paquetes_asociados")
+    search_fields = ("dni", "direccion", "telefono")
+
+    @admin.display(description="Paquetes")
+    def paquetes_asociados(self, obj):
+        """Cuántos paquetes apuntan a este cliente (FK `paquete.id_datos_cliente`)."""
+        return obj.paquetes.count()
+
 
 
 @admin.register(Paquete)
@@ -50,8 +55,10 @@ class PaqueteAdmin(admin.ModelAdmin):
         "cliente",
         "repartidor",
         "comprobante",
+        "fecha_origen",
+        "fecha_destino",
     )
-    list_filter = ("estado", "tamanio", "comercio")
+    list_filter = ("estado", "tamanio", "comercio", "fecha_origen", "fecha_destino")
     search_fields = ("cod_seguimiento", "cliente__dni", "comercio__nombre")
     # En el formulario, estos campos se eligen con un buscador en vez de
     # un <select> con todos los registros (imprescindible con muchos datos):
@@ -63,5 +70,7 @@ class PaqueteAdmin(admin.ModelAdmin):
 class ComprobanteAdmin(admin.ModelAdmin):
     """Comprobantes de entrega (foto/PDF)."""
 
-    list_display = ("id", "archivo", "paquete")
+    # `file` es la columna del diagrama; se muestra la ruta relativa guardada.
+    list_display = ("id", "file", "paquete")
     search_fields = ("id",)
+

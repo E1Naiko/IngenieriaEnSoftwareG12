@@ -97,7 +97,7 @@ backend/crudComercios/
 ├── views.py           # corazón del CRUD: 2 vistas + 3 helpers
 ├── urls.py            # 2 rutas REST montadas bajo /api/
 ├── admin.py           # vacío — Comercio se administra en core/admin.py
-├── tests.py           # 10 tests de integración
+├── tests.py           # 12 tests de integración
 ├── migrations/        # vacío (sin modelos propios)
 └── README.md          # documentación técnica exhaustiva
 ```
@@ -105,8 +105,7 @@ backend/crudComercios/
 Dependencias:
 
 ```
-crudComercios.views  →  core.models.Comercio  (CRUD principal)
-                     →  core.models.Cliente   (solo para validar FK datos_cliente)
+crudComercios.views  →  core.models.Comercio  (única dependencia: el CRUD ya no valida FK)
 config/urls.py       →  crudComercios.urls    (include "/api/")
 ```
 
@@ -120,14 +119,13 @@ Definido en `core/models.py`:
 | `nombre` | `CharField(255)` | `varchar(255)` | Obligatorio |
 | `telefono` | `CharField(255)` | `varchar(255)` | Obligatorio |
 | `direccion` | `CharField(255)` | `varchar(255)` | Obligatorio |
-| `datos_cliente` | `ForeignKey(Cliente)` | `integer FK nullable` | Opcional, `SET_NULL`, `related_name="+"` |
 
 Meta: `db_table = "comercio"`, `ordering = ["nombre"]`.
 
-> **Ciclo comercio ↔ cliente:** el diagrama pide `comercio.id_datos_cliente → cliente` y
-> `cliente.id_comercio → comercio` ambos `NOT NULL`, pero eso impide crear el primer registro.
-> Se resolvió dejando `datos_cliente` **nullable** — se crea comercio → cliente → se linkea con `PATCH`.
-> Ver `Info/DB.md` y `backend/crudComercios/README.md §7`.
+> **Comercio ↔ cliente:** no hay FK entre las dos tablas, así que el CRUD no valida FK ni
+> necesita importar `Cliente`: un comercio se crea con sus tres datos, en cualquier orden.
+> El par comercio-cliente solo convive en `Paquete`, que apunta a ambos. Ver `Info/DB.md` y
+> `backend/crudComercios/README.md §7`.
 
 ### 3.4. Endpoints REST
 
@@ -140,7 +138,7 @@ Prefijo global `/api/` definido en `config/urls.py`.
 | 3 | `GET` | `/api/comercios/<id>/` | `comercio_detail` | **Read** (detalle) | Devuelve uno por PK |
 | 4 | `PUT` | `/api/comercios/<id>/` | `comercio_detail` | **Update** (total) | Reemplaza: exige `nombre`, `telefono`, `direccion` |
 | 5 | `PATCH` | `/api/comercios/<id>/` | `comercio_detail` | **Update** (parcial) | Solo valida los campos enviados |
-| 6 | `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | **Delete** | Borra |
+| 6 | `DELETE` | `/api/comercios/<id>/` | `comercio_detail` | **Delete** | Borra → `204` sin body |
 
 > Nota: las rutas Django se definen como `comercios/<int:pk>/`; en la tabla se usa `<id>` como alias genérico del PK.
 
@@ -153,12 +151,11 @@ Objeto comercio (producido por `_comercio_to_dict`):
   "id": 1,
   "nombre": "Kiosco Central",
   "telefono": "221-555-0100",
-  "direccion": "Calle 7 #123, La Plata",
-  "datos_cliente": 4
+  "direccion": "Calle 7 #123, La Plata"
 }
 ```
 
-- `datos_cliente` es el **ID** del `Cliente` vinculado o `null`.
+- Son las **únicas 4 claves** del contrato: `datos_cliente` se borró del esquema y hoy se ignora si llega.
 - Listado responde `{"results": [...], "count": N}`.
 - Errores de validación → `400` con la clave del campo: `{"nombre": "El nombre es obligatorio."}`
 - No encontrado → `404 {"detail": "Comercio no encontrado."}`
@@ -172,7 +169,7 @@ Dos vistas funcionales + tres helpers:
 | Función | Rol |
 |---------|-----|
 | `_parse_body(request)` | Decodifica `request.body` como JSON UTF-8. Devuelve `{}`, `None` o `dict` |
-| `_comercio_to_dict(comercio)` | Serializa `Comercio` a `dict` JSON (expone `datos_cliente_id`) |
+| `_comercio_to_dict(comercio)` | Serializa `Comercio` a `dict` JSON (`id`, `nombre`, `telefono`, `direccion`) |
 | `_validar_y_aplicar(comercio, data, parcial)` | Valida y muta en memoria; retorna `(True, None)` o `(False, JsonResponse 400)` |
 | `comercios_list(request)` | `GET` lista/filtra, `POST` crea (201), delega validación |
 | `comercio_detail(request, pk)` | `GET`/`PUT`/`PATCH`/`DELETE` sobre un ID, con 404 si no existe |
@@ -180,7 +177,7 @@ Dos vistas funcionales + tres helpers:
 Validaciones (`_validar_y_aplicar`):
 
 - `nombre`, `telefono`, `direccion` → `str` no vacío tras `strip()`. Obligatorios en `POST`/`PUT`, opcionales en `PATCH`.
-- `datos_cliente` → `null`/`""` desvincula; entero debe existir como `Cliente`, si no `400`.
+- Cualquier otra clave (incluido el extinto `datos_cliente`) se ignora en silencio, como siempre.
 
 Las vistas solo llaman `comercio.save()` / `comercio.delete()` si la validación pasó.
 
@@ -188,8 +185,8 @@ Las vistas solo llaman `comercio.save()` / `comercio.delete()` si la validación
 
 `frontend/src/pages/Comercios.tsx`:
 
-- `GET /api/comercios/` al montar → tabla con ID, nombre, teléfono, dirección, cliente.
-- Form con `nombre`, `telefono`, `direccion`, `datos_cliente` (opcional) → `POST` (crear) o `PUT` (editar).
+- `GET /api/comercios/` al montar → tabla con ID, nombre, teléfono y dirección.
+- Form con `nombre`, `telefono`, `direccion` → `POST` (crear) o `PUT` (editar).
 - Botones **Editar** (carga form) y **Eliminar** (`DELETE` con `confirm`).
 - Errores `400` se muestran con `JSON.stringify(data)` en rojo.
 
@@ -211,7 +208,9 @@ que Vite proxifica al backend (ver §3.8).
 | `test_actualizar_patch` | `PATCH` parcial → solo cambia lo enviado |
 | `test_borrar` | `DELETE` → 204 y elimina |
 | `test_filtro_q` | `?q=` filtra por nombre |
-| `test_datos_cliente_fk` | `PATCH {datos_cliente: id}` linkea cliente |
+| `test_sin_datos_cliente_en_el_contrato` | la respuesta trae solo las 4 claves del esquema nuevo |
+| `test_datos_cliente_se_ignora` | `PATCH {datos_cliente: ...}` no rompe: se ignora |
+| `test_cliente_se_crea_sin_comercio` | `Cliente` ya no exige `comercio` |
 
 Ejecutar:
 
@@ -253,10 +252,10 @@ curl -s -X PUT http://127.0.0.1:8000/api/comercios/1/ \
   -H "Content-Type: application/json" \
   -d '{"nombre":"Kiosco Editado","telefono":"221-999-0000","direccion":"Calle 8 #456"}' | jq
 
-# Actualización parcial — vincular cliente
+# Actualización parcial — cambiar un dato
 curl -s -X PATCH http://127.0.0.1:8000/api/comercios/1/ \
   -H "Content-Type: application/json" \
-  -d '{"datos_cliente": 3}' | jq
+  -d '{"telefono": "221-999-0000"}' | jq
 
 # Borrar
 curl -s -X DELETE http://127.0.0.1:8000/api/comercios/1/ -i
@@ -294,7 +293,7 @@ print(r.status_code)  # 204
 - **Diferencia PUT vs PATCH** explícita con `parcial` — evita confusión entre reemplazo total y parcial.
 - **`strip()` sistemático** — evita datos con espacios accidentales.
 - **Sin duplicar el modelo** — una sola tabla, una sola migración.
-- **`datos_cliente_id` en vez de objeto anidado** — contrato simple y performante.
+- **Sin anidados** — el contrato espeja la tabla `comercio` (4 columnas) y nada más.
 
 Ideas para extender:
 

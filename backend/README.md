@@ -53,6 +53,20 @@ python manage.py runserver
 > Sin `.env` (o con `DB_HOST` vacío) Django usa una **SQLite local**, así
 > nadie queda bloqueado para desarrollar.
 
+## Desarrollo con Docker
+
+Desde la raíz del repositorio también se puede levantar el backend con una
+SQLite persistida en un volumen:
+
+```bash
+docker compose up --build
+```
+
+El contenedor ejecuta `migrate` automáticamente y expone la API en el puerto
+`8000`. Los datos no se pierden al reconstruir la imagen. La configuración de
+Docker Hub, los comandos de administración y la forma de reiniciar la base están
+en [Info/Docker.md](../Info/Docker.md).
+
 ## Errores comunes
 
 ### `could not translate host name "aws-0-<region>.pooler.supabase.com"`
@@ -120,8 +134,8 @@ python manage.py migrate --fake-initial
 **b) Las tablas viejas no coinciden** → hay que borrar esas tablas y
 recrearlas. Ojo: `--fake-initial` **tampoco sirve acá** (Django solo da la
 migración por aplicada si las tablas existen *y* tienen las columnas de los
-`AddField`, como `cliente.comercio_id`; si falta alguna, vuelve a fallar con
-el mismo error).
+`AddField` de la migración inicial; si falta alguna, vuelve a fallar con el
+mismo error).
 
 `revisar_db` informa cuántas filas hay en cada tabla de `core` y en
 `auth_user`, para saber si el borrado pierde algo.
@@ -169,10 +183,23 @@ python manage.py createsuperuser   # el usuario de /admin se borró
 
 ## CORS (frontend React)
 
-El frontend puede llamar a la API sin tocar nada si corre en
-`http://localhost:5173` (Vite) o `http://localhost:3000` (CRA), ya que con
-`DEBUG=True` se acepta cualquier origen. Para restringirlo, completar
-`CORS_ALLOWED_ORIGINS` en el `.env`.
+Con `DEBUG=True` y `CORS_ALLOWED_ORIGINS` vacío en el `.env`, Django acepta
+cualquier origen: alcanza para llamar la API desde Vite, desde la IP de la
+red de un compañero o desde un túnel, sin configurar nada.
+
+Si el front usa rutas relativas (`/api/...`, como hace este proyecto), las
+llamadas las proxifica Vite (`server.proxy` en `vite.config.ts`) y son
+**mismo origen**: ni siquiera interviene CORS. La allowlist solo importa
+cuando alguien llama a `http://127.0.0.1:8000/...` directamente.
+
+Para producción (`DEBUG=False`): listar en el `.env` el dominio del frontend,
+separado por coma:
+
+```
+CORS_ALLOWED_ORIGINS=https://mi-front.vercel.app,https://www.mi-front.com
+```
+
+Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 
 ## Variables del `.env`
 
@@ -183,6 +210,7 @@ El frontend puede llamar a la API sin tocar nada si corre en
 | `DB_NAME` | Nombre de la base (postgres). |
 | `DB_USER` | Usuario (`postgres.<id-del-proyecto>`). |
 | `DB_PASSWORD` | Contraseña de la base. |
+| `DB_SQLITE_PATH` | Ruta opcional del SQLite cuando `DB_HOST` está vacío. Por defecto, `backend/db.sqlite3`. |
 | `DJANGO_SECRET_KEY` | Clave secreta (en dev hay una por defecto). |
 | `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción. |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |
