@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/", include("crudComercios.urls")),
     path("api/", include("loginCoordinador.urls")),
     path("api/", include("loginRepartidor.urls")),
+    path("api/", include("paquetesEnCurso.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
