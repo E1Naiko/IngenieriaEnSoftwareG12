@@ -65,6 +65,31 @@ class DashboardRepartidoresTests(TestCase):
         ids = [r["id"] for r in repartidores]
         self.assertNotIn(self.repartidor_inactivo.id, ids)
 
+    def test_incluye_activos_con_estado_en_mayusculas_o_espacios(self):
+        """Los datos históricos pueden tener formato distinto al del modelo."""
+        repartidor_legado = Repartidor.objects.create(
+            nombre="Pedro",
+            apellido="Pérez",
+            dni=34567890,
+            telefono="2215559999",
+            mail="pedro@example.com",
+            tipo_vehiculo=Repartidor.TipoVehiculo.MOTO,
+            estado=" ACTIVO ",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        ids = [r["id"] for r in response.json()["repartidores"]]
+        self.assertIn(self.repartidor_activo.id, ids)
+        self.assertIn(repartidor_legado.id, ids)
+        self.assertNotIn(self.repartidor_inactivo.id, ids)
+        datos_legado = next(
+            r for r in response.json()["repartidores"]
+            if r["id"] == repartidor_legado.id
+        )
+        self.assertEqual(datos_legado["estado"], "activo")
+
     def test_respuesta_contiene_los_campos_esperados(self):
         """
         Comprueba que cada repartidor tenga los campos

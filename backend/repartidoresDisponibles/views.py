@@ -3,6 +3,8 @@ import json
 
 # Permite devolver respuestas HTTP con contenido JSON.
 from django.http import JsonResponse
+from django.db.models import CharField, F
+from django.db.models.functions import Upper, Trim
 
 # Importa el modelo Repartidor definido en la aplicación core.
 from core.models import Repartidor
@@ -34,7 +36,7 @@ def _repartidor_to_dict(repartidor):
 
         # Información relacionada con su función de reparto.
         "tipo_vehiculo": repartidor.tipo_vehiculo,
-        "estado": repartidor.estado,
+        "estado": repartidor.estado.strip().lower(),
 
         # Lista con los IDs de los paquetes asignados al repartidor.
         "listado_id_pedidos_asignados": (
@@ -64,9 +66,16 @@ def dashboard_repartidores(request):
         )
 
     # Consulta la base de datos mediante el ORM de Django.
-    # Devuelve únicamente los repartidores cuyo estado sea ACTIVO.
-    repartidores = Repartidor.objects.filter(
-        estado=Repartidor.Estado.ACTIVO
+    # En bases ya cargadas, el estado puede haber quedado en mayúsculas o con
+    # espacios (por ejemplo, "ACTIVO" o " activo "). Normalizamos el valor
+    # para no excluir repartidores disponibles por diferencias de formato.
+    repartidores = (
+        Repartidor.objects.annotate(
+            estado_normalizado=Upper(
+                Trim(F("estado"), output_field=CharField())
+            )
+        )
+        .filter(estado_normalizado=Repartidor.Estado.ACTIVO.upper())
     )
 
     # Comprueba si la consulta devolvió algún resultado.
