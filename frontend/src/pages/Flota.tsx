@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import "../styles/Flota.css";
 
 // Define la estructura que debe tener cada repartidor recibido desde el backend.
 interface Repartidor {
@@ -75,77 +76,126 @@ function Flota() {
   }, []);
 
   // Devuelve la interfaz que se mostrará en pantalla.
-  return (
-    <div>
-      {/* Título principal de la sección de flota. */}
-      <h1>Flota disponible</h1>
+  
+return (
+  <main className="flota-container">
+    {/* Encabezado de la página */}
+    <header className="flota-header">
+      <div>
+        <h1 className="flota-titulo">Flota disponible</h1>
+        <p className="flota-subtitulo">
+          Administración y seguimiento de repartidores.
+        </p>
+      </div>
 
-      {/* Muestra un mensaje mientras se espera la respuesta del backend. */}
-      {loading && <p>Cargando repartidores...</p>}
+      <button
+        className="flota-boton"
+        onClick={load}
+        disabled={loading}
+      >
+        <span aria-hidden="true">↻</span>
+        {loading ? "Actualizando..." : "Actualizar flota"}
+      </button>
+    </header>
 
-      {/* Muestra el mensaje de error únicamente si existe uno. */}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    {/* Tarjeta principal */}
+    <section className="flota-card">
+      <div className="flota-toolbar">
+        <h2 className="flota-toolbar-titulo">
+          Listado de repartidores
+        </h2>
 
-      {/* Muestra la tabla cuando no se está cargando y no hay errores. */}
-      {!loading && !error && (
-        <table
-          // Agrega bordes a las celdas y permite configurar su apariencia.
-          border={1}
-          cellPadding={6}
-          style={{ width: "100%", borderCollapse: "collapse" }}
-        >
-          {/* Encabezado de la tabla. */}
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Vehículo</th>
-              <th>Teléfono</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
+        <span className="flota-contador">
+          {items.length} repartidor
+          {items.length !== 1 ? "es" : ""}
+        </span>
+      </div>
 
-          {/* Cuerpo de la tabla: contiene una fila por cada repartidor. */}
-          <tbody>
-            {items.map((repartidor) => (
-              // Recorre la lista items y genera una fila por repartidor.
-              // La propiedad key permite a React identificar cada fila.
-              <tr key={repartidor.id}>
-                {/* Muestra el identificador del repartidor. */}
-                <td>{repartidor.id}</td>
-
-                {/* Muestra el nombre del repartidor. */}
-                <td>{repartidor.nombre}</td>
-
-                {/* Muestra el apellido del repartidor. */}
-                <td>{repartidor.apellido}</td>
-
-                {/* Muestra el tipo de vehículo que utiliza. */}
-                <td>{repartidor.tipo_vehiculo}</td>
-
-                {/* Muestra su número de teléfono. */}
-                <td>{repartidor.telefono}</td>
-
-                {/* Muestra su estado actual. */}
-                <td>{repartidor.estado}</td>
-              </tr>
-            ))}
-
-            {/* Si la lista está vacía, muestra un mensaje en la tabla. */}
-            {items.length === 0 && (
-              <tr>
-                {/* colSpan={6} hace que la celda ocupe las seis columnas. */}
-                <td colSpan={6} style={{ textAlign: "center" }}>
-                  No hay repartidores disponibles.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Estado de carga */}
+      {loading && (
+        <p className="flota-mensaje flota-cargando" role="status">
+          Cargando repartidores...
+        </p>
       )}
-    </div>
-  );
+
+      {/* Mensaje de error */}
+      {error && (
+        <p className="flota-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {/* Tabla de datos */}
+      {!loading && !error && (
+        <div className="flota-tabla-wrapper">
+          <table className="flota-tabla">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Vehículo</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {items.map((repartidor) => {
+                const estado = repartidor.estado
+                  .trim()
+                  .toLowerCase();
+
+                const claseEstado =
+                  estado === "disponible"
+                    ? "flota-estado-disponible"
+                    : estado === "ocupado"
+                      ? "flota-estado-ocupado"
+                      : "flota-estado-inactivo";
+
+                return (
+                  <tr key={repartidor.id}>
+                    <td className="flota-id">
+                      #{repartidor.id}
+                    </td>
+
+                    <td className="flota-nombre">
+                      {repartidor.nombre}
+                    </td>
+
+                    <td>{repartidor.apellido}</td>
+                    <td>{repartidor.tipo_vehiculo}</td>
+                    <td>{repartidor.telefono}</td>
+
+                    <td>
+                      <span
+                        className={`flota-estado ${claseEstado}`}
+                      >
+                        {repartidor.estado}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {items.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="flota-mensaje flota-vacio"
+                  >
+                    No hay repartidores disponibles.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  </main>
+);
+
 }
 
 // Permite importar este componente desde otros archivos de React.
