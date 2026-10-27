@@ -1,108 +1,79 @@
-# Docker, SQLite de desarrollo y Docker Hub
+# Docker, Supabase y Docker Hub
 
 La imagen publicada contiene **el backend Django**. El frontend React se sigue
 ejecutando con Vite y consume la API expuesta en el puerto `8000`.
 
-## Desarrollo con SQLite
+La base de desarrollo y la de producción son **dos proyectos Supabase
+separados**. En local se usa `backend/.env` con las credenciales del proyecto
+de desarrollo; el hosting de producción recibe las credenciales de producción
+como secretos. No se mezclan ni se suben a Git.
 
-Requisitos: Docker con el plugin Docker Compose. No hace falta crear
-`backend/.env` ni tener credenciales de Supabase.
+> Docker Hub almacena imágenes, no bases de datos vivas. Para desarrollar no
+> hace falta Docker: Django se puede ejecutar localmente y conectarse al
+> Supabase de desarrollo. Docker es opcional para contenerizar el backend; la
+> base sigue estando en Supabase.
 
-Desde la raíz del repositorio:
-
-```bash
-docker compose up --build
-```
-
-El servicio hace lo siguiente:
-
-1. Construye la imagen desde `backend/Dockerfile`.
-2. Fuerza `DB_HOST=` para activar el fallback a SQLite ya existente.
-3. Guarda la base en `/data/db.sqlite3`, dentro del volumen `sqlite_data`.
-4. Ejecuta `python manage.py migrate --noinput` antes de iniciar Django.
-5. Expone la API en http://localhost:8000 y el admin en
-   http://localhost:8000/admin/.
-
-Para probar que responde:
-
-```bash
-curl http://localhost:8000/api/ping/
-```
-
-La base y los archivos subidos **no quedan dentro de la imagen**. Sobreviven a
-`docker compose down`, a `docker compose up --build` y a la recreación del
-contenedor gracias a los volúmenes `sqlite_data` y `media_data`.
-
-### Comandos habituales
-
-Con el contenedor levantado:
-
-```bash
-# Crear un usuario para /admin/
-docker compose exec backend python manage.py createsuperuser
-
-# Revisar el esquema y las migraciones
-docker compose exec backend python manage.py revisar_db
-
-# Ejecutar la suite de tests
-docker compose exec backend python manage.py test
-
-# Ver los logs
-docker compose logs -f backend
-```
-
-Para detener los servicios sin borrar los datos:
-
-```bash
-docker compose down
-```
-
-Para **recrear desde cero la base y los archivos subidos de desarrollo**:
-
-```bash
-# Atención: -v elimina los volúmenes sqlite_data y media_data de este proyecto.
-docker compose down -v
-docker compose up --build
-```
-
-Esto no borra un `backend/db.sqlite3` que se haya creado al ejecutar Django
-fuera de Docker; son dos bases independientes.
-
-### Cambios en el código
-
-El Compose no monta el código fuente dentro del contenedor: después de un
-cambio hay que reconstruir la imagen:
-
-```bash
-docker compose up --build
-```
-
-Las migraciones se vuelven a aplicar solas. Los datos del volumen se conservan.
-Si se prefiere trabajar con recarga inmediata sin reconstruir, se puede seguir
-usando el arranque local descripto en `backend/README.md`.
-
-## SQLite fuera de Docker
-
-El comportamiento anterior no cambia: con `DB_HOST` vacío se usa
-`backend/db.sqlite3`.
+## Desarrollo local sin Docker
 
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate       # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+# completar DB_HOST, DB_USER y DB_PASSWORD del proyecto Supabase de desarrollo
+python manage.py revisar_db    # comprobar que apunta al proyecto de desarrollo
 python manage.py migrate
 python manage.py runserver
 ```
 
-Opcionalmente, `DB_SQLITE_PATH` permite elegir otro archivo. Las rutas
-relativas se resuelven desde `backend/`:
+La API queda en http://localhost:8000. Antes de migrar, verificar siempre el
+resultado de `revisar_db`; la plantilla de desarrollo no debe contener el host
+ni la contraseña de producción.
 
-```dotenv
-DB_HOST=
-DB_SQLITE_PATH=data/desarrollo.sqlite3
+## Ejecución opcional con Docker Compose
+
+Compose también usa las variables de `backend/.env` y conecta al Supabase de
+desarrollo (no guarda una SQLite). Desde la raíz del repositorio:
+
+```bash
+cp backend/.env.example backend/.env
+# completar las credenciales del proyecto de desarrollo
+docker compose up --build
 ```
 
-Hay que crear el directorio destino si no existe. El archivo SQLite y los datos
-no se versionan; cualquier desarrollador puede recrear el esquema con las
-migraciones.
+El contenedor ejecuta `migrate` al arrancar y expone la API en el puerto `8000`.
+**No apuntar `backend/.env` a producción:** Compose migra la base configurada.
+Los archivos subidos quedan en el volumen `media_data`; `docker compose down -v`
+borra esos archivos locales, pero no borra la base remota de Supabase.
+
+Comandos habituales:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py revisar_db
+# Las pruebas usan SQLite aislada y no crean una base de test en Supabase.
+docker compose exec backend env DATABASE_MODE=sqlite python manage.py test
+docker compose logs -f backend
+```
+
+Después de cambiar código hay que reconstruir la imagen con
+`docker compose up --build`. Para trabajar con recarga inmediata, ejecutar el
+backend localmente sin Docker.
+
+## SQLite opcional para trabajo offline
+
+SQLite queda disponible para pruebas locales sin conexión a Supabase; no es la
+base compartida de desarrollo. Desde `backend/`:
+
+```bash
+DATABASE_MODE=sqlite python manage.py migrate
+DATABASE_MODE=sqlite python manage.py runserver
+```
+
+Por defecto el archivo es `backend/db.sqlite3`. `DB_SQLITE_PATH` permite
+seleccionar otra ruta; las rutas relativas se resuelven desde `backend/` y el
+directorio debe existir. El archivo se ignora en Git.
 
 ## CI: tests y build en cualquier rama
 
@@ -304,19 +275,27 @@ docker pull <usuario>/ingenieria-en-software-g12-backend:dev-mi-rama-a1b2c3d
 ## Uso de la imagen publicada
 
 En producción hay que proporcionar una configuración real mediante variables
-de entorno: como mínimo `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False`,
+de entorno: `DATABASE_MODE=postgres`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False`,
 `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` y las credenciales PostgreSQL.
-El fallback a SQLite está pensado para desarrollo, no como almacenamiento de
-producción.
+La plantilla es `backend/.env.supabase.example`; completar los valores reales
+antes de usarla. Si `DJANGO_DEBUG=False` y no se define `DATABASE_MODE`, Django
+elige PostgreSQL, y si faltan credenciales detiene el arranque: nunca cambia a
+SQLite silenciosamente.
 
 Las migraciones son un paso explícito y no se ejecutan en cada arranque de la
-imagen de producción. Por ejemplo, usando un `.env` ya configurado que no está
-incluido en la imagen:
+imagen de producción. No reutilices el `backend/.env` local (de desarrollo).
+Para usar Docker manualmente, crea un archivo ignorado con los secretos de
+producción a partir de la plantilla; en el hosting, inyecta esos valores como
+secretos del servicio:
 
 ```bash
+# Preparación local opcional (archivo ignorado por Git):
+cp backend/.env.supabase.example backend/.env.production
+# Completarlo con las credenciales del proyecto Supabase de producción.
+
 # Aplicar migraciones una vez por despliegue.
 docker run --rm \
-  --env-file backend/.env \
+  --env-file backend/.env.production \
   <usuario>/ingenieria-en-software-g12-backend:latest \
   python manage.py migrate --noinput
 
@@ -325,7 +304,7 @@ docker run -d \
   --name srfr-backend \
   --restart unless-stopped \
   -p 8000:8000 \
-  --env-file backend/.env \
+  --env-file backend/.env.production \
   <usuario>/ingenieria-en-software-g12-backend:latest
 ```
 

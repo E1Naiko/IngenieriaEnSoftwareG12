@@ -8,16 +8,15 @@ services:
     image: ingenieria-en-software-g12-backend:dev
     ports:
       - "8000:8000"
+    # Compose es opcional para desarrollo; usa las credenciales del proyecto
+    # Supabase de desarrollo configuradas en backend/.env.
+    env_file:
+      - ./backend/.env
     environment:
-      # Sin DB_HOST se activa el fallback ya existente de Django a SQLite.
-      DB_HOST: ""
-      DB_SQLITE_PATH: /data/db.sqlite3
+      DATABASE_MODE: postgres
       DJANGO_DEBUG: "True"
-      DJANGO_SECRET_KEY: desarrollo-local-no-usar-en-produccion
       DJANGO_ALLOWED_HOSTS: "*"
     volumes:
-      # Los datos sobreviven a `docker compose down` y a reconstruir la imagen.
-      - sqlite_data:/data
       - media_data:/app/media
     command: >
       sh -c "python manage.py migrate --noinput &&
@@ -34,5 +33,4 @@ services:
       start_period: 10s
 
 volumes:
-  sqlite_data:
   media_data:

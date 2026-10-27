@@ -1,9 +1,9 @@
 """
 Configuración de Django para el proyecto login (Grupo 12).
 
-- La base de datos PostgreSQL está en Supabase: las credenciales se leen
-  del archivo .env (ver .env.example). Si DB_HOST está vacío se usa una
-  SQLite local para poder desarrollar sin conexión.
+- Producción: PostgreSQL en Supabase (DATABASE_MODE=postgres).
+- Desarrollo: PostgreSQL en un proyecto Supabase separado de producción
+  (DATABASE_MODE=postgres); SQLite queda disponible para pruebas offline.
 - El frontend React vive en ../frontend y se comunica con esta API por
   HTTP (CORS ya está configurado en este archivo).
 """
@@ -11,8 +11,8 @@ Configuración de Django para el proyecto login (Grupo 12).
 from pathlib import Path
 import os
 import re
-import warnings
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # BASE_DIR = .../backend
@@ -92,69 +92,87 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Base de datos
 # --------------------------------------------------------------------------
 
-DB_HOST = os.getenv("DB_HOST", "").strip()
+
+def _resolver_modo_db(environ, debug):
+    """Resuelve el backend configurado; los proyectos Supabase usan PostgreSQL."""
+    modo = (environ.get("DATABASE_MODE") or "").strip().lower()
+    if not modo:
+        # En producción no caer silenciosamente en una SQLite efímera si falta
+        # la configuración de Supabase. Sin un .env local, DEBUG=True mantiene
+        # un fallback SQLite para pruebas offline; .env.example selecciona
+        # explícitamente el proyecto Supabase de desarrollo.
+        modo = "sqlite" if debug else "postgres"
+
+    if modo not in {"sqlite", "postgres"}:
+        raise ImproperlyConfigured(
+            "DATABASE_MODE debe ser 'sqlite' (offline/tests) o 'postgres' "
+            f"(Supabase); se recibió {modo!r}."
+        )
+    return modo
 
 
-def _sin_completar(valor):
-    """True si el valor es una plantilla de .env.example (ej. '<region>')."""
-    return bool(re.search(r"<[^<>]*>", valor or ""))
+def _configurar_db(modo, environ, base_dir):
+    if modo == "sqlite":
+        ruta_configurada = environ.get("DB_SQLITE_PATH") or base_dir / "db.sqlite3"
+        ruta = Path(ruta_configurada).expanduser()
+        if not ruta.is_absolute():
+            ruta = base_dir / ruta
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": ruta,
+            }
+        }
 
+    # PostgreSQL en Supabase. Se recomienda "Connect → Session pooler".
+    # En este modo no hay fallback: un secreto faltante o de plantilla tiene
+    # que detener el arranque antes de operar por error sobre otra base.
+    valores = {
+        "DB_HOST": (environ.get("DB_HOST") or "").strip(),
+        "DB_NAME": (environ.get("DB_NAME") or "").strip(),
+        "DB_USER": (environ.get("DB_USER") or "").strip(),
+        # No se modifica la contraseña: puede contener espacios válidos.
+        "DB_PASSWORD": environ.get("DB_PASSWORD") or "",
+    }
+    incompletos = [
+        nombre
+        for nombre, valor in valores.items()
+        if not valor.strip() or re.search(r"<[^<>]*>", valor)
+    ]
+    if incompletos:
+        raise ImproperlyConfigured(
+            "DATABASE_MODE=postgres requiere credenciales de Supabase completas "
+            "en backend/.env (o en el entorno del despliegue). Revisá: "
+            + ", ".join(incompletos)
+            + ". No se usa SQLite como fallback."
+        )
 
-# Quien copia .env.example y se olvida de completarlo queda con valores como
-# "aws-0-<region>.pooler.supabase.com". Sin este chequeo, cualquier comando
-# (migrate, runserver, ...) muere con un error de DNS que no explica nada.
-# Si detectamos la plantilla, lo tratamos como "sin configurar" → SQLite.
-_valores_db = {
-    "DB_HOST": DB_HOST,
-    "DB_PORT": os.getenv("DB_PORT", ""),
-    "DB_NAME": os.getenv("DB_NAME", ""),
-    "DB_USER": os.getenv("DB_USER", ""),
-    "DB_PASSWORD": os.getenv("DB_PASSWORD", ""),
-}
-_sin_completar_en = [nombre for nombre, valor in _valores_db.items() if _sin_completar(valor)]
+    puerto = (environ.get("DB_PORT") or "5432").strip()
+    try:
+        puerto_numero = int(puerto)
+    except ValueError as exc:
+        mensaje = "DB_PORT debe ser un número de puerto válido."
+        raise ImproperlyConfigured(mensaje) from exc
+    if not 1 <= puerto_numero <= 65535:
+        raise ImproperlyConfigured("DB_PORT debe estar entre 1 y 65535.")
 
-if DB_HOST and _sin_completar_en:
-    warnings.warn(
-        "backend/.env tiene valores de ejemplo sin completar ("
-        + ", ".join(_sin_completar_en)
-        + "). Se usa la SQLite local (db.sqlite3). Completá las credenciales de "
-        "Supabase o dejá DB_HOST vacío para desarrollar con SQLite.",
-        stacklevel=1,
-    )
-    DB_HOST = ""
-
-if DB_HOST:
-    # PostgreSQL en Supabase. Se recomienda la sección "Session pooler"
-    # del dashboard (funciona por IPv4 desde cualquier red).
-    DATABASES = {
+    return {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "postgres"),
-            "USER": os.getenv("DB_USER", "postgres"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": DB_HOST,
-            "PORT": os.getenv("DB_PORT", "5432"),
+            "NAME": valores["DB_NAME"],
+            "USER": valores["DB_USER"],
+            "PASSWORD": valores["DB_PASSWORD"],
+            "HOST": valores["DB_HOST"],
+            "PORT": str(puerto_numero),
             "OPTIONS": {
-                "sslmode": os.getenv("DB_SSLMODE", "require"),
+                "sslmode": (environ.get("DB_SSLMODE") or "require").strip(),
             },
         }
     }
-else:
-    # Fallback para desarrollar sin credenciales: SQLite local. La ruta se
-    # puede mover a un volumen Docker (por ejemplo, /data/db.sqlite3) sin
-    # cambiar el valor habitual para quien ejecuta Django directamente.
-    SQLITE_PATH = Path(
-        os.getenv("DB_SQLITE_PATH") or str(BASE_DIR / "db.sqlite3")
-    ).expanduser()
-    if not SQLITE_PATH.is_absolute():
-        SQLITE_PATH = BASE_DIR / SQLITE_PATH
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": SQLITE_PATH,
-        }
-    }
+
+DATABASE_MODE = _resolver_modo_db(os.environ, DEBUG)
+DATABASES = _configurar_db(DATABASE_MODE, os.environ, BASE_DIR)
 
 
 # Validación de contraseñas

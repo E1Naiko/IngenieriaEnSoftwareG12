@@ -73,14 +73,14 @@ cd backend
 python manage.py createsuperuser   # usuario, mail (opcional) y contraseña
 ```
 
-Ese usuario también entra a `/admin/`. Si se crea con el `.env` de Supabase, queda en la base compartida del equipo.
+Ese usuario también entra a `/admin/`. Se crea en la base indicada por las credenciales cargadas: en desarrollo queda en el proyecto Supabase de desarrollo y en producción en el proyecto separado (solo si se ejecuta allí de forma autorizada).
 
 ---
 
 ## 5. Probar
 
 ```bash
-python manage.py test loginCoordinador
+DATABASE_MODE=sqlite python manage.py test loginCoordinador
 ```
 
 A mano, con `runserver` levantado:
