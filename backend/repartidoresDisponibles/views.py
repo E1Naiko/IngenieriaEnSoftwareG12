@@ -66,16 +66,20 @@ def dashboard_repartidores(request):
         )
 
     # Consulta la base de datos mediante el ORM de Django.
-    # En bases ya cargadas, el estado puede haber quedado en mayúsculas o con
-    # espacios (por ejemplo, "ACTIVO" o " activo "). Normalizamos el valor
-    # para no excluir repartidores disponibles por diferencias de formato.
+    # La base de producción usa "DISPONIBLE" (además del valor legado
+    # "ACTIVO"). Normalizamos mayúsculas/espacios y aceptamos ambos para
+    # que el contrato funcione con datos existentes y registros nuevos.
+    estados_disponibles = {
+        Repartidor.Estado.ACTIVO.upper(),
+        "DISPONIBLE",
+    }
     repartidores = (
         Repartidor.objects.annotate(
             estado_normalizado=Upper(
                 Trim(F("estado"), output_field=CharField())
             )
         )
-        .filter(estado_normalizado=Repartidor.Estado.ACTIVO.upper())
+        .filter(estado_normalizado__in=estados_disponibles)
     )
 
     # Comprueba si la consulta devolvió algún resultado.
