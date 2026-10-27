@@ -14,8 +14,10 @@ Ejecutar::
 """
 
 from datetime import date
+import importlib
 
-from django.db import IntegrityError, transaction
+from django.apps import apps
+from django.db import IntegrityError, connection, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 
@@ -29,7 +31,13 @@ def _comercio(**kwargs):
 
 
 def _cliente(**kwargs):
-    defaults = {"telefono": "221-555-0200", "direccion": "Calle 44 #999", "dni": 30111222}
+    defaults = {
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "telefono": "221-555-0200",
+        "direccion": "Calle 44 #999",
+        "dni": 30111222,
+    }
     defaults.update(kwargs)
     return Cliente.objects.create(**defaults)
 
@@ -86,17 +94,33 @@ class RepartidorTests(TestCase):
         repartidor = _repartidor()
         comercio, cliente = _comercio(), _cliente()
         pendiente = _paquete(comercio, cliente, repartidor=repartidor)
+        retirado = _paquete(
+            comercio,
+            cliente,
+            repartidor=repartidor,
+            estado=Paquete.Estado.RETIRADO,
+        )
         entregado = _paquete(
             comercio,
             cliente,
             repartidor=repartidor,
             estado=Paquete.Estado.ENTREGADO,
         )
+        entregado_mayus = _paquete(
+            comercio,
+            cliente,
+            repartidor=repartidor,
+            estado="ENTREGADO",
+        )
 
         self.assertEqual(
-            sorted(repartidor.listado_id_pedidos_asignados), sorted([pendiente.id, entregado.id])
+            sorted(repartidor.listado_id_pedidos_asignados),
+            sorted([pendiente.id, retirado.id, entregado.id, entregado_mayus.id]),
         )
-        self.assertEqual(list(repartidor.historial_asociado), [entregado])
+        self.assertEqual(
+            sorted(p.id for p in repartidor.historial_asociado),
+            sorted([entregado.id, entregado_mayus.id]),
+        )
 
 
 class ComercioClienteTests(TestCase):
@@ -117,12 +141,35 @@ class ComercioClienteTests(TestCase):
             {"id", "nombre", "telefono", "direccion"},
         )
 
-    def test_cliente_tiene_cuatro_columnas(self):
-        """``cliente`` = id + telefono + direccion + dni."""
+    def test_cliente_tiene_seis_columnas(self):
+        """``cliente`` = id + nombre + apellido + telefono + direccion + dni."""
         self.assertEqual(
             {f.name for f in Cliente._meta.get_fields() if f.concrete},
-            {"id", "telefono", "direccion", "dni"},
+            {"id", "nombre", "apellido", "telefono", "direccion", "dni"},
         )
+
+    def test_cliente_guarda_nombre_y_apellido(self):
+        cliente = _cliente(nombre="María", apellido="Gómez", dni=33444555)
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.nombre, "María")
+        self.assertEqual(cliente.apellido, "Gómez")
+        self.assertIn("Gómez, María", str(cliente))
+
+    def test_migracion_completa_nombre_y_apellido_faltantes(self):
+        migracion = importlib.import_module(
+            "core.migrations.0007_agregar_nombre_y_apellido_cliente"
+        )
+        sin_datos = _cliente(nombre="", apellido="", dni=31000001)
+        con_datos = _cliente(nombre="Laura", apellido="Díaz", dni=31000002)
+
+        migracion.popular_nombre_y_apellido_clientes(apps, connection.schema_editor())
+
+        sin_datos.refresh_from_db()
+        con_datos.refresh_from_db()
+        self.assertTrue(sin_datos.nombre)
+        self.assertTrue(sin_datos.apellido)
+        self.assertEqual(con_datos.nombre, "Laura")
+        self.assertEqual(con_datos.apellido, "Díaz")
 
     def test_vinculo_se_infiere_por_paquete(self):
         """El par comercio-cliente existe únicamente dentro de un paquete."""
@@ -153,6 +200,13 @@ class PaqueteTests(TestCase):
     def test_estado_por_defecto_pendiente(self):
         paquete = _paquete(self.comercio, self.cliente)
         self.assertEqual(paquete.estado, Paquete.Estado.PENDIENTE)
+
+    def test_estado_retirado(self):
+        paquete = _paquete(
+            self.comercio, self.cliente, estado=Paquete.Estado.RETIRADO
+        )
+        paquete.refresh_from_db()
+        self.assertEqual(paquete.estado, "retirado")
 
     def test_fechas_origen_y_destino_se_persisten(self):
         paquete = _paquete(self.comercio, self.cliente)
@@ -228,4 +282,10 @@ class TablasDelDiagramaTests(TestCase):
             with self.subTest(campo=nombre):
                 self.assertFalse(Paquete._meta.get_field(nombre).null)
                 self.assertEqual(Paquete._meta.get_field(nombre).get_internal_type(), "DateField")
+        for nombre in ("nombre", "apellido"):
+            with self.subTest(campo=f"cliente.{nombre}"):
+                campo = Cliente._meta.get_field(nombre)
+                self.assertFalse(campo.null)
+                self.assertEqual(campo.get_internal_type(), "CharField")
+                self.assertEqual(campo.max_length, 255)
         self.assertEqual(Comprobante._meta.get_field("file").max_length, 255)

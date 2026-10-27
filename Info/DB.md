@@ -13,8 +13,8 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 |---|---|
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
-| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Cliente` | Datos personales y de contacto del destinatario (`nombre`, `apellido`, `telefono`, `direccion`, `dni`). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ## Puesta en marcha
@@ -95,7 +95,9 @@ autorizado. SQLite se usa únicamente si se selecciona explícitamente
 > La migración que agrega `fecha_origen` y `fecha_destino` asigna la fecha del
 > momento de la migración a paquetes preexistentes, porque el esquema anterior
 > no guardaba esas fechas. Si hay paquetes con datos históricos reales,
-> corregí esas dos fechas después de migrar.
+> corregí esas dos fechas después de migrar. Del mismo modo, la migración que
+> agrega `nombre` y `apellido` a `cliente` completa valores iniciales en los
+> clientes preexistentes para cumplir `NOT NULL`.
 >
 > Si `migrate` falla con `relation "cliente" already exists` (base creada a
 > mano o con las migraciones anteriores borradas), corré primero
