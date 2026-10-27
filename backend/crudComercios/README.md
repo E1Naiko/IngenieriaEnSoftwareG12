@@ -206,7 +206,7 @@ Las vistas solo llaman a `comercio.save()` / `comercio.delete()` si la validaci�
 - **`@csrf_exempt`**: necesario porque el frontend React envía JSON sin token CSRF. Si se migra a sesión/cookies, quitar el decorador y enviar `X-CSRFToken`.
 - **`@require_http_methods`** no se usa explícitamente: cada vista comprueba `request.method` y devuelve `405` para verbos no soportados.
 - **CORS / Hosts**: `config/settings.py` lista `http://localhost:5173` (Vite) en `CORS_ALLOWED_ORIGINS`; con `DEBUG=True`, `ALLOWED_HOSTS = ["*"]` acepta cualquier host/preview `*.e2b.app`. Para más orígenes CORS completar `CORS_ALLOWED_ORIGINS` / `DJANGO_ALLOWED_HOSTS`.
-- **Base de datos**: PostgreSQL (Supabase) vía `.env`; fallback a `db.sqlite3` si `DB_HOST` vacío. La tabla usada es `comercio`.
+- **Base de datos**: PostgreSQL en Supabase con proyectos separados para desarrollo y producción; SQLite queda como opción offline (`DATABASE_MODE=sqlite`). La tabla usada es `comercio`.
 
 ---
 
@@ -232,9 +232,9 @@ Ejecutar:
 
 ```bash
 cd backend
-python manage.py test crudComercios        # solo este módulo
-python manage.py test crudComercios.tests.ComercioAPITests.test_listar  # uno puntual
-python manage.py test                      # todo el proyecto
+DATABASE_MODE=sqlite python manage.py test crudComercios        # solo este módulo
+DATABASE_MODE=sqlite python manage.py test crudComercios.tests.ComercioAPITests.test_listar  # uno puntual
+DATABASE_MODE=sqlite python manage.py test                      # todo el proyecto
 ```
 
 ---

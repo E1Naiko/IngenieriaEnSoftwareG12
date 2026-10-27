@@ -216,12 +216,12 @@ Ejecutar:
 
 ```bash
 cd backend
-python manage.py test crudComercios -v 2
+DATABASE_MODE=sqlite python manage.py test crudComercios -v 2
 ```
 
 ### 3.8. Infraestructura
 
-- **Base de datos**: PostgreSQL en Supabase (credenciales en `backend/.env`); fallback a `db.sqlite3` si `DB_HOST` vacío.
+- **Base de datos**: dos proyectos PostgreSQL en Supabase, uno para desarrollo y otro para producción. SQLite queda como opción offline (`DATABASE_MODE=sqlite`).
 - **CORS / Hosts** (`config/settings.py`): `CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]` (Vite); con `DEBUG=True`, `ALLOWED_HOSTS = ["*"]` acepta cualquier host/preview `*.e2b.app`. Para más orígenes completar `CORS_ALLOWED_ORIGINS` / `DJANGO_ALLOWED_HOSTS`.
 - **CSRF**: vistas con `@csrf_exempt` porque el frontend envía JSON sin token. Si se usa sesión, quitar el decorador.
 - **Admin**: `core/admin.py → ComercioAdmin` (`list_display`, `search_fields`). No hay `ModelAdmin` en `crudComercios`.
