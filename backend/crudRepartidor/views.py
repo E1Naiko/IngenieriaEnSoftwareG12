@@ -1,7 +1,6 @@
 from django.shortcuts import render
 import json
-from django.db import IntegrityError
-from django.views.decorators.http import require_POST
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -56,6 +55,13 @@ def _repartidor_to_dict(repartidor):
     }
 
 """Alta de repartidor (HU #25): el coordinador carga un repartidor."""
+
+CAMPOS_OBLIGATORIOS = ["dni", "nombre", "apellido", "telefono", "mail", "tipo_vehiculo"]
+
+# Mensajes exactos que pide la HU
+MSG_ALTA_EXITOSA = "Repartidor cargado con éxito"
+MSG_CAMPO_OBLIGATORIO = "Campo obligatorio"
+MSG_DATO_REPETIDO = "Este dato ya existe en el sistema"
 
 # Campos que el coordinador tiene que completar (el token lo genera el sistema)
 CAMPOS_OBLIGATORIOS = ["dni", "nombre", "apellido", "telefono", "mail", "tipo_vehiculo"]
