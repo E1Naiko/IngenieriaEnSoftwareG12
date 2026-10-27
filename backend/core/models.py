@@ -1,17 +1,14 @@
 """
 Modelos del sistema de reparto de paquetes (app core).
 
-Cada modelo es una tabla del diagrama de la base y conserva su nombre exacto
-vía ``Meta.db_table``: ``repartidor``, ``comercio``, ``cliente``, ``paquete``
-y ``comprobante``. Las columnas se escriben en ``snake_case`` (convención de
-Django), así que el diagrama y la base quedan con los mismos nombres.
-
-Mapa de relaciones (5 tablas, 4 FK — todas viven en ``paquete``):
+Cada modelo conserva el nombre de tabla del diagrama mediante ``Meta.db_table``.
+Las claves primarias son enteros de 32 bits y las columnas FK de ``paquete``
+usan los nombres explícitos del modelo actual:
 
     paquete.id_repartidor_asignado  →  repartidor.id   opcional  (SET_NULL)
-    paquete.id_comercio             →  comercio.id      obligatorio (PROTECT)
-    paquete.id_datos_cliente        →  cliente.id       obligatorio (PROTECT)
-    paquete.id_comprobante          →  comprobante.id   opcional, 1 a 1 (SET_NULL)
+    paquete.id_comercio             →  comercio.id     obligatorio (PROTECT)
+    paquete.id_datos_cliente        →  cliente.id      obligatorio (PROTECT)
+    paquete.id_comprobante          →  comprobante.id  opcional, 1 a 1 (SET_NULL)
 
 ``comercio`` y ``cliente`` no se referencian entre sí: el único punto donde
 ambos aparecen juntos es ``paquete``, así que el vínculo se consulta ahí.
@@ -163,8 +160,9 @@ class Paquete(models.Model):
     que recibe y un comprobante (opcional, uno a uno, se carga al entregar).
 
     Arranca en estado ``pendiente`` y ``cod_seguimiento`` se autogenera con el
-    formato SRFR-XXXXXXXX. El historial de un repartidor sale de filtrar estos
-    estados, no hace falta guardarlo en otra tabla.
+    formato SRFR-XXXXXXXX. ``fecha_origen`` y ``fecha_destino`` son fechas
+    obligatorias. El historial de un repartidor sale de filtrar estos estados,
+    no hace falta guardarlo en otra tabla.
     """
 
     class Estado(models.TextChoices):
@@ -192,25 +190,29 @@ class Paquete(models.Model):
         on_delete=models.SET_NULL,  # sin repartidor: el paquete vuelve a estar sin asignar
         null=True,
         blank=True,
+        db_column="id_repartidor_asignado",
         related_name="paquetes",
-    )  # id_repartidor_asignado
+    )
     comercio = models.ForeignKey(
         Comercio,
         on_delete=models.PROTECT,   # no se puede borrar un comercio con paquetes
+        db_column="id_comercio",
         related_name="paquetes",
-    )  # id_comercio
+    )
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,   # no se puede borrar un cliente con paquetes
+        db_column="id_datos_cliente",
         related_name="paquetes",
-    )  # id_datos_cliente
+    )
     comprobante = models.OneToOneField(
         "Comprobante",
         on_delete=models.SET_NULL,  # se borra el comprobante, el paquete sigue en pie
         null=True,
         blank=True,
+        db_column="id_comprobante",
         related_name="paquete",
-    )  # id_comprobante
+    )
     tamanio = models.CharField(
         max_length=255,
         choices=Tamanio.choices,
@@ -222,6 +224,8 @@ class Paquete(models.Model):
         editable=False,
         help_text="Código autogenerado (SRFR-XXXXXXXX) para seguir la entrega.",
     )
+    fecha_origen = models.DateField()
+    fecha_destino = models.DateField()
 
     class Meta:
         db_table = "paquete"        # nombre de tabla del diagrama
@@ -256,6 +260,7 @@ class Comprobante(models.Model):
     """
 
     file = models.FileField(
+        max_length=255,
         upload_to="comprobantes/%Y/%m/",  # queda en media/comprobantes/2026/10/...
         null=True,
         blank=True,

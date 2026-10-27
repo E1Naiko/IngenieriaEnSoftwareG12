@@ -13,6 +13,8 @@ Ejecutar::
     python manage.py test core
 """
 
+from datetime import date
+
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
@@ -44,6 +46,17 @@ def _repartidor(**kwargs):
     return Repartidor.objects.create(**defaults)
 
 
+def _paquete(comercio, cliente, **kwargs):
+    defaults = {
+        "comercio": comercio,
+        "cliente": cliente,
+        "fecha_origen": date(2026, 10, 1),
+        "fecha_destino": date(2026, 10, 2),
+    }
+    defaults.update(kwargs)
+    return Paquete.objects.create(**defaults)
+
+
 class RepartidorTests(TestCase):
     """Token autogenerado, DNI único y los tres estados posibles."""
 
@@ -72,10 +85,10 @@ class RepartidorTests(TestCase):
         """Los dos campos del diagrama que no son columna salen de la FK inversa."""
         repartidor = _repartidor()
         comercio, cliente = _comercio(), _cliente()
-        pendiente = Paquete.objects.create(comercio=comercio, cliente=cliente, repartidor=repartidor)
-        entregado = Paquete.objects.create(
-            comercio=comercio,
-            cliente=cliente,
+        pendiente = _paquete(comercio, cliente, repartidor=repartidor)
+        entregado = _paquete(
+            comercio,
+            cliente,
             repartidor=repartidor,
             estado=Paquete.Estado.ENTREGADO,
         )
@@ -114,7 +127,7 @@ class ComercioClienteTests(TestCase):
     def test_vinculo_se_infiere_por_paquete(self):
         """El par comercio-cliente existe únicamente dentro de un paquete."""
         comercio, cliente = _comercio(), _cliente()
-        Paquete.objects.create(comercio=comercio, cliente=cliente)
+        _paquete(comercio, cliente)
 
         self.assertEqual(
             list(Paquete.objects.filter(comercio=comercio, cliente=cliente).values_list(
@@ -132,18 +145,24 @@ class PaqueteTests(TestCase):
         self.cliente = _cliente()
 
     def test_cod_seguimiento_autogenerado_unico(self):
-        p1 = Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
-        p2 = Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        p1 = _paquete(self.comercio, self.cliente)
+        p2 = _paquete(self.comercio, self.cliente)
         self.assertRegex(p1.cod_seguimiento, r"^SRFR-[0-9A-F]{8}$")
         self.assertNotEqual(p1.cod_seguimiento, p2.cod_seguimiento)
 
     def test_estado_por_defecto_pendiente(self):
-        paquete = Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        paquete = _paquete(self.comercio, self.cliente)
         self.assertEqual(paquete.estado, Paquete.Estado.PENDIENTE)
+
+    def test_fechas_origen_y_destino_se_persisten(self):
+        paquete = _paquete(self.comercio, self.cliente)
+        paquete.refresh_from_db()
+        self.assertEqual(paquete.fecha_origen, date(2026, 10, 1))
+        self.assertEqual(paquete.fecha_destino, date(2026, 10, 2))
 
     def test_repartidor_opcional(self):
         """El paquete puede crearse antes de tener repartidor asignado."""
-        paquete = Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        paquete = _paquete(self.comercio, self.cliente)
         self.assertIsNone(paquete.repartidor)
 
         repartidor = _repartidor()
@@ -153,26 +172,24 @@ class PaqueteTests(TestCase):
 
     def test_borrar_repartidor_deja_paquete_sin_asignar(self):
         repartidor = _repartidor()
-        paquete = Paquete.objects.create(
-            comercio=self.comercio, cliente=self.cliente, repartidor=repartidor
-        )
+        paquete = _paquete(self.comercio, self.cliente, repartidor=repartidor)
         repartidor.delete()
         paquete.refresh_from_db()
         self.assertIsNone(paquete.repartidor)
 
     def test_no_se_borra_un_comercio_con_paquetes(self):
-        Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        _paquete(self.comercio, self.cliente)
         with self.assertRaises(ProtectedError):
             self.comercio.delete()
 
     def test_no_se_borra_un_cliente_con_paquetes(self):
-        Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        _paquete(self.comercio, self.cliente)
         with self.assertRaises(ProtectedError):
             self.cliente.delete()
 
     def test_comprobante_one_to_one(self):
         """El comprobante es opcional y lo sostiene la FK única de ``paquete``."""
-        paquete = Paquete.objects.create(comercio=self.comercio, cliente=self.cliente)
+        paquete = _paquete(self.comercio, self.cliente)
         self.assertIsNone(paquete.comprobante)
 
         comprobante = Comprobante.objects.create()  # `file` puede quedar vacío
@@ -185,7 +202,30 @@ class TablasDelDiagramaTests(TestCase):
     """Las tablas se llaman como en el diagrama, vía ``Meta.db_table``."""
 
     def test_db_table(self):
+        modelos = (Repartidor, Comercio, Cliente, Paquete, Comprobante)
         self.assertEqual(
-            {m._meta.db_table for m in (Repartidor, Comercio, Cliente, Paquete, Comprobante)},
+            {m._meta.db_table for m in modelos},
             {"repartidor", "comercio", "cliente", "paquete", "comprobante"},
         )
+
+    def test_ids_son_enteros_de_32_bits(self):
+        modelos = (Repartidor, Comercio, Cliente, Paquete, Comprobante)
+        self.assertTrue(all(m._meta.pk.get_internal_type() == "AutoField" for m in modelos))
+
+    def test_nombres_de_columnas_fk_en_paquete(self):
+        columnas = {
+            "repartidor": "id_repartidor_asignado",
+            "comercio": "id_comercio",
+            "cliente": "id_datos_cliente",
+            "comprobante": "id_comprobante",
+        }
+        for campo, columna in columnas.items():
+            with self.subTest(campo=campo):
+                self.assertEqual(Paquete._meta.get_field(campo).column, columna)
+
+    def test_fechas_obligatorias_y_file_de_255_caracteres(self):
+        for nombre in ("fecha_origen", "fecha_destino"):
+            with self.subTest(campo=nombre):
+                self.assertFalse(Paquete._meta.get_field(nombre).null)
+                self.assertEqual(Paquete._meta.get_field(nombre).get_internal_type(), "DateField")
+        self.assertEqual(Comprobante._meta.get_field("file").max_length, 255)
