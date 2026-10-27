@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from django.test import TestCase
 from django.urls import reverse
@@ -65,30 +66,30 @@ class DashboardRepartidoresTests(TestCase):
         ids = [r["id"] for r in repartidores]
         self.assertNotIn(self.repartidor_inactivo.id, ids)
 
-    def test_incluye_activos_con_estado_en_mayusculas_o_espacios(self):
-        """Los datos históricos pueden tener formato distinto al del modelo."""
-        repartidor_legado = Repartidor.objects.create(
+    def test_incluye_estados_disponibles_legacy_y_actual(self):
+        """Incluye ACTIVO legado y DISPONIBLE usado por la base actual."""
+        repartidor_disponible = Repartidor.objects.create(
             nombre="Pedro",
             apellido="Pérez",
             dni=34567890,
             telefono="2215559999",
             mail="pedro@example.com",
             tipo_vehiculo=Repartidor.TipoVehiculo.MOTO,
-            estado=" ACTIVO ",
+            estado=" DISPONIBLE ",
         )
 
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
-        ids = [r["id"] for r in response.json()["repartidores"]]
+        repartidores = response.json()["repartidores"]
+        ids = [r["id"] for r in repartidores]
         self.assertIn(self.repartidor_activo.id, ids)
-        self.assertIn(repartidor_legado.id, ids)
+        self.assertIn(repartidor_disponible.id, ids)
         self.assertNotIn(self.repartidor_inactivo.id, ids)
-        datos_legado = next(
-            r for r in response.json()["repartidores"]
-            if r["id"] == repartidor_legado.id
+        datos_disponible = next(
+            r for r in repartidores if r["id"] == repartidor_disponible.id
         )
-        self.assertEqual(datos_legado["estado"], "activo")
+        self.assertEqual(datos_disponible["estado"], "disponible")
 
     def test_respuesta_contiene_los_campos_esperados(self):
         """
@@ -162,12 +163,13 @@ class DashboardRepartidoresTests(TestCase):
             telefono="2214441111",
             direccion="Calle 50 567",
             dni=34567890,
-            comercio=comercio,
         )
         paquete = Paquete.objects.create(
             repartidor=self.repartidor_activo,
             comercio=comercio,
             cliente=cliente,
+            fecha_origen=date(2026, 10, 27),
+            fecha_destino=date(2026, 10, 28),
         )
 
         response = self.client.get(self.url)
