@@ -187,15 +187,20 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias de desarrollo
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
 
       - name: Verificar configuración de Django
         run: python manage.py check
+
+      - name: Verificar tipos de los modelos con Pyrefly
+        run: pyrefly check --preset default core/models.py
 
       - name: Verificar migraciones
         run: python manage.py makemigrations --check --dry-run

@@ -88,7 +88,8 @@ class Repartidor(models.Model):
             self.token = self._generar_token()
         super().save(*args, **kwargs)
 
-    def _generar_token(self):
+    @staticmethod
+    def _generar_token() -> str:
         """Genera un token único de 6 caracteres (A-Z, 0-9)."""
         alfabeto = string.ascii_uppercase + string.digits
         while True:
@@ -161,10 +162,11 @@ class Paquete(models.Model):
     paquete puede nacer sin asignar), un comercio que despacha, un cliente
     que recibe y un comprobante (opcional, uno a uno, se carga al entregar).
 
-    Arranca en estado ``pendiente`` y ``cod_seguimiento`` se autogenera con el
-    formato SRFR-XXXXXXXX. ``fecha_origen`` y ``fecha_destino`` son fechas
-    obligatorias. El historial de un repartidor sale de filtrar estos estados,
-    no hace falta guardarlo en otra tabla.
+    Arranca en estado ``pendiente``; ``retirado`` es otra opción que debe
+    asignarse explícitamente, sin transiciones automáticas. ``cod_seguimiento``
+    se autogenera con el formato SRFR-XXXXXXXX. ``fecha_origen`` y
+    ``fecha_destino`` son fechas obligatorias. El historial de un repartidor
+    sale de filtrar los paquetes entregados, no de otra tabla.
     """
 
     class Estado(models.TextChoices):
@@ -244,7 +246,8 @@ class Paquete(models.Model):
             self.cod_seguimiento = self._generar_codigo()
         super().save(*args, **kwargs)
 
-    def _generar_codigo(self):
+    @staticmethod
+    def _generar_codigo() -> str:
         """Genera un código único con el formato SRFR-XXXXXXXX."""
         while True:
             codigo = f"SRFR-{secrets.token_hex(4).upper()}"

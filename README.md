@@ -19,7 +19,7 @@ compose.yaml    → opción para ejecutar el backend en contenedor
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 # completar DB_HOST, DB_USER y DB_PASSWORD del proyecto Supabase de desarrollo
 python manage.py revisar_db  # verificar el destino
