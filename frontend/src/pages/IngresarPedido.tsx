@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
-import "./IngresarPedido.css";
+import "../styles/IngresarPedido.css";
 import FormularioComercio from "../components/formularios/FormularioComercio";
 import FormularioCliente from "../components/formularios/FormularioCliente";
 import { createPortal } from "react-dom";

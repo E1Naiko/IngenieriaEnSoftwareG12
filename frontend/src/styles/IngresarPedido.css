@@ -167,3 +167,104 @@
   background: #fff;
   cursor: pointer;
 }
+/* ==========================================
+   POPUPS INTERNOS: COMERCIO, CLIENTE Y AVISOS
+========================================== */
+
+.pedido-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+/* Ventana del popup */
+
+.pedido-popup {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  min-width: 0;
+
+  overflow: hidden;
+
+  background-color: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Encabezado */
+
+.pedido-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  flex-shrink: 0;
+  padding: 18px 22px;
+
+  border-bottom: 1px solid #e5eaf2;
+}
+
+/* Contenido: lista de clientes o comercios */
+
+.pedido-lista,
+.pedido-popup-alta,
+.pedido-similar {
+  min-height: 0;
+  padding: 18px 22px;
+  overflow-y: auto;
+}
+
+/* Pie del popup */
+
+.pedido-popup-foot {
+  flex-shrink: 0;
+  padding: 16px 22px;
+
+  border-top: 1px solid #e5eaf2;
+  background-color: #ffffff;
+}
+
+/* Adaptación a celulares */
+
+@media (max-width: 600px) {
+  .pedido-fondo {
+    padding: 12px;
+  }
+
+  .pedido-popup {
+    max-height: 92vh;
+  }
+
+  .pedido-popup-head {
+    padding: 16px;
+  }
+
+  .pedido-lista,
+  .pedido-popup-alta,
+  .pedido-similar {
+    padding: 16px;
+  }
+
+  .pedido-popup-foot {
+    padding: 14px 16px;
+  }
+}
