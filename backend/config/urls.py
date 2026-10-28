@@ -26,6 +26,8 @@ urlpatterns = [
     path("api/", include("crudComercios.urls")),
     path("api/", include("loginCoordinador.urls")),
     path("api/", include("loginRepartidor.urls")),
+    # GET/POST /api/cambiar-estado-pedido/
+    path("api/", include("actualizacionEstado.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
