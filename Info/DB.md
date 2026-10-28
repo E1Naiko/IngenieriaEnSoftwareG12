@@ -1,8 +1,11 @@
 # Ingeniería en Software — Grupo 12
 
-Sistema de gestión de reparto de paquetes (app **core**) hecho con **Django** y
-**PostgreSQL en Supabase**. Las tablas usan el nombre exacto del diagrama de la
-base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
+Sistema de gestión de reparto de paquetes (app **core**) hecho con **Django**.
+La base se separa por entorno en **dos proyectos Supabase/PostgreSQL**: uno de
+desarrollo y otro de producción. SQLite queda como alternativa local offline.
+Las tablas usan el nombre exacto del diagrama (`repartidor`, `comercio`,
+`cliente`, `paquete`, `comprobante`). Para configurar credenciales y trabajar
+con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 
 ## Modelos
 
@@ -10,9 +13,45 @@ base (`repartidor`, `comercio`, `cliente`, `paquete`, `comprobante`).
 |---|---|
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
-| `Cliente` | Datos de contacto del destinatario (teléfono, dirección, DNI). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Cliente` | Datos personales y de contacto del destinatario (`nombre`, `apellido`, `telefono`, `direccion`, `dni`). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
+
+### Estados de un paquete
+
+`Paquete.estado` es un `CharField` con opciones definidas en `Paquete.Estado`:
+
+| Valor guardado | Etiqueta | Constante |
+|---|---|---|
+| `pendiente` | Pendiente | `Paquete.Estado.PENDIENTE` |
+| `retirado` | Retirado | `Paquete.Estado.RETIRADO` |
+| `en_camino` | En camino | `Paquete.Estado.EN_CAMINO` |
+| `entregado` | Entregado | `Paquete.Estado.ENTREGADO` |
+| `cancelado` | Cancelado | `Paquete.Estado.CANCELADO` |
+
+El valor predeterminado sigue siendo `pendiente`. `retirado` debe asignarse
+explícitamente, por ejemplo desde el formulario de `/admin/` o desde el ORM:
+
+```python
+from core.models import Paquete
+
+paquete = Paquete.objects.get(pk=1)
+paquete.estado = Paquete.Estado.RETIRADO
+paquete.full_clean()  # valida los campos del modelo, incluido estado
+paquete.save(update_fields=["estado"])
+```
+
+Los `choices` validan el valor en formularios, el admin y `full_clean()`, pero
+`save()` y `objects.create()` **no llaman a `full_clean()` automáticamente**.
+El esquema creado por Django tampoco agrega una restricción `CHECK` para las
+opciones: SQL directo o `update()` pueden escribir otros valores en la columna
+`varchar(255)`. Si la base tiene restricciones agregadas manualmente, hay que
+revisarlas por separado.
+
+El modelo no cambia estados automáticamente ni impone transiciones u orden.
+Tampoco existe todavía un endpoint de paquetes. La property
+`repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
+`retirado` no se considera entregado.
 
 ## Puesta en marcha
 
@@ -23,49 +62,95 @@ cd backend
 python -m venv venv
 source venv/bin/activate        # en Windows: venv\Scripts\activate
                                 # en Fish: source venv/bin/activate.fish
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-### 2. Crear el proyecto en Supabase (una sola persona del grupo)
+### 2. Mantener dos proyectos Supabase separados
 
-1. Entrar a https://supabase.com y crear una organización y un proyecto
-   (guardar la **contraseña de la base de datos** que pide al crearlo).
-2. En el dashboard, botón **Connect** (barra superior) → sección
-   **"Session pooler"**: ahí están el host, puerto, usuario y nombre de base.
-3. Pasar esos valores al equipo (por privado, no por el repo).
+Debe haber un proyecto Supabase para **desarrollo** y otro para **producción**.
+Cada proyecto tiene sus propias credenciales (host, usuario y contraseña);
+compartir las de desarrollo con el equipo por un gestor seguro y guardar las
+de producción únicamente como secretos del hosting. Nunca subirlas al repo.
 
-### 3. Configurar credenciales (cada integrante)
+### 3. Configurar desarrollo
 
 ```bash
 cd backend
 cp .env.example .env
-# y editar .env con los valores de Supabase
-```
-
-> Si alguien no tiene las credenciales a mano, puede dejar el `.env` vacío y
-> Django usará una SQLite local (`db.sqlite3`) para seguir desarrollando.
-
-### 4. Crear las tablas y un usuario administrador
-
-```bash
-python manage.py migrate            # crea las tablas en la base
-python manage.py createsuperuser    # usuario para entrar al /admin
+# completar DB_HOST, DB_USER y DB_PASSWORD del proyecto Supabase de desarrollo
+python manage.py revisar_db  # comprobar el destino antes de migrar
+python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Entrar a http://127.0.0.1:8000/admin/ con el superusuario y ya se pueden
-cargar repartidores, comercios, clientes y paquetes.
+El `.env.example` usa `DATABASE_MODE=postgres`, pero con las credenciales del
+proyecto **de desarrollo**. Todo el equipo puede conectarse a ese proyecto; la
+base de producción debe tener un host y credenciales distintos. Para ejecutar
+la suite de tests localmente sin crear una base de test en Supabase, usar
+`DATABASE_MODE=sqlite python manage.py test`.
 
-> **La base de cada uno tiene que estar al día con `core/migrations/`**:
+### 4. Configurar producción
+
+Copiar `.env.supabase.example` como `.env` solo en un entorno de despliegue, o
+cargar sus variables como secretos del hosting. Completar las credenciales del
+proyecto Supabase **de producción**; mantener `DATABASE_MODE=postgres` y
+`DJANGO_DEBUG=False`. No subir el `.env` a Git ni incluirlo en la imagen Docker.
+
+Los datos de los dos proyectos no se sincronizan. Las migraciones crean el
+mismo esquema en cada uno, pero los registros de desarrollo no se copian a
+producción.
+
+### 5. Migraciones y usuario administrador
+
+`python manage.py migrate` siempre opera sobre la base seleccionada en
+`DATABASE_MODE`. Antes de ejecutarlo, comprobar el destino:
+
+```bash
+python manage.py revisar_db       # comprobar el destino
+python manage.py showmigrations core
+python manage.py migrate --plan  # revisar todas las migraciones pendientes
+python manage.py migrate
+python manage.py showmigrations core  # confirmar que figure [X]
+python manage.py createsuperuser  # solo si todavía se necesita un usuario admin
+```
+
+Con `backend/.env` configurado para desarrollo, estos comandos apuntan al
+Supabase de desarrollo. En un despliegue, apuntan al Supabase de producción;
+ejecutar migraciones y crear usuarios allí solo como parte de un despliegue
+autorizado. SQLite se usa si se selecciona `DATABASE_MODE=sqlite` o, con
+`DJANGO_DEBUG=True`, si no se configura ningún `DATABASE_MODE`; por eso es
+importante comprobar el destino antes de migrar.
+
+La migración `core.0006_agregar_estado_retirado_paquete` incorpora `retirado`
+al estado de los `choices` de Django. No modifica el tipo ni la longitud de
+la columna, no agrega un `CHECK` y no cambia los estados de los paquetes
+existentes; no hace falta SQL manual para el esquema generado por Django.
+Hay que aplicarla **en cada base** (desarrollo y producción) con `migrate`.
+Si hay otras migraciones pendientes, `migrate` también las aplicará: revisar
+el plan antes de ejecutarlo. `revisar_db` muestra las migraciones aplicadas,
+pero su diagnóstico de columnas no garantiza que todas estén aplicadas; para
+confirmar la `0006`, usar `showmigrations core` y buscar `[X]` junto a su nombre.
+Si se revierte la `0006`, las filas `retirado` permanecen en la base, pero los
+formularios y la validación de la versión anterior no aceptan ese valor.
+
+> **La base de cada entorno tiene que estar al día con `core/migrations/`**:
 > corré `python manage.py migrate` antes de programar y `python manage.py
 > revisar_db` para comprobar que las tablas coinciden con los modelos. Las
-> migraciones de `core` son incrementales y no borran datos, así que no hace
-> falta dropear tablas al actualizar.
+> migraciones son incrementales; la `0006` no requiere borrar tablas ni cambia
+> filas existentes. Revisá el plan y respaldá los datos antes de aplicar las
+> migraciones pendientes.
+
+> **Antes de cualquier operación destructiva, verificá `python manage.py revisar_db`**
+> y asegurate de que el host sea el del proyecto de desarrollo. Nunca ejecutes
+> los `DROP` de abajo contra producción.
 >
 > La migración que agrega `fecha_origen` y `fecha_destino` asigna la fecha del
 > momento de la migración a paquetes preexistentes, porque el esquema anterior
 > no guardaba esas fechas. Si hay paquetes con datos históricos reales,
-> corregí esas dos fechas después de migrar.
+> corregí esas dos fechas después de migrar. Del mismo modo, la migración que
+> agrega `nombre` y `apellido` a `cliente` completa valores iniciales en los
+> clientes preexistentes para cumplir `NOT NULL`.
 >
 > Si `migrate` falla con `relation "cliente" already exists` (base creada a
 > mano o con las migraciones anteriores borradas), corré primero

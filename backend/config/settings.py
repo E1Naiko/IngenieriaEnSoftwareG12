@@ -1,9 +1,9 @@
 """
 Configuración de Django para el proyecto login (Grupo 12).
 
-- La base de datos PostgreSQL está en Supabase: las credenciales se leen
-  del archivo .env (ver .env.example). Si DB_HOST está vacío se usa una
-  SQLite local para poder desarrollar sin conexión.
+- Producción: PostgreSQL en Supabase (DATABASE_MODE=postgres).
+- Desarrollo: PostgreSQL en un proyecto Supabase separado de producción
+  (DATABASE_MODE=postgres); SQLite queda disponible para pruebas offline.
 - El frontend React vive en ../frontend y se comunica con esta API por
   HTTP (CORS ya está configurado en este archivo).
 """
@@ -14,6 +14,7 @@ import re
 import sys
 import warnings
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # BASE_DIR = .../backend
@@ -144,32 +145,20 @@ elif DB_HOST:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DB_NAME", "postgres"),
-            "USER": os.getenv("DB_USER", "postgres"),
-            "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": DB_HOST,
-            "PORT": os.getenv("DB_PORT", "5432"),
+            "NAME": valores["DB_NAME"],
+            "USER": valores["DB_USER"],
+            "PASSWORD": valores["DB_PASSWORD"],
+            "HOST": valores["DB_HOST"],
+            "PORT": str(puerto_numero),
             "OPTIONS": {
-                "sslmode": os.getenv("DB_SSLMODE", "require"),
+                "sslmode": (environ.get("DB_SSLMODE") or "require").strip(),
             },
         }
     }
-else:
-    # Fallback para desarrollar sin credenciales: SQLite local. La ruta se
-    # puede mover a un volumen Docker (por ejemplo, /data/db.sqlite3) sin
-    # cambiar el valor habitual para quien ejecuta Django directamente.
-    SQLITE_PATH = Path(
-        os.getenv("DB_SQLITE_PATH") or str(BASE_DIR / "db.sqlite3")
-    ).expanduser()
-    if not SQLITE_PATH.is_absolute():
-        SQLITE_PATH = BASE_DIR / SQLITE_PATH
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": SQLITE_PATH,
-        }
-    }
+
+DATABASE_MODE = _resolver_modo_db(os.environ, DEBUG)
+DATABASES = _configurar_db(DATABASE_MODE, os.environ, BASE_DIR)
 
 
 # Validación de contraseñas
