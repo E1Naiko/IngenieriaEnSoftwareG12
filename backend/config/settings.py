@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "crudRepartidor",
     "loginCoordinador",
     "loginRepartidor",
+    "ingresarPedido",
     "actualizacionEstado",
 ]
 
