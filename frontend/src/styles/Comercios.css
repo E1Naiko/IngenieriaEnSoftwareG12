@@ -1,0 +1,284 @@
+/* ================================
+   CONFIGURACIÓN GENERAL
+================================ */
+
+.comercios-container {
+  min-height: 100vh;
+  padding: 36px;
+  background-color: #f4f6fa;
+  color: #1e293b;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.comercios-container *,
+.comercios-container *::before,
+.comercios-container *::after {
+  box-sizing: border-box;
+}
+
+/* ================================
+   ENCABEZADO
+================================ */
+
+.comercios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.comercios-titulo {
+  margin: 0;
+  color: #172033;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
+.comercios-subtitulo {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ================================
+   TARJETA PRINCIPAL
+================================ */
+
+.comercios-card {
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* ================================
+   BARRA SUPERIOR
+================================ */
+
+.comercios-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.comercios-toolbar-titulo {
+  margin: 0;
+  color: #253047;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.comercios-contador {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ================================
+   TABLA
+================================ */
+
+.comercios-tabla-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.comercios-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.comercios-tabla thead {
+  background-color: #f8fafc;
+}
+
+.comercios-tabla th {
+  padding: 15px 24px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e9edf4;
+}
+
+.comercios-tabla td {
+  padding: 17px 24px;
+  color: #475569;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f2f7;
+  transition: background-color 0.2s ease;
+}
+
+.comercios-tabla tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.comercios-tabla tbody tr:hover {
+  background-color: #f8faff;
+}
+
+.comercios-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.comercios-id {
+  color: #94a3b8 !important;
+  font-weight: 600;
+}
+
+.comercios-nombre {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+/* ================================
+   DIRECCIÓN Y TELÉFONO
+================================ */
+
+.comercios-direccion {
+  color: #64748b;
+  white-space: normal;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.comercios-telefono {
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* ================================
+   CARGA Y ERRORES
+================================ */
+
+.comercios-mensaje {
+  margin: 0;
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.comercios-cargando {
+  color: #64748b;
+}
+
+.comercios-error {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.comercios-vacio {
+  color: #94a3b8;
+}
+
+/* ================================
+   BOTÓN DE ACTUALIZACIÓN (OPCIONAL)
+================================ */
+
+.comercios-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.comercios-boton:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
+.comercios-boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.comercios-boton:focus-visible {
+  outline: 3px solid #bfdbfe;
+  outline-offset: 3px;
+}
+
+.comercios-boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================================
+   DISEÑO RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+  .comercios-container {
+    padding: 20px 14px;
+  }
+
+  .comercios-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .comercios-titulo {
+    font-size: 25px;
+  }
+
+  .comercios-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .comercios-tabla th,
+  .comercios-tabla td {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .comercios-container {
+    padding: 16px 10px;
+  }
+
+  .comercios-titulo {
+    font-size: 23px;
+  }
+
+  .comercios-boton {
+    width: 100%;
+  }
+}

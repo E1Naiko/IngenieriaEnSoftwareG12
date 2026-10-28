@@ -1,25 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import "../styles/Comercios.css";
 
-/**
- * Página de gestión de comercios (CRUD completo contra /api/comercios/).
- *
- * Cómo funciona:
- * 1. Al montar, `load()` pide la lista y guarda `results` en `items`.
- * 2. El form tiene dos modos, definidos por `editingId`:
- *    - `editingId === null`  → creación con POST.
- *    - `editingId` con valor → reemplazo total con PUT a /api/comercios/<id>/.
- * 3. Después de guardar o borrar se vuelve a llamar `load()`: la tabla siempre
- *    se lee desde el backend, nunca se parchea el estado local.
- *
- * Las rutas son relativas (`/api/...`): en desarrollo Vite las proxifica a
- * Django (`server.proxy` en vite.config.ts), así que no hay que configurar
- * hosts ni depender de CORS.
- *
- * `Comercio` espeja la tabla `comercio` de la base: id, nombre, teléfono y
- * dirección. El `id` lo asigna la base, por eso el form no lo envía.
- */
-
+// Representa los datos de un comercio.
 interface Comercio {
   id: number;
   nombre: string;
@@ -27,171 +9,148 @@ interface Comercio {
   direccion: string;
 }
 
-const emptyForm = { nombre: "", telefono: "", direccion: "" };
+// Permite actualizar el listado desde el componente padre.
+interface ComerciosProps {
+  refreshKey?: number;
+}
 
-export default function Comercios() {
+export default function Comercios({
+  refreshKey = 0,
+}: ComerciosProps) {
+  // Almacena los comercios recibidos desde Django.
   const [items, setItems] = useState<Comercio[]>([]);
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  // Controla el estado de carga y los posibles errores.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /** Lee todos los comercios. `{results, count}` o una lista plana. */
+  // Consulta la API para obtener los comercios registrados.
   async function load() {
     setLoading(true);
     setError("");
+
     try {
       const res = await fetch("/api/comercios/");
-      if (!res.ok) throw new Error("No se pudieron cargar los comercios");
+
+      if (!res.ok) {
+        throw new Error("No se pudieron cargar los comercios.");
+      }
+
       const data = await res.json();
-      setItems(data.results ?? data);
+
+      // Admite respuestas como lista directa o paginada.
+      setItems(Array.isArray(data) ? data : data.results ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Error al cargar comercios."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  // Carga los comercios al iniciar y cuando cambia refreshKey.
   useEffect(() => {
     load();
-  }, []);
-
-  /** Crea (POST) o reemplaza (PUT) según haya una fila en edición. */
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    const body: Record<string, unknown> = {
-      nombre: form.nombre,
-      telefono: form.telefono,
-      direccion: form.direccion,
-    };
-    const url = editingId ? `/api/comercios/${editingId}/` : "/api/comercios/";
-    const method = editingId ? "PUT" : "POST";
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      // El 204 del DELETE no trae body: se parsea solo cuando hay contenido.
-      const data = res.status === 204 ? {} : await res.json();
-      if (!res.ok) {
-        // 400 viene como {"nombre": "..."} por campo; el resto como {"detail": "..."}.
-        setError(JSON.stringify(data));
-        return;
-      }
-      setForm(emptyForm);
-      setEditingId(null);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
-    }
-  }
-
-  /** Carga la fila elegida en el form y lo pasa a modo edición. */
-  function startEdit(c: Comercio) {
-    setEditingId(c.id);
-    setForm({ nombre: c.nombre, telefono: c.telefono, direccion: c.direccion });
-  }
-
-  /** Borra y recarga. Sin `catch`, un 500/502 pasaría desapercibido. */
-  async function handleDelete(id: number) {
-    if (!confirm("¿Eliminar este comercio?")) return;
-    try {
-      const res = await fetch(`/api/comercios/${id}/`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`No se pudo eliminar (${res.status})`);
-      if (editingId === id) {
-        setEditingId(null);
-        setForm(emptyForm);
-      }
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al eliminar");
-    }
-  }
+  }, [refreshKey]);
 
   return (
-    <main style={{ padding: "1rem", maxWidth: 900, margin: "0 auto" }}>
-      <h1>Gestión de Comercios</h1>
-      <p>
-        <Link to="/dashboard">Volver al dashboard</Link>
-      </p>
+    <div className="comercios-container">
+      {/* Encabezado de la sección */}
+      <header className="comercios-header">
+        <div>
+          <h1 className="comercios-titulo">Comercios</h1>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: "1.5rem" }}>
-        <h2>{editingId ? "Editar comercio" : "Nuevo comercio"}</h2>
-        <div style={{ display: "grid", gap: "0.5rem", maxWidth: 400 }}>
-          <input
-            placeholder="Nombre"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            required
-          />
-          <input
-            placeholder="Teléfono"
-            value={form.telefono}
-            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-            required
-          />
-          <input
-            placeholder="Dirección"
-            value={form.direccion}
-            onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-            required
-          />
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button type="submit">{editingId ? "Guardar" : "Crear"}</button>
-            {editingId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
-              >
-                Cancelar
-              </button>
-            )}
-          </div>
+          <p className="comercios-subtitulo">
+            Consulta los comercios registrados en el sistema.
+          </p>
         </div>
-      </form>
+      <button
+        className="comercios-boton"
+        onClick={load}
+        disabled={loading}
+      >
+        <span aria-hidden="true">↻</span>
+        {loading ? "Actualizando..." : "Actualizar comercios"}
+      </button>
+      </header>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
-        <table border={1} cellPadding={6} style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Dirección</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((c) => (
-              <tr key={c.id}>
-                <td>{c.id}</td>
-                <td>{c.nombre}</td>
-                <td>{c.telefono}</td>
-                <td>{c.direccion}</td>
-                <td>
-                  <button onClick={() => startEdit(c)}>Editar</button>{" "}
-                  <button onClick={() => handleDelete(c.id)}>Eliminar</button>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ textAlign: "center" }}>
-                  Sin comercios
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      )}
-    </main>
+      {/* Tarjeta principal del listado */}
+      <section className="comercios-card">
+        <div className="comercios-toolbar">
+          <h2 className="comercios-toolbar-titulo">
+            Listado de comercios
+          </h2>
+
+          <span className="comercios-contador">
+            Total: {items.length}
+          </span>
+        </div>
+
+        {/* Estado de carga */}
+        {loading && (
+          <p className="comercios-mensaje comercios-cargando">
+            Cargando comercios...
+          </p>
+        )}
+
+        {/* Mensaje de error */}
+        {!loading && error && (
+          <p
+            className="comercios-mensaje comercios-error"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Mensaje cuando no hay registros */}
+        {!loading && !error && items.length === 0 && (
+          <p className="comercios-mensaje comercios-vacio">
+            No hay comercios registrados.
+          </p>
+        )}
+
+        {/* Tabla de comercios */}
+        {!loading && !error && items.length > 0 && (
+          <div className="comercios-tabla-wrapper">
+            <table className="comercios-tabla">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Dirección</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {items.map((comercio) => (
+                  <tr key={comercio.id}>
+                    <td className="comercios-id">
+                      {comercio.id}
+                    </td>
+
+                    <td className="comercios-nombre">
+                      {comercio.nombre}
+                    </td>
+
+                    <td className="comercios-telefono">
+                      {comercio.telefono}
+                    </td>
+
+                    <td className="comercios-direccion">
+                      {comercio.direccion}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
