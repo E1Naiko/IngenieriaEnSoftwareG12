@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import "../styles/Dashboard.css";
 
+import "../styles/Dashboard.css";
 import Flota from "./Flota";
 import PaquetesEnCurso from "./PaquetesEnCurso";
 import Comercios from "./Comercios";
+import GestionarComercios from "./GestionarComercios";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -13,10 +14,17 @@ function Dashboard() {
   // Controla la visibilidad del panel lateral.
   const [sidebarAbierto, setSidebarAbierto] = useState(true);
 
-  // Controla los menús desplegables de cada sección.
+  // Controla los menús desplegables.
   const [flotaAbierta, setFlotaAbierta] = useState(true);
   const [paquetesAbiertos, setPaquetesAbiertos] = useState(true);
   const [comerciosAbiertos, setComerciosAbiertos] = useState(true);
+
+  // Controla la ventana modal de gestión de comercios.
+  const [modalComerciosAbierto, setModalComerciosAbierto] =
+    useState(false);
+
+  // Permite actualizar el listado después de modificar comercios.
+  const [refreshComercios, setRefreshComercios] = useState(0);
 
   // Si no hay sesión iniciada, vuelve al login.
   if (!guardado) {
@@ -34,6 +42,11 @@ function Dashboard() {
   // Muestra u oculta el panel lateral.
   function alternarSidebar() {
     setSidebarAbierto(!sidebarAbierto);
+  }
+
+  // Actualiza el listado después de una operación CRUD exitosa.
+  function actualizarComercios() {
+    setRefreshComercios((actual) => actual + 1);
   }
 
   return (
@@ -58,14 +71,16 @@ function Dashboard() {
             {sidebarAbierto && <span>Dashboard</span>}
           </Link>
 
-          <Link
-            to="/comercios"
+          {/* Abre el modal en lugar de navegar a otra página. */}
+          <button
+            type="button"
             className="sidebar-link"
-            title="Gestionar comercios"
+            title="Cargar comercio"
+            onClick={() => setModalComerciosAbierto(true)}
           >
             <span className="sidebar-icon">🏪</span>
-            {sidebarAbierto && <span>Gestionar comercios</span>}
-          </Link>
+            {sidebarAbierto && <span>Cargar comercio</span>}
+          </button>
 
           <Link
             to="/flota"
@@ -84,17 +99,18 @@ function Dashboard() {
             <span className="sidebar-icon">📦</span>
             {sidebarAbierto && <span>Paquetes en curso</span>}
           </Link>
-                  {/* Botón para cerrar sesión */}
-          <button
-            type="button"
-            className="sidebar-logout"
-            onClick={cerrarSesion}
-            title="Cerrar sesión"
-          >
+        </nav>
+
+        {/* Botón para cerrar sesión */}
+        <button
+          type="button"
+          className="sidebar-logout"
+          onClick={cerrarSesion}
+          title="Cerrar sesión"
+        >
           <span className="sidebar-icon">🚪</span>
           {sidebarAbierto && <span>Cerrar sesión</span>}
         </button>
-        </nav>
       </aside>
 
       {/* Contenido principal */}
@@ -219,7 +235,7 @@ function Dashboard() {
               <span className="section-title-group">
                 <span className="section-title">Comercios</span>
                 <span className="section-subtitle">
-                  Consulta y gestión de comercios
+                  Consulta los comercios registrados
                 </span>
               </span>
             </span>
@@ -236,11 +252,48 @@ function Dashboard() {
 
           {comerciosAbiertos && (
             <div className="dashboard-section-content">
-              <Comercios />
+              <Comercios refreshKey={refreshComercios} />
             </div>
           )}
         </section>
       </main>
+
+      {/* Ventana modal para gestionar comercios */}
+      {modalComerciosAbierto && (
+        <div
+          className="modal-overlay"
+          onClick={() => setModalComerciosAbierto(false)}
+        >
+          <section
+            className="modal-comercios"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-comercios-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="modal-comercios-header">
+              <h2 id="modal-comercios-titulo">
+                Cargar comercio
+              </h2>
+
+              <button
+                type="button"
+                className="modal-comercios-cerrar"
+                aria-label="Cerrar ventana"
+                onClick={() => setModalComerciosAbierto(false)}
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="modal-comercios-body">
+              <GestionarComercios
+                onChange={actualizarComercios}
+              />
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
