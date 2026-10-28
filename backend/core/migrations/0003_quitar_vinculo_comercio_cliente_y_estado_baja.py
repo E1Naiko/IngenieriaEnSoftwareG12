@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_repartidor_choices_actualizados'),
+        ('core', '0003_alter_comercio_datos_cliente_and_more'),
     ]
 
     operations = [

@@ -49,7 +49,12 @@ opciones: SQL directo o `update()` pueden escribir otros valores en la columna
 revisarlas por separado.
 
 El modelo no cambia estados automáticamente ni impone transiciones u orden.
-Tampoco existe todavía un endpoint de paquetes. La property
+El único endpoint de paquetes por ahora es
+`GET /api/dashboard/paquetes-en-curso/` (HU #40): excluye solo `entregado`,
+comparando el estado sin distinguir mayúsculas. `cancelado` es un estado
+intermediario y por eso también se lista. Devuelve `id`, `destinatario`,
+`direccion`, `repartidor` y `estado` ("Sin asignar" cuando la FK `repartidor`
+es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
 `retirado` no se considera entregado.
 

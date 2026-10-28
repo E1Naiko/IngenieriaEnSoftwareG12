@@ -56,6 +56,37 @@ python manage.py runserver
 - Admin: http://127.0.0.1:8000/admin/
 - Ping para probar desde React: http://127.0.0.1:8000/api/ping/
 
+### Panel "Paquetes en curso" (HU #40)
+
+`GET /api/dashboard/paquetes-en-curso/` devuelve `{"paquetes": [...]}` con los
+paquetes que no están `entregado` (la comparación ignora mayúsculas).
+`cancelado` es un estado intermediario, así que también se lista. Cada ítem
+tiene exactamente cinco claves, que son las que usa
+`frontend/src/pages/PaquetesEnCurso.tsx`:
+
+```json
+{
+  "id": 1,
+  "destinatario": "Ana Pérez",
+  "direccion": "Calle 12 #34",
+  "repartidor": "Juan Gómez",
+  "estado": "en_camino"
+}
+```
+
+`repartidor` vale `"Sin asignar"` si el paquete todavía no tiene uno. Cuando
+no hay paquetes activos la respuesta es `200` con `{"mensaje": "...",
+"paquetes": []}`. La consulta usa `select_related("repartidor", "cliente")`
+para resolver las FKs en un solo query; no incluir `"paquete"` ahí, porque es
+el nombre de la relación inversa de `Comprobante`, no un campo de `Paquete`.
+
+Tests del endpoint:
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable
@@ -243,6 +274,19 @@ python manage.py createsuperuser   # el usuario de /admin se borró
 > Para recrear la SQLite offline (no Supabase), borrá el archivo y ejecutá la
 > migración forzando ese modo: `rm -f db.sqlite3` y luego
 > `DATABASE_MODE=sqlite python manage.py migrate`.
+
+### `database "test_postgres" already exists` / `ObjectInUse: database "test_postgres" is being accessed by other users`
+
+Ocurría al correr `python manage.py test` apuntando al *Session pooler* de
+Supabase (`*.pooler.supabase.com`), que redirige las conexiones a la base
+compartida `postgres` y retiene sesiones abiertas impidiendo el `DROP DATABASE`
+al finalizar.
+
+`settings.py` ya fuerza **SQLite en memoria** automáticamente durante
+`python manage.py test`, sin importar qué credenciales haya en `.env`. Si en
+Supabase quedó una base `test_postgres` huérfana de corridas anteriores, es
+inofensiva (o se puede borrar desde *SQL Editor* con
+`drop database if exists test_postgres;`).
 
 ## CORS (frontend React)
 
