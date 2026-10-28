@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/", include("crudComercios.urls")),
     path("api/", include("loginCoordinador.urls")),
     path("api/", include("loginRepartidor.urls")),
+    path("api/", include("ingresarPedido.urls")),
     # GET/POST /api/cambiar-estado-pedido/
     path("api/", include("actualizacionEstado.urls")),
 ]

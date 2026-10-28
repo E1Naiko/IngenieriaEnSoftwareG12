@@ -10,6 +10,9 @@ function Dashboard() {
         <br></br>
         <Link to="/flota">Ver Flota Disponible</Link>
       </p>
+      <p>
+        <Link to="/ingresar-pedido">Ingresar pedido</Link>
+      </p>
     </div>
   );
 }
