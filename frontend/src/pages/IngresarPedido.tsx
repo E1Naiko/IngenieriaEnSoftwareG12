@@ -3,9 +3,8 @@ import type { ComponentType, FormEvent, ReactNode } from "react";
 import "./IngresarPedido.css";
 import FormularioComercio from "../components/formularios/FormularioComercio";
 import FormularioCliente from "../components/formularios/FormularioCliente";
-
+import { createPortal } from "react-dom";
 /* ---------- Tipos ---------- */
-
 // Valores que acepta el back (el texto que ve el usuario puede ser otro)
 export type Tamano = "chico" | "mediano" | "grande";
 
@@ -61,18 +60,17 @@ interface PopupProps {
   pie: ReactNode;
 }
 
+
 function Popup({ titulo, onCerrar, children, pie }: PopupProps) {
-  return (
-    <div className="pedido-fondo" onClick={onCerrar}>
-      <div className="pedido-popup" role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
-        <div className="pedido-popup-head">
-          <strong>{titulo}</strong>
-          <button type="button" onClick={onCerrar} aria-label="Cerrar">✕</button>
-        </div>
-        {children}
-        <div className="pedido-popup-foot">{pie}</div>
-      </div>
-    </div>
+  // Portal: el popup se dibuja fuera del <form> del pedido, porque los
+  // formularios de alta tienen su propio <form> y HTML no permite anidarlos.
+  return createPortal(
+    <div className="fondo" onClick={onCerrar}
+         // En React el submit igual sube al form del pedido aunque haya portal: se corta acá
+         onSubmit={(e) => e.stopPropagation()}>
+      ...lo mismo que hoy...
+    </div>,
+    document.body,
   );
 }
 
