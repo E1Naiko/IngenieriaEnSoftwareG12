@@ -49,14 +49,20 @@ opciones: SQL directo o `update()` pueden escribir otros valores en la columna
 revisarlas por separado.
 
 El modelo no cambia estados automáticamente ni impone transiciones u orden.
-El único endpoint de paquetes por ahora es
-`GET /api/dashboard/paquetes-en-curso/` (HU #40): excluye solo `entregado`,
+`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye solo `entregado`,
 comparando el estado sin distinguir mayúsculas. `cancelado` es un estado
 intermediario y por eso también se lista. Devuelve `id`, `destinatario`,
 `direccion`, `repartidor` y `estado` ("Sin asignar" cuando la FK `repartidor`
 es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
 `retirado` no se considera entregado.
+
+El historial por repartidor de la HU "ver el historial de repartos" se lee con
+la app `historialRepartos`: `GET /api/historial/` lista a los repartidores con
+la cantidad de entregas y la última fecha, y `GET /api/historial/<id>/`
+devuelve los paquetes `entregado` de ese repartidor (la misma definición de
+`historial_asociado`). No hay tabla de historial: sale de `paquete`. Los dos
+endpoints exigen sesión de coordinador.
 
 ## Puesta en marcha
 

@@ -87,6 +87,32 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 ```
 
+### Historial de repartos (HU: ver el historial)
+
+La app `historialRepartos` expone el historial de entregas por repartidor.
+**Solo el coordinador** puede consultarlo: los endpoints exigen la sesión que
+crea `POST /api/login-coordinador/` y responden `401` sin ella. No tiene
+tablas propias; lee `paquete` y `repartidor`.
+
+```
+GET /api/historial/       → escenario 1: repartidores con su resumen
+GET /api/historial/<id>/  → escenario 2: historial completo de ese repartidor
+```
+
+El listado devuelve `{"repartidores": [...], "total_repartidores": N}`, donde
+cada ítem agrega `entregas` (cuántos paquetes entregó) y `ultima_entrega`
+(fecha o `null`) a los datos personales. El detalle devuelve
+`{"repartidor": {...}, "entregas": [...], "total_entregas": N}` con los
+pedidos `entregado` de ese repartidor, del más reciente al más viejo. El
+historial de un repartidor nunca incluye pedidos de otro, y los estados
+`pendiente`, `retirado`, `en_camino` y `cancelado` todavía no son historial.
+Contrato completo, decisiones y pruebas a mano en
+[historialRepartos/README.md](historialRepartos/README.md).
+
+```bash
+DATABASE_MODE=sqlite python manage.py test historialRepartos
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable

@@ -29,6 +29,8 @@ urlpatterns = [
     path("api/", include("ingresarPedido.urls")),
     # GET/POST /api/cambiar-estado-pedido/
     path("api/", include("actualizacionEstado.urls")),
+    # GET /api/historial/ y GET /api/historial/<id>/ (historial de repartos)
+    path("api/", include("historialRepartos.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
