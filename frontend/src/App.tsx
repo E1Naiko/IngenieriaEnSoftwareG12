@@ -7,8 +7,9 @@ import Comercios from "./pages/Comercios";
 import Flota from "./pages/Flota";
 import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
-
+import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import "./App.css";
+
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/comercios" element={<Comercios />} /> 
         <Route path="/loginrepartidor" element={<LoginRepartidor />} />
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
+        <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
       </Routes>
     </BrowserRouter>
   );

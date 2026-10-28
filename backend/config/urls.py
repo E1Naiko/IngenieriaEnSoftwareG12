@@ -33,6 +33,7 @@ urlpatterns = [
     # Endpoints de repartidores disponibles.
     path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("loginRepartidor.urls")),
+    path("api/", include("paquetesEnCurso.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos desde media/.
