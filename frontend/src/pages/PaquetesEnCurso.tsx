@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-//import "../styles/PaquetesEnCurso.css";
+import "../styles/PaquetesEnCurso.css";
 
 // Define la estructura que debe tener cada paquete recibido desde el backend.
 interface Paquete {
@@ -36,7 +36,7 @@ function PaquetesEnCurso() {
 
     try {
       // Endpoint de ejemplo: debe coincidir con la URL configurada en Django.
-      const res = await fetch("/api/dashboard/paquetes-en-curso/");
+      const res = await fetch("api/dashboard/paquetes-en-curso/");
 
       // Comprueba si la petición fue exitosa.
       if (!res.ok) {
