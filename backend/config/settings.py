@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     "crudComercios",
     "loginCoordinador",
     "loginRepartidor",
-    "paquetesEnCurso",
 ]
 
 MIDDLEWARE = [

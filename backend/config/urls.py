@@ -20,16 +20,25 @@ admin.site.index_title = "Panel de gestión"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # Endpoint de prueba: confirma que la API está viva y que el frontend
-    # puede comunicarse (lo usamos para verificar el CORS).
+
+    # Endpoint de prueba para verificar que la API responde.
     path("api/ping/", views.ping, name="ping"),
+
+    # Endpoints de comercios.
     path("api/", include("crudComercios.urls")),
+
+    # Endpoints de login del coordinador.
     path("api/", include("loginCoordinador.urls")),
+
+    # Endpoints de repartidores disponibles.
+    path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("loginRepartidor.urls")),
     path("api/", include("paquetesEnCurso.urls")),
 ]
 
-# En desarrollo Django sirve los archivos subidos (comprobantes) desde
-# media/. En producción eso lo resuelve el servidor web o un storage.
+# En desarrollo Django sirve los archivos subidos desde media/.
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=settings.MEDIA_ROOT,
+    )
