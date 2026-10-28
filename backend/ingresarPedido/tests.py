@@ -103,12 +103,12 @@ class PedidoAPITests(TestCase):
         self.assertEqual(self._post().status_code, 201)
 
     def test_duplicado_con_estados_de_la_base_dev(self):
-        """Los datos de dev usan mayúsculas y "ASIGNADO" (ver shortcut en views)."""
+        """Todo estado salvo cancelado avisa, aunque venga en mayúscula como en dev."""
         self._post()
-        for estado in (" PENDIENTE", "ASIGNADO", "EN_CAMINO"):
+        for estado in (" PENDIENTE", "ASIGNADO", "EN_CAMINO", "RETIRADO", "ENTREGADO", "entregado"):
             Paquete.objects.update(estado=estado)
             self.assertEqual(self._post().status_code, 409)
-        Paquete.objects.update(estado="ENTREGADO")
+        Paquete.objects.update(estado="CANCELADO")
         self.assertEqual(self._post().status_code, 201)
 
 
@@ -116,16 +116,22 @@ class ClienteAPITests(TestCase):
     """``/api/clientes/``: lo mínimo para el selector y el popup del front."""
 
     def _post(self, **data):
+        """POST de cliente; nombre y apellido van por defecto salvo que se pisen."""
+        data = {"nombre": "Ana", "apellido": "Gómez", **data}
         return self.client.post("/api/clientes/", data=data, content_type="application/json")
 
     def test_crear_y_listar(self):
         resp = self._post(telefono="221", direccion="Calle 7", dni=40123456)
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(resp.json()["dni"], 40123456)
-        self.assertEqual(self.client.get("/api/clientes/").json()["count"], 1)
+        listado = self.client.get("/api/clientes/").json()
+        self.assertEqual(listado["count"], 1)
+        self.assertEqual(listado["results"][0]["apellido"], "Gómez")
 
     def test_validaciones(self):
         self.assertEqual(self._post(telefono="221").status_code, 400)
+        resp = self._post(nombre=" ", telefono="1", direccion="x", dni=5)
+        self.assertEqual(resp.json(), {"nombre": "Campo obligatorio *"})
         self.assertEqual(self._post(telefono="1", direccion="x", dni="12a").status_code, 400)
         self._post(telefono="1", direccion="x", dni="123")
         resp = self._post(telefono="2", direccion="y", dni=123)

@@ -46,16 +46,13 @@ MSG_FECHA_INVALIDA = "Fecha invalida"
 MSG_SIMILAR = "Hay un pedido similar ¿Desea cargarlo igualmente?"
 
 CAMPOS_PEDIDO = ("comercio", "cliente", "tamanio", "fecha_destino")
-CAMPOS_CLIENTE = ("telefono", "direccion", "dni")
+CAMPOS_CLIENTE = ("nombre", "apellido", "telefono", "direccion", "dni")
 
-# Un pedido cancelado o ya entregado no cuenta como duplicado.
-# shortcut: la base de dev guarda estados en mayúscula y usa "ASIGNADO", que no está
-# en el modelo (mismo parche que #33); sacar cuando se normalicen los datos.
-ESTADOS_ACTIVOS = {
-    Paquete.Estado.PENDIENTE.upper(),
-    Paquete.Estado.EN_CAMINO.upper(),
-    "ASIGNADO",
-}
+# Solo un pedido cancelado no cuenta como similar: el 409 es una advertencia,
+# así que también se avisa si el similar ya fue entregado.
+# shortcut: la base de dev guarda estados en mayúscula (mismo parche que #33);
+# sacar el Upper/Trim cuando se normalicen los datos.
+ESTADO_EXCLUIDO = Paquete.Estado.CANCELADO.upper()
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +100,14 @@ def _pedido_to_dict(p):
 
 def _cliente_to_dict(c):
     """Serializa un ``Cliente`` al contrato JSON de la API."""
-    return {"id": c.id, "telefono": c.telefono, "direccion": c.direccion, "dni": c.dni}
+    return {
+        "id": c.id,
+        "nombre": c.nombre,
+        "apellido": c.apellido,
+        "telefono": c.telefono,
+        "direccion": c.direccion,
+        "dni": c.dni,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -155,12 +159,8 @@ def pedidos_list(request):
     # Escenario 4: el coordinador decide si lo carga igual reenviando con forzar=true
     similar = (
         Paquete.objects.annotate(estado_normalizado=Upper(Trim("estado")))
-        .filter(
-            comercio=comercio,
-            cliente=cliente,
-            fecha_destino=fecha_destino,
-            estado_normalizado__in=ESTADOS_ACTIVOS,
-        )
+        .filter(comercio=comercio, cliente=cliente, fecha_destino=fecha_destino)
+        .exclude(estado_normalizado=ESTADO_EXCLUIDO)
         .first()
     )
     if similar and data.get("forzar") is not True:
@@ -180,7 +180,7 @@ def pedidos_list(request):
 
 @csrf_exempt
 def clientes_list(request):
-    """Lista (``GET``) o crea (``POST``) clientes con ``telefono``, ``direccion`` y ``dni``."""
+    """Lista (``GET``) o crea (``POST``) clientes. Ver ``CAMPOS_CLIENTE``."""
     if request.method == "GET":
         qs = Cliente.objects.all()
         return JsonResponse(
@@ -206,6 +206,8 @@ def clientes_list(request):
         return JsonResponse({"dni": "Ya existe un cliente con ese DNI."}, status=400)
 
     cliente = Cliente.objects.create(
+        nombre=str(data["nombre"]).strip(),
+        apellido=str(data["apellido"]).strip(),
         telefono=str(data["telefono"]).strip(),
         direccion=str(data["direccion"]).strip(),
         dni=int(dni),
