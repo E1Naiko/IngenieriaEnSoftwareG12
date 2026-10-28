@@ -6,6 +6,7 @@ import Flota from "./Flota";
 import PaquetesEnCurso from "./PaquetesEnCurso";
 import Comercios from "./Comercios";
 import GestionarComercios from "./GestionarComercios";
+import IngresarPedido from "./IngresarPedido";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -23,8 +24,9 @@ function Dashboard() {
   const [comerciosAbiertos, setComerciosAbiertos] = useState(true);
 
   // Controla la ventana modal de gestión de comercios.
-  const [modalComerciosAbierto, setModalComerciosAbierto] =
-    useState(false);
+  const [modalComerciosAbierto, setModalComerciosAbierto] = useState(false);
+  // Controla la ventana modal para ingresar pedidos.
+  const [modalPedidoAbierto, setModalPedidoAbierto] = useState(false);
 
   // Permite actualizar el listado después de modificar comercios.
   const [refreshComercios, setRefreshComercios] = useState(0);
@@ -120,14 +122,16 @@ function Dashboard() {
             {sidebarAbierto && <span>Flota disponible</span>}
           </Link>
 
-          <Link
-            to="/paquetesencurso"
+          {/* Abre el modal para ingresar un pedido. */}
+          <button
+            type="button"
             className="sidebar-link"
-            title="Paquetes en curso"
+            title="Ingresar pedido"
+            onClick={() => setModalPedidoAbierto(true)}
           >
             <span className="sidebar-icon">📦</span>
-            {sidebarAbierto && <span>Paquetes en curso</span>}
-          </Link>
+            {sidebarAbierto && <span>Ingresar Pedido</span>}
+          </button>
         </nav>
 
         {/* Botón para cerrar sesión */}
@@ -319,6 +323,41 @@ function Dashboard() {
               <GestionarComercios
                 onChange={actualizarComercios}
               />
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Ventana modal para ingresar pedidos */}
+      {modalPedidoAbierto && (
+        <div
+          className="modal-overlay"
+          onClick={() => setModalPedidoAbierto(false)}
+        >
+          <section
+            className="modal-pedido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-pedido-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="modal-pedido-header">
+              <h2 id="modal-pedido-titulo">
+                Ingresar Pedido
+              </h2>
+
+              <button
+                type="button"
+                className="modal-pedido-cerrar"
+                aria-label="Cerrar ventana"
+                onClick={() => setModalPedidoAbierto(false)}
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="modal-pedido-body">
+              <IngresarPedido />
             </div>
           </section>
         </div>
