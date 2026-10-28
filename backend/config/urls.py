@@ -31,6 +31,10 @@ urlpatterns = [
     path("api/", include("actualizacionEstado.urls")),
     # GET /api/historial/ y GET /api/historial/<id>/ (historial de repartos)
     path("api/", include("historialRepartos.urls")),
+    # GET /api/dashboard/paquetes-en-curso/ (HU #40)
+    path("api/", include("paquetesEnCurso.urls")),
+    # GET /api/dashboard/repartidores-disponibles/
+    path("api/", include("repartidoresDisponibles.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
