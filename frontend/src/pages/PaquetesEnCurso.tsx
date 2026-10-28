@@ -10,6 +10,15 @@ interface Paquete {
   estado: string;
 }
 
+// El backend guarda los estados con estos valores (Paquete.Estado).
+const ETIQUETAS_ESTADO: Record<string, string> = {
+  pendiente: "Pendiente",
+  retirado: "Retirado",
+  en_camino: "En camino",
+  entregado: "Entregado",
+  cancelado: "Cancelado",
+};
+
 function PaquetesEnCurso() {
   // Guarda la lista de paquetes recibidos desde el backend.
   const [items, setItems] = useState<Paquete[]>([]);
@@ -127,8 +136,9 @@ function PaquetesEnCurso() {
 
               <tbody>
                 {items.map((paquete) => {
-                  // Normaliza el estado para poder compararlo.
-                  const estado = paquete.estado
+                  // Normaliza el estado para poder compararlo con los
+                  // valores del modelo y con etiquetas más antiguas.
+                  const estado = (paquete.estado ?? "")
                     .trim()
                     .toLowerCase();
 
@@ -136,7 +146,9 @@ function PaquetesEnCurso() {
                   const claseEstado =
                     estado === "en curso" ||
                     estado === "en distribución" ||
-                    estado === "en distribucion"
+                    estado === "en distribucion" ||
+                    estado === "en_camino" ||
+                    estado === "retirado"
                       ? "paquetes-estado-curso"
                       : estado === "pendiente"
                         ? "paquetes-estado-pendiente"
@@ -162,7 +174,7 @@ function PaquetesEnCurso() {
                         <span
                           className={`paquetes-estado ${claseEstado}`}
                         >
-                          {paquete.estado}
+                          {ETIQUETAS_ESTADO[estado] ?? paquete.estado}
                         </span>
                       </td>
                     </tr>
