@@ -60,11 +60,6 @@ export default function FormularioComercio({ onGuardado, onCancelar }: Props) {
         onChange={(e) => setForm({ ...form, direccion: e.target.value })}
         required
       />
-      <input
-        placeholder="ID"
-        value={form.datos_cliente}
-        onChange={(e) => setForm({ ...form, datos_cliente: e.target.value })}
-      />
       {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
       <div style={{ display: "flex", gap: "0.5rem" }}>
         <button type="submit" disabled={guardando}>Crear comercio</button>

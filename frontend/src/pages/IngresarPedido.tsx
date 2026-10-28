@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
 import "./IngresarPedido.css";
-import FormularioComercio from "../components/login/FormularioComercio";
-import FormularioCliente from "../components/login/FormularioCliente";
+import FormularioComercio from "../components/formularios/FormularioComercio";
+import FormularioCliente from "../components/formularios/FormularioCliente";
 
 /* ---------- Tipos ---------- */
 
