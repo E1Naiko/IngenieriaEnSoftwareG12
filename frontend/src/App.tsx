@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Comercios from "./pages/Comercios";
 import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
-import PaquetesEnCurso from "./pages/Paquetesencurso";
+import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import "./App.css";
 
 
