@@ -244,6 +244,19 @@ python manage.py createsuperuser   # el usuario de /admin se borró
 > migración forzando ese modo: `rm -f db.sqlite3` y luego
 > `DATABASE_MODE=sqlite python manage.py migrate`.
 
+### `database "test_postgres" already exists` / `ObjectInUse: database "test_postgres" is being accessed by other users`
+
+Ocurría al correr `python manage.py test` apuntando al *Session pooler* de
+Supabase (`*.pooler.supabase.com`), que redirige las conexiones a la base
+compartida `postgres` y retiene sesiones abiertas impidiendo el `DROP DATABASE`
+al finalizar.
+
+`settings.py` ya fuerza **SQLite en memoria** automáticamente durante
+`python manage.py test`, sin importar qué credenciales haya en `.env`. Si en
+Supabase quedó una base `test_postgres` huérfana de corridas anteriores, es
+inofensiva (o se puede borrar desde *SQL Editor* con
+`drop database if exists test_postgres;`).
+
 ## CORS (frontend React)
 
 Con `DEBUG=True` y `CORS_ALLOWED_ORIGINS` vacío en el `.env`, Django acepta
