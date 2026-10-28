@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import "../styles/Dashboard.css";
@@ -14,6 +14,9 @@ function Dashboard() {
   // Controla la visibilidad del panel lateral.
   const [sidebarAbierto, setSidebarAbierto] = useState(true);
 
+  // Referencia al panel lateral para detectar clics externos.
+  const sidebarRef = useRef<HTMLElement>(null);
+
   // Controla los menús desplegables.
   const [flotaAbierta, setFlotaAbierta] = useState(true);
   const [paquetesAbiertos, setPaquetesAbiertos] = useState(true);
@@ -25,6 +28,24 @@ function Dashboard() {
 
   // Permite actualizar el listado después de modificar comercios.
   const [refreshComercios, setRefreshComercios] = useState(0);
+
+  // Contrae el sidebar al hacer clic fuera de él.
+  useEffect(() => {
+    function manejarClickExterno(event: MouseEvent) {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node)
+      ) {
+        setSidebarAbierto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", manejarClickExterno);
+
+    return () => {
+      document.removeEventListener("mousedown", manejarClickExterno);
+    };
+  }, []);
 
   // Si no hay sesión iniciada, vuelve al login.
   if (!guardado) {
@@ -41,10 +62,10 @@ function Dashboard() {
 
   // Muestra u oculta el panel lateral.
   function alternarSidebar() {
-    setSidebarAbierto(!sidebarAbierto);
+    setSidebarAbierto((abierto) => !abierto);
   }
 
-  // Actualiza el listado después de una operación CRUD exitosa.
+  // Actualiza el listado después de una operación exitosa.
   function actualizarComercios() {
     setRefreshComercios((actual) => actual + 1);
   }
@@ -56,7 +77,15 @@ function Dashboard() {
       }`}
     >
       {/* Panel lateral */}
-      <aside className="dashboard-sidebar">
+      <aside
+        ref={sidebarRef}
+        className="dashboard-sidebar"
+        onClick={() => {
+          if (!sidebarAbierto) {
+            setSidebarAbierto(true);
+          }
+        }}
+      >
         <h2 className="sidebar-logo">
           {sidebarAbierto ? "Panel de Gestión" : "PG"}
         </h2>
@@ -71,7 +100,7 @@ function Dashboard() {
             {sidebarAbierto && <span>Dashboard</span>}
           </Link>
 
-          {/* Abre el modal en lugar de navegar a otra página. */}
+          {/* Abre el modal para cargar un comercio. */}
           <button
             type="button"
             className="sidebar-link"
@@ -258,7 +287,7 @@ function Dashboard() {
         </section>
       </main>
 
-      {/* Ventana modal para gestionar comercios */}
+      {/* Ventana modal para cargar comercios */}
       {modalComerciosAbierto && (
         <div
           className="modal-overlay"
