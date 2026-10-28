@@ -5,13 +5,13 @@ function DashboardRepartidor() {
   const guardado = localStorage.getItem("repartidor");
 
   // Si no hay sesión iniciada, vuelve al login
-  if (!guardado) return <Navigate to="/" replace />;
+  if (!guardado) return <Navigate to="/loginrepartidor" replace />;
 
   const repartidor = JSON.parse(guardado);
 
   function cerrarSesion() {
     localStorage.removeItem("repartidor");
-    navigate("/");
+    navigate("/loginrepartidor");
   }
 
   return (
