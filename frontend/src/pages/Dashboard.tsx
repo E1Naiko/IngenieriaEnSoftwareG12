@@ -113,15 +113,6 @@ function Dashboard() {
             {sidebarAbierto && <span>Alta Repartidor</span>}
           </Link>
 
-          <Link
-            to="/flota"
-            className="sidebar-link"
-            title="Flota disponible"
-          >
-            <span className="sidebar-icon">🚚</span>
-            {sidebarAbierto && <span>Flota disponible</span>}
-          </Link>
-
           {/* Abre el modal para ingresar un pedido. */}
           <button
             type="button"
@@ -132,6 +123,24 @@ function Dashboard() {
             <span className="sidebar-icon">📦</span>
             {sidebarAbierto && <span>Ingresar Pedido</span>}
           </button>
+          
+          <Link
+            to="/asignar-pedido"
+            className="sidebar-link"
+            title="Asignar Pedido"
+          >
+            <span className="sidebar-icon">📦</span>
+            {sidebarAbierto && <span>Asignar Pedido</span>}
+          </Link>
+
+          <Link
+            to="/historial"
+            className="sidebar-link"
+            title="Historial de Pedidos"
+          >
+            <span className="sidebar-icon">📋</span>
+            {sidebarAbierto && <span>Historial de Pedidos</span>}
+          </Link>
         </nav>
 
         {/* Botón para cerrar sesión */}
