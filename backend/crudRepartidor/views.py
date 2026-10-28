@@ -113,7 +113,7 @@ def _validar_alta(data):
 @csrf_exempt  # Desactiva la validación CSRF para este endpoint.
 @require_POST  # Acepta únicamente POST; los demás métodos reciben 405.
 def repartidores_alta(request):
-    """POST /api/crud-repartidor/ — da de alta un repartidor.
+    """POST /api/repartidores/ — da de alta un repartidor.
 
     Devuelve:
         201: Si el repartidor se creó correctamente.

@@ -2,7 +2,7 @@ from django.urls import path
 
 from . import views
 
-# Se monta bajo /api/ en config/urls.py → POST /api/crud-repartidor/
+# Se monta bajo /api/ en config/urls.py → POST /api/repartidores/
 urlpatterns = [
-    path("crud-repartidor/", views.repartidores_alta, name="crud-repartidor"),
+    path("repartidores/", views.repartidores_alta, name="crud-repartidor"),
 ]
