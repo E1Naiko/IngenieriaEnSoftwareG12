@@ -1,0 +1,37 @@
+Marcos:
+Objetivo:
+Estado:
+Complicaciones:
+
+Valen: #34 y #17
+Objetivo:
+Estado:
+Complicaciones:
+
+Giula: testear #9 y #25, #10
+Objetivo:
+Estado:
+Complicaciones: Mal formato en url de login repartidor, pero solucionado.
+
+Herlan: testear #9, #25 y #10
+Objetivo:
+Estado:
+Complicaciones:
+
+Jose: #14
+Objetivo:
+Estado:
+Complicaciones:
+
+Luciano: #32
+Objetivo:
+Estado:
+Complicaciones:
+
+Nicolás: #32
+Objetivo:
+Estado:
+Complicaciones:
+
+Bloqueos Identificados:
+ -
