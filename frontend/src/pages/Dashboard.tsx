@@ -89,19 +89,10 @@ function Dashboard() {
         }}
       >
         <h2 className="sidebar-logo">
-          {sidebarAbierto ? "Panel de Gestión" : "PG"}
+          {sidebarAbierto ? "🏠Panel de Gestión" : "PG"}
         </h2>
 
         <nav className="sidebar-navigation">
-          <Link
-            to="/dashboard"
-            className="sidebar-link"
-            title="Dashboard"
-          >
-            <span className="sidebar-icon">🏠</span>
-            {sidebarAbierto && <span>Dashboard</span>}
-          </Link>
-
           {/* Abre el modal para cargar un comercio. */}
           <button
             type="button"
@@ -112,6 +103,15 @@ function Dashboard() {
             <span className="sidebar-icon">🏪</span>
             {sidebarAbierto && <span>Cargar comercio</span>}
           </button>
+
+          <Link
+            to="/alta-repartidor"
+            className="sidebar-link"
+            title="Alta Repartidor"
+          >
+            <span className="sidebar-icon">🚚</span>
+            {sidebarAbierto && <span>Alta Repartidor</span>}
+          </Link>
 
           <Link
             to="/flota"
