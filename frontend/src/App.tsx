@@ -5,10 +5,12 @@ import Login from "./components/login/login";
 import Dashboard from "./pages/Dashboard";
 import Comercios from "./pages/Comercios";
 import IngresarPedido from "./pages/IngresarPedido";
+import Flota from "./pages/Flota";
 import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
-
+import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import "./App.css";
+
 
 function App() {
   return (
@@ -18,8 +20,11 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/comercios" element={<Comercios />} />
         <Route path="/ingresar-pedido" element={<IngresarPedido />} />
+        <Route path="/flota" element={<Flota />} />
+        <Route path="/comercios" element={<Comercios />} /> 
         <Route path="/loginrepartidor" element={<LoginRepartidor />} />
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
+        <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
       </Routes>
     </BrowserRouter>
   );

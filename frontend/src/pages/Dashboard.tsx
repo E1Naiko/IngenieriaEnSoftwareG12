@@ -7,6 +7,8 @@ function Dashboard() {
       <p>Iniciaste sesión correctamente.</p>
       <p>
         <Link to="/comercios">Gestionar comercios</Link>
+        <br></br>
+        <Link to="/flota">Ver Flota Disponible</Link>
       </p>
       <p>
         <Link to="/ingresar-pedido">Ingresar pedido</Link>

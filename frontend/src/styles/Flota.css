@@ -1,0 +1,307 @@
+/* ================================
+   CONFIGURACIÓN GENERAL
+================================ */
+
+.flota-container {
+  min-height: 100vh;
+  padding: 36px;
+  background-color: #f4f6fa;
+  color: #1e293b;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.flota-container *,
+.flota-container *::before,
+.flota-container *::after {
+  box-sizing: border-box;
+}
+
+/* ================================
+   ENCABEZADO
+================================ */
+
+.flota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.flota-titulo {
+  margin: 0;
+  color: #172033;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
+.flota-subtitulo {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ================================
+   TARJETA PRINCIPAL
+================================ */
+
+.flota-card {
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid #e5eaf2;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* ================================
+   BARRA SUPERIOR DE LA TABLA
+================================ */
+
+.flota-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.flota-toolbar-titulo {
+  margin: 0;
+  color: #253047;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.flota-contador {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ================================
+   TABLA
+================================ */
+
+.flota-tabla-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.flota-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.flota-tabla thead {
+  background-color: #f8fafc;
+}
+
+.flota-tabla th {
+  padding: 15px 24px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e9edf4;
+}
+
+.flota-tabla td {
+  padding: 17px 24px;
+  color: #475569;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f2f7;
+  transition: background-color 0.2s ease;
+}
+
+.flota-tabla tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.flota-tabla tbody tr:hover {
+  background-color: #f8faff;
+}
+
+.flota-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.flota-id {
+  color: #94a3b8 !important;
+  font-weight: 600;
+}
+
+.flota-nombre {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+/* ================================
+   ETIQUETAS DE ESTADO
+================================ */
+
+.flota-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.flota-estado::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.flota-estado-disponible {
+  color: #15803d;
+  background-color: #dcfce7;
+}
+
+.flota-estado-ocupado {
+  color: #b45309;
+  background-color: #fef3c7;
+}
+
+.flota-estado-inactivo {
+  color: #64748b;
+  background-color: #e2e8f0;
+}
+
+/* ================================
+   CARGA Y ERRORES
+================================ */
+
+.flota-mensaje {
+  margin: 0;
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.flota-cargando {
+  color: #64748b;
+}
+
+.flota-error {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.flota-vacio {
+  color: #94a3b8;
+}
+
+/* ================================
+   BOTÓN DE ACTUALIZACIÓN
+================================ */
+
+.flota-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.flota-boton:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
+.flota-boton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.flota-boton:focus-visible {
+  outline: 3px solid #bfdbfe;
+  outline-offset: 3px;
+}
+
+.flota-boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================================
+   DISEÑO RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+  .flota-container {
+    padding: 20px 14px;
+  }
+
+  .flota-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .flota-titulo {
+    font-size: 25px;
+  }
+
+  .flota-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .flota-tabla th,
+  .flota-tabla td {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .flota-container {
+    padding: 16px 10px;
+  }
+
+  .flota-titulo {
+    font-size: 23px;
+  }
+
+  .flota-boton {
+    width: 100%;
+  }
+}
