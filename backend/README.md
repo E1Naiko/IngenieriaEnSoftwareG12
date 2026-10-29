@@ -324,3 +324,53 @@ Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 | `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción. |
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |
 | `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, separados por coma. |
+
+### Representación numérica del tamaño de paquetes (migración 0008)
+
+| Vehículo (`tipo_vehiculo`) | `repartidor.tamanio_maximo_nivel` | Tamaño máximo |
+| --- | --- | --- |
+| `moto` | 1 | chico |
+| `auto` | 2 | mediano |
+| `camioneta` | 3 | grande |
+| `camion` | 3 | grande |
+
+El número es un **nivel de tamaño**, no una cantidad de paquetes. Se conservan
+los strings `repartidor.tipo_vehiculo` y `paquete.tamanio`, junto a sus niveles
+numéricos `repartidor.tamanio_maximo_nivel` y `paquete.tamanio_nivel`.
+
+`paquete.tamanio_nivel` vale 1 para `chico`, 2 para `mediano` y 3 para
+`grande`. No se agrega un cuarto tamaño. Ambas columnas son enteros
+**generados y almacenados por la base**: se completan para las filas existentes
+y se recalculan incluso al modificar el vehículo o tamaño con SQL directo.
+No se escriben manualmente; después de actualizar una instancia con Django,
+usar `refresh_from_db()` para leer su nuevo valor.
+
+La migración convierte `Disponible`/`DISPONIBLE` y variantes con espacios a
+`activo`, normaliza los vehículos y tamaños conocidos y conserva otros datos.
+Un vehículo/tamaño legado desconocido obtiene nivel `NULL` (requiere revisión;
+no debe tratarse como un tamaño de nivel cero). `inactivo` y `baja` no cambian.
+
+Aplicar sobre la base configurada en el entorno correspondiente:
+
+```bash
+cd backend
+python manage.py migrate
+```
+
+Camión se agrega a las opciones del modelo y del formulario de alta. No existe
+una tabla independiente de vehículos en este esquema: no se crean repartidores
+ficticios ni se cambia el vehículo de los repartidores existentes.
+Los contratos JSON conservan los tamaños y vehículos como texto. Para comparar
+niveles de tamaño en el ORM, por ejemplo:
+
+```python
+# Un paquete puede caber si ambos niveles son conocidos y:
+repartidores = Repartidor.objects.filter(
+    estado=Repartidor.Estado.ACTIVO,
+    tamanio_maximo_nivel__gte=paquete.tamanio_nivel,
+) if paquete.tamanio_nivel is not None else Repartidor.objects.none()
+```
+
+Esto agrega la representación numérica de los tamaños; no modifica automáticamente la asignación
+de pedidos. Las pruebas offline usan SQLite; validar también la migración en
+el proyecto PostgreSQL de desarrollo antes de desplegar a producción.
