@@ -94,7 +94,7 @@ class RepartidorTests(TestCase):
         repartidor.refresh_from_db()
         self.assertEqual(repartidor.estado, "baja")
         self.assertEqual(
-            [e.value for e in Repartidor.Estado], ["activo", "inactivo", "baja"]
+            [e.value for e in Repartidor.Estado], ["ACTIVO", "inactivo", "baja"]
         )
 
     def test_estado_por_defecto_activo(self):
@@ -518,3 +518,64 @@ class NivelesDeTamanioTests(TestCase):
                     self.assertIn("LOWER(TRIM(", sql)
                     self.assertIn(" = %s", sql)
                     self.assertTrue(parametros)
+
+
+    def test_migracion_activo_mayusculas_conserva_otros_estados(self):
+        from types import SimpleNamespace
+
+        migracion = importlib.import_module("core.migrations.0009_estado_activo_mayusculas")
+        registros = []
+        for indice, estado in enumerate(["activo", " ACTIVO ", " Disponible ", "inactivo", "baja"]):
+            registros.append(Repartidor.objects.create(
+                nombre="Ana", apellido="Paz", dni=91000000 + indice,
+                telefono="123", mail="ana@example.com", estado=estado,
+            ))
+        editor = SimpleNamespace(connection=connection)
+        migracion.convertir_activos(apps, editor)
+        migracion.convertir_activos(apps, editor)
+        for repartidor, esperado in zip(registros, ["ACTIVO", "ACTIVO", "ACTIVO", "inactivo", "baja"]):
+            repartidor.refresh_from_db()
+            self.assertEqual(repartidor.estado, esperado)
+        nuevo = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=92000000,
+            telefono="123", mail="ana@example.com",
+        )
+        nuevo.refresh_from_db()
+        self.assertEqual(nuevo.estado, "ACTIVO")
+
+
+class CargarRepartidoresDemoTests(TestCase):
+    def test_requiere_confirmacion(self):
+        from django.core.management import call_command, CommandError
+        with self.assertRaises(CommandError):
+            call_command("cargar_repartidores_demo")
+        self.assertEqual(Repartidor.objects.count(), 0)
+
+    def test_cubre_vehiculos_estados_y_es_idempotente(self):
+        from io import StringIO
+        from django.core.management import call_command
+        for _ in range(2):
+            call_command("cargar_repartidores_demo", confirmar_desarrollo=True, stdout=StringIO())
+        self.assertEqual(Repartidor.objects.count(), 12)
+        for vehiculo, nivel in [("moto", 1), ("auto", 2), ("camioneta", 3), ("camion", 3)]:
+            for estado in Repartidor.Estado:
+                repartidor = Repartidor.objects.get(tipo_vehiculo=vehiculo, estado=estado)
+                self.assertEqual(repartidor.tamanio_maximo_nivel, nivel)
+                self.assertEqual(len(repartidor.token), 6)
+                repartidor.full_clean()
+        self.assertEqual(Repartidor.objects.values("token").distinct().count(), 12)
+
+    def test_no_sobrescribe_un_dni_existente(self):
+        from io import StringIO
+        from django.core.management import call_command
+        original = Repartidor.objects.create(
+            dni=99001000, nombre="Existente", apellido="Conservar",
+            telefono="123", mail="existente@example.com", tipo_vehiculo="auto",
+        )
+        call_command("cargar_repartidores_demo", confirmar_desarrollo=True,
+                     stdout=StringIO(), stderr=StringIO())
+        original.refresh_from_db()
+        self.assertEqual(original.nombre, "Existente")
+        self.assertEqual(original.tipo_vehiculo, "auto")
+        self.assertEqual(original.mail, "existente@example.com")
+        self.assertEqual(Repartidor.objects.count(), 12)

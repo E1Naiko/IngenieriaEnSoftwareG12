@@ -46,7 +46,7 @@ class Repartidor(models.Model):
     class Estado(models.TextChoices):
         """Situación del repartidor dentro del sistema."""
 
-        ACTIVO = "activo", "Activo"        # disponible para recibir paquetes
+        ACTIVO = "ACTIVO", "Activo"        # disponible para recibir paquetes
         INACTIVO = "inactivo", "Inactivo"  # temporalmente fuera de la flota
         BAJA = "baja", "Baja"              # baja definitiva (HU #25)
 
@@ -81,7 +81,7 @@ class Repartidor(models.Model):
         max_length=255,
         choices=Estado.choices,
         default=Estado.ACTIVO,
-        help_text="Situación del repartidor (activo, inactivo o baja).",
+        help_text="Situación del repartidor (ACTIVO, inactivo o baja).",
     )
     token = models.CharField(
         max_length=6,

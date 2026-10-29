@@ -89,7 +89,7 @@ class DashboardRepartidoresTests(TestCase):
         datos_disponible = next(
             r for r in repartidores if r["id"] == repartidor_disponible.id
         )
-        self.assertEqual(datos_disponible["estado"], "activo")
+        self.assertEqual(datos_disponible["estado"], "ACTIVO")
 
     def test_respuesta_contiene_los_campos_esperados(self):
         """
@@ -118,7 +118,7 @@ class DashboardRepartidoresTests(TestCase):
 
         self.assertEqual(repartidor["nombre"], "Juan")
         self.assertEqual(repartidor["apellido"], "García")
-        self.assertEqual(repartidor["estado"], "activo")
+        self.assertEqual(repartidor["estado"], "ACTIVO")
 
     def test_devuelve_lista_vacia_si_no_hay_activos(self):
         """
