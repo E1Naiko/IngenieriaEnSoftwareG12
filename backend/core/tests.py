@@ -415,3 +415,57 @@ class EstadoRetiradoMigrationTests(TransactionTestCase):
         PaqueteAnterior = apps_anteriores.get_model("core", "Paquete")
         self.assertNotIn("retirado", dict(PaqueteAnterior._meta.get_field("estado").choices))
         self.assertEqual(self._filas_paquetes(PaqueteAnterior), self.filas_anteriores)
+
+
+class NivelesDeTamanioTests(TestCase):
+    def test_tamanio_maximo_por_vehiculo_y_actualizacion_sql(self):
+        for indice, (vehiculo, nivel) in enumerate(
+            [("moto", 1), ("auto", 2), ("camioneta", 3), ("camion", 3)]
+        ):
+            with self.subTest(vehiculo=vehiculo):
+                repartidor = Repartidor.objects.create(
+                    nombre="Ana", apellido="Paz", dni=90000000 + indice,
+                    telefono="2215550000", mail="ana@example.com",
+                    tipo_vehiculo=vehiculo,
+                )
+                repartidor.full_clean()
+                repartidor.refresh_from_db()
+                self.assertEqual(repartidor.tamanio_maximo_nivel, nivel)
+                Repartidor.objects.filter(pk=repartidor.pk).update(tipo_vehiculo="auto")
+                repartidor.refresh_from_db()
+                self.assertEqual(repartidor.tamanio_maximo_nivel, 2)
+
+    def test_nivel_por_tamanio_y_actualizacion_sql(self):
+        comercio = Comercio.objects.create(nombre="Local", telefono="123", direccion="7")
+        cliente = Cliente.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000000, telefono="123", direccion="8"
+        )
+        for tamanio, nivel in [("chico", 1), ("mediano", 2), ("grande", 3)]:
+            with self.subTest(tamanio=tamanio):
+                paquete = Paquete.objects.create(
+                    comercio=comercio, cliente=cliente, tamanio=tamanio,
+                    fecha_origen=date.today(), fecha_destino=date.today(),
+                )
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.tamanio_nivel, nivel)
+                Paquete.objects.filter(pk=paquete.pk).update(tamanio="grande")
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.tamanio_nivel, 3)
+
+    def test_normalizacion_datos_es_idempotente(self):
+        repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000000,
+            telefono="123", mail="ana@example.com",
+            tipo_vehiculo=" CAMION ", estado=" Disponible ",
+        )
+        migracion = importlib.import_module(
+            "core.migrations.0008_capacidades_vehiculos_y_paquetes"
+        )
+        from types import SimpleNamespace
+        editor = SimpleNamespace(connection=connection)
+        migracion.normalizar_datos(apps, editor)
+        migracion.normalizar_datos(apps, editor)
+        repartidor.refresh_from_db()
+        self.assertEqual(repartidor.estado, "activo")
+        self.assertEqual(repartidor.tipo_vehiculo, "camion")
+        self.assertEqual(repartidor.tamanio_maximo_nivel, 3)

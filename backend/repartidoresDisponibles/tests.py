@@ -89,7 +89,7 @@ class DashboardRepartidoresTests(TestCase):
         datos_disponible = next(
             r for r in repartidores if r["id"] == repartidor_disponible.id
         )
-        self.assertEqual(datos_disponible["estado"], "disponible")
+        self.assertEqual(datos_disponible["estado"], "activo")
 
     def test_respuesta_contiene_los_campos_esperados(self):
         """

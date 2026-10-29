@@ -39,6 +39,7 @@ class Repartidor(models.Model):
         MOTO = "moto", "Moto"
         AUTO = "auto", "Auto"
         CAMIONETA = "camioneta", "Camioneta"
+        CAMION = "camion", "Camión"
 
     class Estado(models.TextChoices):
         """Situación del repartidor dentro del sistema."""
@@ -60,6 +61,19 @@ class Repartidor(models.Model):
         choices=TipoVehiculo.choices,
         default=TipoVehiculo.MOTO,
         help_text="Medio de transporte que usa para repartir.",
+    )
+    tamanio_maximo_nivel = models.GeneratedField(
+        expression=models.Case(
+            models.When(tipo_vehiculo__iexact="moto", then=models.Value(1)),
+            models.When(tipo_vehiculo__iexact="auto", then=models.Value(2)),
+            models.When(tipo_vehiculo__iexact="camioneta", then=models.Value(3)),
+            models.When(tipo_vehiculo__iexact="camion", then=models.Value(3)),
+            default=models.Value(None),
+        ),
+        output_field=models.IntegerField(),
+        db_persist=True,
+        null=True,
+        help_text="Nivel del tamaño máximo transportable: 1 chico, 2 mediano, 3 grande.",
     )
     estado = models.CharField(
         max_length=255,
@@ -222,6 +236,18 @@ class Paquete(models.Model):
         max_length=255,
         choices=Tamanio.choices,
         default=Tamanio.CHICO,
+    )
+    tamanio_nivel = models.GeneratedField(
+        expression=models.Case(
+            models.When(tamanio__iexact="chico", then=models.Value(1)),
+            models.When(tamanio__iexact="mediano", then=models.Value(2)),
+            models.When(tamanio__iexact="grande", then=models.Value(3)),
+            default=models.Value(None),
+        ),
+        output_field=models.IntegerField(),
+        db_persist=True,
+        null=True,
+        help_text="Nivel de tamaño: 1 chico, 2 mediano, 3 grande.",
     )
     cod_seguimiento = models.CharField(
         max_length=255,
