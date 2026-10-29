@@ -8,6 +8,7 @@ interface Paquete {
   direccion: string;
   repartidor: string;
   estado: string;
+  tamanio: string;
 }
 
 // El backend guarda los estados con estos valores (Paquete.Estado).
@@ -129,6 +130,7 @@ function PaquetesEnCurso() {
                   <th>ID</th>
                   <th>Destinatario</th>
                   <th>Dirección</th>
+                  <th>Tamaño</th>
                   <th>Repartidor asignado</th>
                   <th>Estado</th>
                 </tr>
@@ -167,7 +169,7 @@ function PaquetesEnCurso() {
                       </td>
 
                       <td>{paquete.direccion}</td>
-
+                      <td>{paquete.tamanio}</td>
                       <td>{paquete.repartidor}</td>
 
                       <td>

@@ -305,3 +305,32 @@
     width: 100%;
   }
 }
+.flota-filtro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.flota-filtro select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #1f2937;
+  font: inherit;
+  cursor: pointer;
+}
+
+.flota-filtro select:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+.flota-fila-clicable {
+  cursor: pointer;
+}
+
+.flota-fila-clicable:hover {
+  background: #f1f5f9;
+}
