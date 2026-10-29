@@ -469,3 +469,52 @@ class NivelesDeTamanioTests(TestCase):
         self.assertEqual(repartidor.estado, "activo")
         self.assertEqual(repartidor.tipo_vehiculo, "camion")
         self.assertEqual(repartidor.tamanio_maximo_nivel, 3)
+
+    def test_niveles_normalizan_mayusculas_y_espacios_sin_cambiar_strings(self):
+        repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000001,
+            telefono="123", mail="ana@example.com", tipo_vehiculo=" CAMION ",
+        )
+        repartidor.refresh_from_db()
+        self.assertEqual(repartidor.tipo_vehiculo, " CAMION ")
+        self.assertEqual(repartidor.tamanio_maximo_nivel, 3)
+        comercio = Comercio.objects.create(nombre="Local", telefono="123", direccion="7")
+        cliente = Cliente.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000001, telefono="123", direccion="8"
+        )
+        paquete = Paquete.objects.create(
+            comercio=comercio, cliente=cliente, tamanio=" MEDIANO ",
+            fecha_origen=date.today(), fecha_destino=date.today(),
+        )
+        paquete.refresh_from_db()
+        self.assertEqual(paquete.tamanio, " MEDIANO ")
+        self.assertEqual(paquete.tamanio_nivel, 2)
+        Repartidor.objects.filter(pk=repartidor.pk).update(tipo_vehiculo="desconocido")
+        repartidor.refresh_from_db()
+        self.assertIsNone(repartidor.tamanio_maximo_nivel)
+
+    def test_sql_postgresql_no_aplica_upper_a_literales(self):
+        # Compila con el backend PostgreSQL sin necesitar conexión al servidor.
+        from django.db.backends.postgresql.base import DatabaseWrapper
+        from django.db.models.sql.query import Query
+
+        pg = DatabaseWrapper({"ENGINE": "django.db.backends.postgresql", "NAME": "offline"})
+        migracion = importlib.import_module(
+            "core.migrations.0008_capacidades_vehiculos_y_paquetes"
+        )
+        for modelo, nombre in [
+            (Repartidor, "tamanio_maximo_nivel"), (Paquete, "tamanio_nivel")
+        ]:
+            campo_migracion = next(
+                op.field for op in migracion.Migration.operations
+                if getattr(op, "name", None) == nombre
+            )
+            for campo in (modelo._meta.get_field(nombre), campo_migracion):
+                with self.subTest(modelo=modelo.__name__, campo=nombre):
+                    query = Query(modelo)
+                    expresion = campo.expression.resolve_expression(query, allow_joins=False)
+                    sql, parametros = query.get_compiler(connection=pg).compile(expresion)
+                    self.assertNotIn("UPPER(", sql)
+                    self.assertIn("LOWER(TRIM(", sql)
+                    self.assertIn(" = %s", sql)
+                    self.assertTrue(parametros)

@@ -22,6 +22,8 @@ import secrets
 import string
 
 from django.db import models
+from django.db.models.functions import Lower, Trim
+from django.db.models.lookups import Exact
 
 
 class Repartidor(models.Model):
@@ -64,10 +66,10 @@ class Repartidor(models.Model):
     )
     tamanio_maximo_nivel = models.GeneratedField(
         expression=models.Case(
-            models.When(tipo_vehiculo__iexact="moto", then=models.Value(1)),
-            models.When(tipo_vehiculo__iexact="auto", then=models.Value(2)),
-            models.When(tipo_vehiculo__iexact="camioneta", then=models.Value(3)),
-            models.When(tipo_vehiculo__iexact="camion", then=models.Value(3)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("moto")), then=models.Value(1)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("auto")), then=models.Value(2)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("camioneta")), then=models.Value(3)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("camion")), then=models.Value(3)),
             default=models.Value(None),
         ),
         output_field=models.IntegerField(),
@@ -239,9 +241,9 @@ class Paquete(models.Model):
     )
     tamanio_nivel = models.GeneratedField(
         expression=models.Case(
-            models.When(tamanio__iexact="chico", then=models.Value(1)),
-            models.When(tamanio__iexact="mediano", then=models.Value(2)),
-            models.When(tamanio__iexact="grande", then=models.Value(3)),
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("chico")), then=models.Value(1)),
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("mediano")), then=models.Value(2)),
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("grande")), then=models.Value(3)),
             default=models.Value(None),
         ),
         output_field=models.IntegerField(),

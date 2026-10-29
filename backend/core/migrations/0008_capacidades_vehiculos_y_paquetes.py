@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 from django.db.models.functions import Lower, Trim
+from django.db.models.lookups import Exact
 
 
 def normalizar_datos(apps, schema_editor):
@@ -49,12 +50,12 @@ class Migration(migrations.Migration):
         AddStoredGeneratedField(
             model_name='paquete',
             name='tamanio_nivel',
-            field=models.GeneratedField(db_persist=True, expression=models.Case(models.When(tamanio__iexact='chico', then=models.Value(1)), models.When(tamanio__iexact='mediano', then=models.Value(2)), models.When(tamanio__iexact='grande', then=models.Value(3)), default=models.Value(None)), help_text='Nivel de tamaño: 1 chico, 2 mediano, 3 grande.', null=True, output_field=models.IntegerField()),
+            field=models.GeneratedField(db_persist=True, expression=models.Case(models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value('chico')), then=models.Value(1)), models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value('mediano')), then=models.Value(2)), models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value('grande')), then=models.Value(3)), default=models.Value(None)), help_text='Nivel de tamaño: 1 chico, 2 mediano, 3 grande.', null=True, output_field=models.IntegerField()),
         ),
         AddStoredGeneratedField(
             model_name='repartidor',
             name='tamanio_maximo_nivel',
-            field=models.GeneratedField(db_persist=True, expression=models.Case(models.When(then=models.Value(1), tipo_vehiculo__iexact='moto'), models.When(then=models.Value(2), tipo_vehiculo__iexact='auto'), models.When(then=models.Value(3), tipo_vehiculo__iexact='camioneta'), models.When(then=models.Value(3), tipo_vehiculo__iexact='camion'), default=models.Value(None)), help_text='Nivel del tamaño máximo transportable: 1 chico, 2 mediano, 3 grande.', null=True, output_field=models.IntegerField()),
+            field=models.GeneratedField(db_persist=True, expression=models.Case(models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value('moto')), then=models.Value(1)), models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value('auto')), then=models.Value(2)), models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value('camioneta')), then=models.Value(3)), models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value('camion')), then=models.Value(3)), default=models.Value(None)), help_text='Nivel del tamaño máximo transportable: 1 chico, 2 mediano, 3 grande.', null=True, output_field=models.IntegerField()),
         ),
         migrations.AlterField(
             model_name='repartidor',
