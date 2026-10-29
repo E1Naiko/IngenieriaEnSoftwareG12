@@ -140,7 +140,7 @@ function Dashboard() {
           </Link>
 
           <Link
-            to="/historial"
+            to="/historialenvios"
             className="sidebar-link"
             title="Historial de Pedidos"
           >

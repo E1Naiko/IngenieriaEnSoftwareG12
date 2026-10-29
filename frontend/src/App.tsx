@@ -9,6 +9,7 @@ import Flota from "./pages/Flota";
 import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
+import HistorialEnvios from "./pages/HistorialEnvios";
 import "./App.css";
 
 
@@ -25,6 +26,7 @@ function App() {
         <Route path="/loginrepartidor" element={<LoginRepartidor />} />
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
+        <Route path="/historialenvios" element={<HistorialEnvios />} />
       </Routes>
     </BrowserRouter>
   );
