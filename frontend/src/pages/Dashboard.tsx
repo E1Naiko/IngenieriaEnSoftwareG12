@@ -125,15 +125,6 @@ function Dashboard() {
           </button>
           
           <Link
-            to="/asignar-pedido"
-            className="sidebar-link"
-            title="Asignar Pedido"
-          >
-            <span className="sidebar-icon">📦</span>
-            {sidebarAbierto && <span>Asignar Pedido</span>}
-          </Link>
-
-          <Link
             to="/historial"
             className="sidebar-link"
             title="Historial de Pedidos"
