@@ -1,4 +1,4 @@
-"""Pruebas de la consulta del estado actual de un envío.
+"""Tests de la consulta del estado actual de un envío(HU#14).
 
 Ejecutar desde backend: python manage.py test consultarEstadoEnvio
 """

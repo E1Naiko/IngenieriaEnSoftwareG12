@@ -1,4 +1,4 @@
-"""Consulta del estado actual de un envío mediante su código de seguimiento.
+"""Consulta del estado actual de un envío(HU #14).
 
 POST /api/consultar-estado-envio/
     {"cod_seguimiento": "SRFR-XXXXXXXX"}
