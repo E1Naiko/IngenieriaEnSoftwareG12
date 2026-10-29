@@ -183,6 +183,30 @@
   cursor: pointer;
 }
 
+/* Datos del repartidor creado (vista de éxito) */
+.modal-datos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.modal-datos dt {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.modal-datos dd {
+  margin: 0;
+  color: #0f172a;
+  text-align: right;
+  word-break: break-word;
+}
+
 @media (max-width: 650px) {
   .modal-card {
     padding: 24px;
