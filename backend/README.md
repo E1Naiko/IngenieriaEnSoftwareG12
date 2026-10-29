@@ -387,3 +387,33 @@ Si el intento falló en PostgreSQL y `showmigrations core` muestra `[ ] 0008`,
 actualizar el código y volver a ejecutar `python manage.py migrate`. No marcar
 la 0008 con `--fake`: se necesitan sus columnas reales. La migración es atómica,
 por lo que el intento fallido se revierte en PostgreSQL.
+
+
+### Estado ACTIVO en mayúsculas (migración 0009)
+
+El valor persistido y devuelto por la API para repartidores activos es `ACTIVO`.
+La migración 0009 actualiza los registros `activo`/`disponible` (incluidas
+variantes con mayúsculas y espacios), sin modificar `inactivo` ni `baja`.
+El modelo usa `ACTIVO` como valor por defecto. La 0008 no se modifica: para
+bases donde ya está aplicada, ejecutar `python manage.py migrate` para aplicar
+la corrección de datos y opciones de la 0009.
+
+### Repartidores ficticios para desarrollo
+
+Después de aplicar las migraciones, verificá que el entorno apunte a la base
+**de desarrollo** y ejecutá explícitamente:
+
+```bash
+python manage.py migrate
+python manage.py cargar_repartidores_demo --confirmar-desarrollo
+```
+
+Crea 12 repartidores: cada combinación de moto, auto, camioneta y camión con
+los estados `ACTIVO`, `inactivo` y `baja`. Así hay un repartidor activo de cada
+vehículo para probar la selección por tamaño. Los niveles se calculan en la
+base y los tokens se generan automáticamente.
+
+Usa DNIs ficticios 99001000–99001011, correos `@example.invalid` y teléfonos
+`0000000000`. Puede repetirse sin duplicar registros ni sobrescribir los
+existentes. Si un DNI ya pertenece a otro registro, lo omite con una advertencia.
+No reinicia datos demo que se hayan editado. No ejecutar en producción.
