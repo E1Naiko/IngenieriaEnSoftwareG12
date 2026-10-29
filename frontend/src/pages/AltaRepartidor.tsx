@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import "./styles/AltaRepartidor.css";
+import "../styles/AltaRepartidor.css";
 
 // Ruta del backend para dar de alta un repartidor (POST).
 const ALTA_REPARTIDOR_URL = "http://127.0.0.1:8000/api";
@@ -75,7 +75,7 @@ interface Props {
   onCreado?: () => void; // para que la pantalla del coordinador refresque su lista
 }
 
-function CargarRepartidorModal({ abierto, onCerrar, onCreado }: Props) {
+function AltaRepartidor({ abierto, onCerrar, onCreado }: Props) {
   const [valores, setValores] = useState<Valores>(VALORES_INICIALES);
   const [errores, setErrores] = useState<Errores>({});
   const [errorGeneral, setErrorGeneral] = useState("");
@@ -310,4 +310,4 @@ function CargarRepartidorModal({ abierto, onCerrar, onCreado }: Props) {
   );
 }
 
-export default CargarRepartidorModal;
+export default AltaRepartidor;
