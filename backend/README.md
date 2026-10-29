@@ -374,3 +374,16 @@ repartidores = Repartidor.objects.filter(
 Esto agrega la representación numérica de los tamaños; no modifica automáticamente la asignación
 de pedidos. Las pruebas offline usan SQLite; validar también la migración en
 el proyecto PostgreSQL de desarrollo antes de desplegar a producción.
+
+#### Error de collation al aplicar la 0008 en PostgreSQL
+
+La expresión original con `__iexact` generaba `UPPER()` también sobre literales
+SQL, lo que podía causar `IndeterminateCollation` al crear las columnas STORED.
+La 0008 y los modelos ahora comparan `LOWER(TRIM(columna))` con un literal sin
+aplicarle funciones al literal. La collation de la función proviene de la
+columna y se conserva la tolerancia a mayúsculas y espacios.
+
+Si el intento falló en PostgreSQL y `showmigrations core` muestra `[ ] 0008`,
+actualizar el código y volver a ejecutar `python manage.py migrate`. No marcar
+la 0008 con `--fake`: se necesitan sus columnas reales. La migración es atómica,
+por lo que el intento fallido se revierte en PostgreSQL.
