@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     # Proyecto
     "core",
     "crudComercios",
+    "crudRepartidor",
     "loginCoordinador",
     "loginRepartidor",
     "ingresarPedido",
