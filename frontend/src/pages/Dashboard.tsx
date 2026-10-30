@@ -129,7 +129,7 @@ function Dashboard() {
             <span className="sidebar-icon">📦</span>
             {sidebarAbierto && <span>Ingresar Pedido</span>}
           </button>
-          
+
           <Link
             to="/historialenvios"
             className="sidebar-link"
