@@ -61,7 +61,7 @@ python manage.py runserver
 `GET /api/dashboard/paquetes-en-curso/` devuelve `{"paquetes": [...]}` con los
 paquetes que no están `entregado` (la comparación ignora mayúsculas).
 `cancelado` es un estado intermediario, así que también se lista. Cada ítem
-tiene exactamente cinco claves, que son las que usa
+tiene exactamente seis claves, que son las que usa
 `frontend/src/pages/PaquetesEnCurso.tsx`:
 
 ```json
@@ -70,11 +70,12 @@ tiene exactamente cinco claves, que son las que usa
   "destinatario": "Ana Pérez",
   "direccion": "Calle 12 #34",
   "repartidor": "Juan Gómez",
-  "estado": "en_camino"
+  "estado": "en_camino",
+  "tamanio": "chico"
 }
 ```
 
-`repartidor` vale `"Sin asignar"` si el paquete todavía no tiene uno. Cuando
+`tamanio` es el valor de `paquete.tamanio` (`chico`, `mediano` o `grande`). `repartidor` vale `"Sin asignar"` si el paquete todavía no tiene uno. Cuando
 no hay paquetes activos la respuesta es `200` con `{"mensaje": "...",
 "paquetes": []}`. La consulta usa `select_related("repartidor", "cliente")`
 para resolver las FKs en un solo query; no incluir `"paquete"` ahí, porque es
