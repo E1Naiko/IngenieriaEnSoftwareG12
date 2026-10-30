@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "paquetesEnCurso",
     "actualizacionEstado",
     "pedidosAsignados",
+    "historialEnvios",
 ]
 
 MIDDLEWARE = [
