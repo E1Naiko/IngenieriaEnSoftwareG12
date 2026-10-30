@@ -16,18 +16,16 @@ interface PaqueteAsignado {
 }
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
-  pendiente: "Pendiente",
+  asignado: "Asignado",
   retirado: "Retirado",
   en_camino: "En camino",
   entregado: "Entregado",
   cancelado: "Cancelado",
 };
 
-// Siguiente estado de cada estado actual.
-// Si "pendiente" no debe poder avanzar desde acá, borrá esa línea.
+// Flujo que maneja el repartidor: asignado -> en_camino -> entregado.
 const SIGUIENTE_ESTADO: Record<string, string | null> = {
-  pendiente: "retirado",
-  retirado: "en_camino",
+  asignado: "en_camino",
   en_camino: "entregado",
   entregado: null,
   cancelado: null,
@@ -35,8 +33,7 @@ const SIGUIENTE_ESTADO: Record<string, string | null> = {
 
 // Texto del botón según el estado actual
 const TEXTO_BOTON: Record<string, string> = {
-  pendiente: "Marcar como Retirado",
-  retirado: "Marcar como En camino",
+  asignado: "Marcar como En camino",
   en_camino: "Marcar como Entregado",
 };
 
