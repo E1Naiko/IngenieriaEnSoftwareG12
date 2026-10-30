@@ -72,6 +72,27 @@ class ComercioAPITests(TestCase):
         )
         self.assertEqual(resp.status_code, 400)
 
+    def test_crear_nombre_o_direccion_repetidos(self):
+        """POST con nombre o dirección de otro comercio (sin importar mayúsculas) → 400."""
+        for data, campo in (
+            ({"nombre": " comercio a ", "telefono": "9", "direccion": "Otra 1"}, "nombre"),
+            ({"nombre": "Otro", "telefono": "9", "direccion": "CALLE 1"}, "direccion"),
+        ):
+            resp = self.client.post("/api/comercios/", data=data, content_type="application/json")
+            self.assertEqual(resp.status_code, 400)
+            self.assertIn(campo, resp.json())
+        self.assertEqual(Comercio.objects.count(), 1)
+
+    def test_editar_no_choca_consigo_mismo(self):
+        """PUT con su propio nombre y dirección → 200; tomar los de otro → 400."""
+        url = f"/api/comercios/{self.comercio.id}/"
+        data = {"nombre": "Comercio A", "telefono": "456", "direccion": "Calle 1"}
+        resp = self.client.put(url, data=data, content_type="application/json")
+        self.assertEqual(resp.status_code, 200)
+        Comercio.objects.create(nombre="Comercio B", telefono="1", direccion="Calle 2")
+        resp = self.client.patch(url, data={"nombre": "Comercio B"}, content_type="application/json")
+        self.assertEqual(resp.status_code, 400)
+
     # --- Detalle -----------------------------------------------------------
 
     def test_detalle(self):

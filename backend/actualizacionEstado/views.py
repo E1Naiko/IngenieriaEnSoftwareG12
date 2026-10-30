@@ -1,4 +1,4 @@
-"""Vistas para actualizar el estado de los paquetes/pedidos (HU relacionada)."""
+"""Vistas para actualizar el estado de los paquetes/pedidos (HU #34)."""
 
 import json
 
@@ -35,7 +35,7 @@ def cambiar_estado_pedido(request):
 
     POST /api/cambiar-estado-pedido/
         Actualiza el estado de un paquete específico.
-        Body JSON esperado: {"id": <id_paquete>, "estado": "pendiente" | "en_camino" | "entregado" | "cancelado"}
+        Body JSON esperado: {"id": <id_paquete>, "estado": cualquier valor de Paquete.Estado}
     """
 
     # --- GET: Listar paquetes ---

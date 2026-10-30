@@ -37,7 +37,7 @@ Los seis campos son **obligatorios**. El `token` y el `estado` no se mandan: los
 | `moto` | si |
 | `auto` | si |
 | `camioneta` | si |
-| `camion` | **pendiente de agregar en el modelo** (ver sección 5). Hasta entonces la API lo rechaza con "Tipo de vehículo inválido". |
+| `camion` | si|
 
 | Caso (escenario de la HU) | Código | Respuesta |
 |---|---|---|
@@ -155,8 +155,5 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/api/repartidores/ -Method Post -Con
 
 ## 5. Pendiente / a confirmar con el equipo
 
-- **Agregar `camion` a `Repartidor.TipoVehiculo`** en `core/models.py` (por ejemplo
-  `CAMION = "camion", "Camión"`) y generar la migración. Es un cambio del modelo, así que lo hace quien
-  mantiene `core`. La vista no necesita cambios: apenas esté en el modelo, la API lo acepta.
 - Si el repartidor tiene que arrancar `activo` o `inactivo` hasta que se ponga "Disponible" él mismo.
 - Si mail y teléfono tienen que ser únicos también en el modelo.

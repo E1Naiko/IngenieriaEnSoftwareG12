@@ -98,7 +98,7 @@ def _validar_alta(data):
         if campo not in errores:
             valor = str(data[campo]).strip()
 
-            if Repartidor.objects.filter(**{campo: valor}).exists():
+            if Repartidor.objects.filter(**{f"{campo}__iexact": valor}).exists():
                 errores[campo] = MSG_DATO_REPETIDO
 
     # Comprueba que el tipo de vehículo coincida con una opción definida
@@ -108,6 +108,14 @@ def _validar_alta(data):
             errores["tipo_vehiculo"] = "Tipo de vehículo inválido"
 
     return errores
+
+def _normalizar_nombre(texto):
+    """Deja el texto con la primera letra de cada palabra en mayúscula.
+
+    '  jUAN   carlos ' -> 'Juan Carlos'
+    """
+    # split() saca espacios de más; join los une con uno solo; title() capitaliza
+    return " ".join(str(texto or "").split()).title()
 
 
 @csrf_exempt  # Desactiva la validación CSRF para este endpoint.
@@ -141,10 +149,10 @@ def repartidores_alta(request):
         # Se quitan espacios al principio y al final de los textos.
         repartidor = Repartidor.objects.create(
             dni=int(str(data["dni"]).strip()),
-            nombre=str(data["nombre"]).strip(),
-            apellido=str(data["apellido"]).strip(),
+            nombre=_normalizar_nombre(data["nombre"]),
+            apellido=_normalizar_nombre(data["apellido"]),
             telefono=str(data["telefono"]).strip(),
-            mail=str(data["mail"]).strip(),
+            mail=str(data["mail"]).strip().lower(),
             tipo_vehiculo=data["tipo_vehiculo"],
         )
     except IntegrityError:
