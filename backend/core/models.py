@@ -190,6 +190,7 @@ class Paquete(models.Model):
 
         RETIRADO = "retirado", "Retirado"
         PENDIENTE = "pendiente", "Pendiente"
+        ASIGNADO = "asignado", "Asignado"  # el coordinador ya le asignó repartidor
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
         CANCELADO = "cancelado", "Cancelado"
