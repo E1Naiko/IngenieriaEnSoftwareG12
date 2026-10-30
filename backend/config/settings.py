@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "actualizacionEstado",
     "repartidoresDisponibles",
     "paquetesEnCurso",
+    "consultarEstadoEnvio",
 ]
 
 MIDDLEWARE = [

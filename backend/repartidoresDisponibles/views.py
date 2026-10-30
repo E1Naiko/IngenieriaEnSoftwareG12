@@ -36,7 +36,7 @@ def _repartidor_to_dict(repartidor):
 
         # Información relacionada con su función de reparto.
         "tipo_vehiculo": repartidor.tipo_vehiculo,
-        "estado": repartidor.estado.strip().lower(),
+        "estado": Repartidor.Estado.ACTIVO,
 
         # Lista con los IDs de los paquetes asignados al repartidor.
         "listado_id_pedidos_asignados": (

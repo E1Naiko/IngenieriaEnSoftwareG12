@@ -94,7 +94,7 @@ class RepartidorTests(TestCase):
         repartidor.refresh_from_db()
         self.assertEqual(repartidor.estado, "baja")
         self.assertEqual(
-            [e.value for e in Repartidor.Estado], ["activo", "inactivo", "baja"]
+            [e.value for e in Repartidor.Estado], ["ACTIVO", "inactivo", "baja"]
         )
 
     def test_estado_por_defecto_activo(self):
@@ -415,3 +415,167 @@ class EstadoRetiradoMigrationTests(TransactionTestCase):
         PaqueteAnterior = apps_anteriores.get_model("core", "Paquete")
         self.assertNotIn("retirado", dict(PaqueteAnterior._meta.get_field("estado").choices))
         self.assertEqual(self._filas_paquetes(PaqueteAnterior), self.filas_anteriores)
+
+
+class NivelesDeTamanioTests(TestCase):
+    def test_tamanio_maximo_por_vehiculo_y_actualizacion_sql(self):
+        for indice, (vehiculo, nivel) in enumerate(
+            [("moto", 1), ("auto", 2), ("camioneta", 3), ("camion", 3)]
+        ):
+            with self.subTest(vehiculo=vehiculo):
+                repartidor = Repartidor.objects.create(
+                    nombre="Ana", apellido="Paz", dni=90000000 + indice,
+                    telefono="2215550000", mail="ana@example.com",
+                    tipo_vehiculo=vehiculo,
+                )
+                repartidor.full_clean()
+                repartidor.refresh_from_db()
+                self.assertEqual(repartidor.tamanio_maximo_nivel, nivel)
+                Repartidor.objects.filter(pk=repartidor.pk).update(tipo_vehiculo="auto")
+                repartidor.refresh_from_db()
+                self.assertEqual(repartidor.tamanio_maximo_nivel, 2)
+
+    def test_nivel_por_tamanio_y_actualizacion_sql(self):
+        comercio = Comercio.objects.create(nombre="Local", telefono="123", direccion="7")
+        cliente = Cliente.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000000, telefono="123", direccion="8"
+        )
+        for tamanio, nivel in [("chico", 1), ("mediano", 2), ("grande", 3)]:
+            with self.subTest(tamanio=tamanio):
+                paquete = Paquete.objects.create(
+                    comercio=comercio, cliente=cliente, tamanio=tamanio,
+                    fecha_origen=date.today(), fecha_destino=date.today(),
+                )
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.tamanio_nivel, nivel)
+                Paquete.objects.filter(pk=paquete.pk).update(tamanio="grande")
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.tamanio_nivel, 3)
+
+    def test_normalizacion_datos_es_idempotente(self):
+        repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000000,
+            telefono="123", mail="ana@example.com",
+            tipo_vehiculo=" CAMION ", estado=" Disponible ",
+        )
+        migracion = importlib.import_module(
+            "core.migrations.0008_capacidades_vehiculos_y_paquetes"
+        )
+        from types import SimpleNamespace
+        editor = SimpleNamespace(connection=connection)
+        migracion.normalizar_datos(apps, editor)
+        migracion.normalizar_datos(apps, editor)
+        repartidor.refresh_from_db()
+        self.assertEqual(repartidor.estado, "activo")
+        self.assertEqual(repartidor.tipo_vehiculo, "camion")
+        self.assertEqual(repartidor.tamanio_maximo_nivel, 3)
+
+    def test_niveles_normalizan_mayusculas_y_espacios_sin_cambiar_strings(self):
+        repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000001,
+            telefono="123", mail="ana@example.com", tipo_vehiculo=" CAMION ",
+        )
+        repartidor.refresh_from_db()
+        self.assertEqual(repartidor.tipo_vehiculo, " CAMION ")
+        self.assertEqual(repartidor.tamanio_maximo_nivel, 3)
+        comercio = Comercio.objects.create(nombre="Local", telefono="123", direccion="7")
+        cliente = Cliente.objects.create(
+            nombre="Ana", apellido="Paz", dni=90000001, telefono="123", direccion="8"
+        )
+        paquete = Paquete.objects.create(
+            comercio=comercio, cliente=cliente, tamanio=" MEDIANO ",
+            fecha_origen=date.today(), fecha_destino=date.today(),
+        )
+        paquete.refresh_from_db()
+        self.assertEqual(paquete.tamanio, " MEDIANO ")
+        self.assertEqual(paquete.tamanio_nivel, 2)
+        Repartidor.objects.filter(pk=repartidor.pk).update(tipo_vehiculo="desconocido")
+        repartidor.refresh_from_db()
+        self.assertIsNone(repartidor.tamanio_maximo_nivel)
+
+    def test_sql_postgresql_no_aplica_upper_a_literales(self):
+        # Compila con el backend PostgreSQL sin necesitar conexión al servidor.
+        from django.db.backends.postgresql.base import DatabaseWrapper
+        from django.db.models.sql.query import Query
+
+        pg = DatabaseWrapper({"ENGINE": "django.db.backends.postgresql", "NAME": "offline"})
+        migracion = importlib.import_module(
+            "core.migrations.0008_capacidades_vehiculos_y_paquetes"
+        )
+        for modelo, nombre in [
+            (Repartidor, "tamanio_maximo_nivel"), (Paquete, "tamanio_nivel")
+        ]:
+            campo_migracion = next(
+                op.field for op in migracion.Migration.operations
+                if getattr(op, "name", None) == nombre
+            )
+            for campo in (modelo._meta.get_field(nombre), campo_migracion):
+                with self.subTest(modelo=modelo.__name__, campo=nombre):
+                    query = Query(modelo)
+                    expresion = campo.expression.resolve_expression(query, allow_joins=False)
+                    sql, parametros = query.get_compiler(connection=pg).compile(expresion)
+                    self.assertNotIn("UPPER(", sql)
+                    self.assertIn("LOWER(TRIM(", sql)
+                    self.assertIn(" = %s", sql)
+                    self.assertTrue(parametros)
+
+
+    def test_migracion_activo_mayusculas_conserva_otros_estados(self):
+        from types import SimpleNamespace
+
+        migracion = importlib.import_module("core.migrations.0009_estado_activo_mayusculas")
+        registros = []
+        for indice, estado in enumerate(["activo", " ACTIVO ", " Disponible ", "inactivo", "baja"]):
+            registros.append(Repartidor.objects.create(
+                nombre="Ana", apellido="Paz", dni=91000000 + indice,
+                telefono="123", mail="ana@example.com", estado=estado,
+            ))
+        editor = SimpleNamespace(connection=connection)
+        migracion.convertir_activos(apps, editor)
+        migracion.convertir_activos(apps, editor)
+        for repartidor, esperado in zip(registros, ["ACTIVO", "ACTIVO", "ACTIVO", "inactivo", "baja"]):
+            repartidor.refresh_from_db()
+            self.assertEqual(repartidor.estado, esperado)
+        nuevo = Repartidor.objects.create(
+            nombre="Ana", apellido="Paz", dni=92000000,
+            telefono="123", mail="ana@example.com",
+        )
+        nuevo.refresh_from_db()
+        self.assertEqual(nuevo.estado, "ACTIVO")
+
+
+class CargarRepartidoresDemoTests(TestCase):
+    def test_requiere_confirmacion(self):
+        from django.core.management import call_command, CommandError
+        with self.assertRaises(CommandError):
+            call_command("cargar_repartidores_demo")
+        self.assertEqual(Repartidor.objects.count(), 0)
+
+    def test_cubre_vehiculos_estados_y_es_idempotente(self):
+        from io import StringIO
+        from django.core.management import call_command
+        for _ in range(2):
+            call_command("cargar_repartidores_demo", confirmar_desarrollo=True, stdout=StringIO())
+        self.assertEqual(Repartidor.objects.count(), 12)
+        for vehiculo, nivel in [("moto", 1), ("auto", 2), ("camioneta", 3), ("camion", 3)]:
+            for estado in Repartidor.Estado:
+                repartidor = Repartidor.objects.get(tipo_vehiculo=vehiculo, estado=estado)
+                self.assertEqual(repartidor.tamanio_maximo_nivel, nivel)
+                self.assertEqual(len(repartidor.token), 6)
+                repartidor.full_clean()
+        self.assertEqual(Repartidor.objects.values("token").distinct().count(), 12)
+
+    def test_no_sobrescribe_un_dni_existente(self):
+        from io import StringIO
+        from django.core.management import call_command
+        original = Repartidor.objects.create(
+            dni=99001000, nombre="Existente", apellido="Conservar",
+            telefono="123", mail="existente@example.com", tipo_vehiculo="auto",
+        )
+        call_command("cargar_repartidores_demo", confirmar_desarrollo=True,
+                     stdout=StringIO(), stderr=StringIO())
+        original.refresh_from_db()
+        self.assertEqual(original.nombre, "Existente")
+        self.assertEqual(original.tipo_vehiculo, "auto")
+        self.assertEqual(original.mail, "existente@example.com")
+        self.assertEqual(Repartidor.objects.count(), 12)
