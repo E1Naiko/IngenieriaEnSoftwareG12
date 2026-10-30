@@ -1,4 +1,4 @@
-"""Vistas para actualizar el estado de los paquetes/pedidos (HU relacionada)."""
+"""Vistas para actualizar el estado de los paquetes/pedidos (HU #34)."""
 
 import json
 

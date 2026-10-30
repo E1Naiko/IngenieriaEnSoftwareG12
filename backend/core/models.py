@@ -22,6 +22,8 @@ import secrets
 import string
 
 from django.db import models
+from django.db.models.functions import Lower, Trim
+from django.db.models.lookups import Exact
 
 
 class Repartidor(models.Model):
@@ -39,11 +41,12 @@ class Repartidor(models.Model):
         MOTO = "moto", "Moto"
         AUTO = "auto", "Auto"
         CAMIONETA = "camioneta", "Camioneta"
+        CAMION = "camion", "Camión"
 
     class Estado(models.TextChoices):
         """Situación del repartidor dentro del sistema."""
 
-        ACTIVO = "activo", "Activo"        # disponible para recibir paquetes
+        ACTIVO = "ACTIVO", "Activo"        # disponible para recibir paquetes
         INACTIVO = "inactivo", "Inactivo"  # temporalmente fuera de la flota
         BAJA = "baja", "Baja"              # baja definitiva (HU #25)
 
@@ -61,11 +64,24 @@ class Repartidor(models.Model):
         default=TipoVehiculo.MOTO,
         help_text="Medio de transporte que usa para repartir.",
     )
+    tamanio_maximo_nivel = models.GeneratedField(
+        expression=models.Case(
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("moto")), then=models.Value(1)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("auto")), then=models.Value(2)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("camioneta")), then=models.Value(3)),
+            models.When(Exact(Lower(Trim(models.F("tipo_vehiculo"))), models.Value("camion")), then=models.Value(3)),
+            default=models.Value(None),
+        ),
+        output_field=models.IntegerField(),
+        db_persist=True,
+        null=True,
+        help_text="Nivel del tamaño máximo transportable: 1 chico, 2 mediano, 3 grande.",
+    )
     estado = models.CharField(
         max_length=255,
         choices=Estado.choices,
         default=Estado.ACTIVO,
-        help_text="Situación del repartidor (activo, inactivo o baja).",
+        help_text="Situación del repartidor (ACTIVO, inactivo o baja).",
     )
     token = models.CharField(
         max_length=6,
@@ -223,6 +239,18 @@ class Paquete(models.Model):
         max_length=255,
         choices=Tamanio.choices,
         default=Tamanio.CHICO,
+    )
+    tamanio_nivel = models.GeneratedField(
+        expression=models.Case(
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("chico")), then=models.Value(1)),
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("mediano")), then=models.Value(2)),
+            models.When(Exact(Lower(Trim(models.F("tamanio"))), models.Value("grande")), then=models.Value(3)),
+            default=models.Value(None),
+        ),
+        output_field=models.IntegerField(),
+        db_persist=True,
+        null=True,
+        help_text="Nivel de tamaño: 1 chico, 2 mediano, 3 grande.",
     )
     cod_seguimiento = models.CharField(
         max_length=255,
