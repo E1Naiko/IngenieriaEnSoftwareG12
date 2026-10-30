@@ -39,6 +39,14 @@ function Login() {
       if (!response.ok) {
         throw new Error(data.message || "Error al iniciar sesión");
       }
+
+      const sesionCoordinador = {
+        message: data.message,
+        username: username // <-- Guardamos el input del formulario directamente
+      };
+
+
+      localStorage.setItem("coordinador", JSON.stringify(sesionCoordinador));
       navigate("/dashboard");
       setLoggedIn(true);
       setMessage(data.message);
