@@ -89,12 +89,13 @@ class PaquetesEnCursoAPITests(TestCase):
         item = por_id[self.en_camino.id]
         self.assertEqual(
             set(item),
-            {"id", "destinatario", "direccion", "repartidor", "estado"},
+            {"id", "destinatario", "direccion", "repartidor", "estado", "tamanio"},
         )
         self.assertEqual(item["destinatario"], "Ana Pérez")
         self.assertEqual(item["direccion"], "Calle 12 #34")
         self.assertEqual(item["repartidor"], "Juan Gómez")
         self.assertEqual(item["estado"], Paquete.Estado.EN_CAMINO)
+        self.assertEqual(item["tamanio"], self.en_camino.tamanio)
 
     def test_cancelado_se_lista_porque_es_un_estado_intermediario(self):
         """Solo 'entregado' es estado final: 'cancelado' sigue en el panel."""

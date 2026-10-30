@@ -45,7 +45,7 @@ def _nombre_completo(persona):
 
 
 def _paquete_to_dict(paquete):
-    """Serializa un ``Paquete`` a las cinco claves que espera el frontend."""
+    """Serializa un ``Paquete`` a las seis claves que espera el frontend."""
     return {
         "id": paquete.id,
         "destinatario": _nombre_completo(paquete.cliente),
