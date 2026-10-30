@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/", include("actualizacionEstado.urls")),
     path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("paquetesEnCurso.urls")),
+    path("api/", include("historialEnvios.urls")),
     path("api/", include("asignarRepartidor.urls")),
 
     path("api/", include("pedidosAsignados.urls")),
