@@ -24,6 +24,7 @@ urlpatterns = [
     # puede comunicarse (lo usamos para verificar el CORS).
     path("api/ping/", views.ping, name="ping"),
     path("api/", include("crudComercios.urls")),
+    path("api/", include("crudRepartidor.urls")),
     path("api/", include("loginCoordinador.urls")),
     path("api/", include("loginRepartidor.urls")),
     path("api/", include("ingresarPedido.urls")),
@@ -33,6 +34,7 @@ urlpatterns = [
     path("api/", include("actualizacionEstado.urls")),
     path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("paquetesEnCurso.urls")),
+    path("api/", include("pedidosAsignados.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
