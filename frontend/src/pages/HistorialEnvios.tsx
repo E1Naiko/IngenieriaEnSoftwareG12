@@ -74,7 +74,7 @@ export default function HistorialEnvios() {
 
   // Al abrir la pantalla, se solicita la lista de repartidores.
   useEffect(() => {
-    pedir<Respuesta<Repartidor>>("/repartidores/")
+    pedir<Respuesta<Repartidor>>("/historial")
       .then((data) => {
         setRepartidores(extraerLista(data));
       })
@@ -94,8 +94,8 @@ export default function HistorialEnvios() {
 
     try {
       const data = await pedir<Respuesta<Envio>>(
-        `/repartidores/${id}/historial/`
-      );
+      `/historial/${id}`
+     );
 
       setEnvios(extraerLista(data));
     } catch (e) {
