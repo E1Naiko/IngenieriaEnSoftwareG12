@@ -190,7 +190,7 @@
 }
 
 .paquetes-fila-click:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: #eff6ff !important;
 }
 
 /* ---------- MODAL ---------- */
@@ -199,32 +199,31 @@
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
 
   display: flex;
   justify-content: center;
   align-items: center;
-
   padding: 20px;
 }
 
 .asignar-modal {
   width: 100%;
   max-width: 560px;
-  background: #1c1c25;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: white;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 15px 40px rgb(15 23 42 / 15%);
   animation: asignar-modal-entrada 0.2s ease;
 }
 
 @keyframes asignar-modal-entrada {
   from {
     opacity: 0;
-    transform: translateY(15px) scale(0.98);
+    transform: translateY(12px) scale(0.98);
   }
 
   to {
@@ -240,30 +239,37 @@
   justify-content: space-between;
   align-items: center;
   padding: 22px 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .asignar-modal-header h2 {
   margin: 0;
   font-size: 21px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .asignar-modal-header p {
   margin: 6px 0 0;
-  color: #aaa;
+  color: #64748b;
   font-size: 13px;
 }
 
 .asignar-modal-cerrar {
+  width: 34px;
+  height: 34px;
   border: none;
-  background: transparent;
-  color: #aaa;
-  font-size: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 23px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
 .asignar-modal-cerrar:hover {
-  color: white;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 /* ---------- CONTENIDO ---------- */
@@ -286,28 +292,32 @@
 }
 
 .asignar-paquete-info span {
-  color: #999;
+  color: #64748b;
   font-size: 12px;
 }
 
 .asignar-paquete-info strong {
+  color: #1e293b;
   font-size: 14px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .asignar-separador {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #e2e8f0;
   margin: 25px 0;
 }
 
 .asignar-modal-contenido h3 {
   font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
   margin: 0 0 8px;
 }
 
 .asignar-descripcion {
-  color: #aaa;
+  color: #64748b;
   font-size: 13px;
   line-height: 1.5;
   margin-bottom: 20px;
@@ -323,27 +333,31 @@
 
 .asignar-selector-container label {
   font-size: 13px;
-  color: #ccc;
+  font-weight: 600;
+  color: #475569;
 }
 
 .asignar-selector-container select {
   width: 100%;
   padding: 13px;
   border-radius: 8px;
-  border: 1px solid #444454;
-  background: #292936;
-  color: white;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #1e293b;
   font-size: 14px;
   outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
 
 .asignar-selector-container select:focus {
-  border-color: #8b5cf6;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 10%);
 }
 
 .asignar-selector-container option {
-  background: #292936;
-  color: white;
+  background: white;
+  color: #1e293b;
 }
 
 /* ---------- MENSAJES ---------- */
@@ -351,9 +365,10 @@
 .asignar-mensaje,
 .asignar-sin-resultados {
   padding: 15px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  color: #bbb;
+  color: #64748b;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -361,8 +376,9 @@
 .asignar-error {
   padding: 12px;
   border-radius: 8px;
-  background: rgba(220, 50, 50, 0.12);
-  color: #ff7777;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
   font-size: 13px;
 }
 
@@ -373,7 +389,8 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .asignar-modal-footer button {
@@ -386,27 +403,27 @@
 }
 
 .asignar-btn-cancelar {
-  background: #30303d;
-  border: 1px solid #444454;
-  color: #ddd;
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #475569;
 }
 
 .asignar-btn-cancelar:hover {
-  background: #414150;
+  background: #f1f5f9;
 }
 
 .asignar-btn-confirmar {
-  background: #8055d9;
+  background: #2563eb;
   border: none;
   color: white;
 }
 
 .asignar-btn-confirmar:hover:not(:disabled) {
-  background: #956bea;
+  background: #1d4ed8;
 }
 
 .asignar-modal-footer button:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
