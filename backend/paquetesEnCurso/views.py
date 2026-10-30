@@ -56,6 +56,7 @@ def _paquete_to_dict(paquete):
             else MSG_SIN_REPARTIDOR
         ),
         "estado": paquete.estado,
+        "tamanio": paquete.tamanio,
     }
 
 
