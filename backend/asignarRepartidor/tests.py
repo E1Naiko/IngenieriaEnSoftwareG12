@@ -188,7 +188,7 @@ class ListadoFiltradoPorVehiculoTests(AsignarRepartidorTestBase):
 class AsignacionTests(AsignarRepartidorTestBase):
     """Asignación directa por el coordinador (POST)."""
 
-    def test_asignacion_exitosa_no_cambia_el_estado_del_paquete(self):
+    def test_asignacion_exitosa_pasa_el_paquete_a_asignado(self):
         paquete = self._paquete(Paquete.Tamanio.MEDIANO)
 
         response = self._post({"paquete": paquete.id, "repartidor": self.auto.id})
@@ -197,8 +197,7 @@ class AsignacionTests(AsignarRepartidorTestBase):
         self.assertEqual(response.json()["repartidor"], self.auto.id)
         paquete.refresh_from_db()
         self.assertEqual(paquete.repartidor_id, self.auto.id)
-        # La actualización del estado pasa al repartidor: el coordinador no la toca.
-        self.assertEqual(paquete.estado, Paquete.Estado.PENDIENTE)
+        self.assertEqual(paquete.estado, Paquete.Estado.ASIGNADO)
 
     def test_asignacion_aparece_en_listado_del_repartidor(self):
         paquete = self._paquete(Paquete.Tamanio.CHICO)

@@ -15,8 +15,8 @@ Reglas de la HU que implementa este módulo:
   (``Repartidor.tamanio_maximo_nivel >= Paquete.tamanio_nivel``). Entre ellos
   el coordinador elige; no hay asignación automática.
 - El repartidor **no acepta** el pedido: el coordinador lo asigna directamente.
-  Al asignar, ``paquete.estado`` NO cambia; la actualización del estado pasa a
-  ser responsabilidad del repartidor.
+  Al asignar, ``paquete.estado`` pasa a ``asignado``; desde ahí el estado lo
+  avanza el repartidor (asignado -> en_camino -> entregado).
 
 GET con ``?paquete=<id>``::
 
@@ -238,10 +238,11 @@ def _asignar(request):
         if not _repartidores_con_vehiculo_para(paquete).filter(pk=repartidor.pk).exists():
             return JsonResponse({"repartidor": MSG_NO_HAY_CON_VEHICULO}, status=400)
 
-        # Solo se cambia el repartidor. El estado del paquete lo actualiza
-        # el repartidor a partir de ahora.
+        # Al asignar, el paquete pasa a "asignado"; desde ahí el estado lo
+        # avanza el repartidor (asignado -> en_camino -> entregado).
         paquete.repartidor = repartidor
-        paquete.save(update_fields=["repartidor"])
+        paquete.estado = Paquete.Estado.ASIGNADO
+        paquete.save(update_fields=["repartidor", "estado"])
 
     return JsonResponse(_paquete_to_dict(paquete), status=200)
 
