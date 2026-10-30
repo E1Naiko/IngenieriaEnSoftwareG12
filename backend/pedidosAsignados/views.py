@@ -25,6 +25,7 @@ MSG_REPARTIDOR_BAJA = "Repartidor dado de baja"
 # Pendiente = todavía sin asignar; entregado y cancelado ya no son suyos
 # (el cancelado pasa a pedidos cercanos).
 ESTADOS_ACTIVOS = [
+    Paquete.Estado.ASIGNADO,
     Paquete.Estado.RETIRADO,
     Paquete.Estado.EN_CAMINO,
 ]

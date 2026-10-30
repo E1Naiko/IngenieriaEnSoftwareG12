@@ -38,7 +38,8 @@ class PedidosAsignadosTests(TestCase):
         )
 
     def test_escenario_1_lista_solo_sus_pedidos_activos(self):
-        retirado = self._paquete(self.repartidor, "RETIRADO")  # como los datos DEV
+        asignado = self._paquete(self.repartidor, "ASIGNADO")  # como los datos DEV
+        retirado = self._paquete(self.repartidor, "RETIRADO")
         en_camino = self._paquete(self.repartidor, Paquete.Estado.EN_CAMINO)
         # Ninguno de estos debe aparecer
         self._paquete(self.repartidor, Paquete.Estado.PENDIENTE)
@@ -50,8 +51,10 @@ class PedidosAsignadosTests(TestCase):
         r = self._post({"token": self.repartidor.token})
         self.assertEqual(r.status_code, 200)
         paquetes = r.json()["paquetes"]
-        self.assertEqual({p["id"] for p in paquetes}, {retirado.id, en_camino.id})
-        self.assertEqual(paquetes[1]["estado"], "retirado")
+        self.assertEqual(
+            {p["id"] for p in paquetes}, {asignado.id, retirado.id, en_camino.id}
+        )
+        self.assertEqual(paquetes[2]["estado"], "asignado")
         self.assertEqual(paquetes[0], {
             "id": en_camino.id,  # orden -id: el más nuevo primero
             "cod_seguimiento": en_camino.cod_seguimiento,
