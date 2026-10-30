@@ -5,7 +5,7 @@ interface Paquete {
   id: number;
   destinatario: string;
   direccion: string;
-  repartidor: string;
+  repartidor: string | number | null;
   estado: string;
   tamanio: string;
 }
@@ -34,6 +34,9 @@ function PaquetesEnCurso() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Filtro para mostrar únicamente paquetes sin repartidor.
+  const [soloSinAsignar, setSoloSinAsignar] = useState(false);
+
   // Paquete seleccionado para asignarle un repartidor.
   const [paqueteSeleccionado, setPaqueteSeleccionado] =
     useState<Paquete | null>(null);
@@ -49,6 +52,33 @@ function PaquetesEnCurso() {
   const [asignando, setAsignando] = useState(false);
   const [errorModal, setErrorModal] = useState("");
   const [mensajeModal, setMensajeModal] = useState("");
+
+  // Devuelve el texto del repartidor.
+  function obtenerRepartidorTexto(
+    repartidor: string | number | null | undefined
+  ): string {
+    if (repartidor === null || repartidor === undefined) {
+      return "Sin asignar";
+    }
+
+    const texto = String(repartidor).trim();
+
+    return texto === "" || texto.toLowerCase() === "null"
+      ? "Sin asignar"
+      : texto;
+  }
+
+  // Comprueba si un paquete todavía no tiene repartidor.
+  function estaSinAsignar(paquete: Paquete): boolean {
+    const repartidor = obtenerRepartidorTexto(paquete.repartidor);
+
+    return repartidor.toLowerCase() === "sin asignar";
+  }
+
+  // Lista que se muestra según el filtro seleccionado.
+  const paquetesFiltrados = soloSinAsignar
+    ? items.filter(estaSinAsignar)
+    : items;
 
   // Carga los paquetes.
   async function load() {
@@ -205,15 +235,31 @@ function PaquetesEnCurso() {
 
       <section className="paquetes-card">
 
+        {/* BARRA DE HERRAMIENTAS */}
         <div className="paquetes-toolbar">
           <h2 className="paquetes-toolbar-titulo">
             Listado de paquetes
           </h2>
 
-          <span className="paquetes-contador">
-            {items.length} paquete
-            {items.length !== 1 ? "s" : ""}
-          </span>
+          <div className="paquetes-toolbar-acciones">
+            <button
+              className={`paquetes-filtro-btn ${
+                soloSinAsignar ? "activo" : ""
+              }`}
+              onClick={() => setSoloSinAsignar(!soloSinAsignar)}
+            >
+              <span aria-hidden="true">☷</span>
+
+              {soloSinAsignar
+                ? "Mostrar todos"
+                : "Solo sin asignar"}
+            </button>
+
+            <span className="paquetes-contador">
+              {paquetesFiltrados.length} paquete
+              {paquetesFiltrados.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
         {loading && (
@@ -243,7 +289,7 @@ function PaquetesEnCurso() {
               </thead>
 
               <tbody>
-                {items.map((paquete) => {
+                {paquetesFiltrados.map((paquete) => {
                   const estado = (paquete.estado ?? "")
                     .trim()
                     .toLowerCase();
@@ -262,12 +308,24 @@ function PaquetesEnCurso() {
                           : "paquetes-estado-otro";
 
                   return (
-                    <tr
-                      key={paquete.id}
-                      className="paquetes-fila-click"
-                      onClick={() => abrirModal(paquete)}
-                      title="Hacé clic para gestionar el repartidor"
-                    >
+                        <tr
+                          key={paquete.id}
+                          className={
+                            estaSinAsignar(paquete)
+                              ? "paquetes-fila-click"
+                              : "paquetes-fila-asignado"
+                          }
+                          onClick={
+                            estaSinAsignar(paquete)
+                              ? () => abrirModal(paquete)
+                              : undefined
+                          }
+                          title={
+                            estaSinAsignar(paquete)
+                              ? "Hacé clic para asignar un repartidor"
+                              : "Este paquete ya tiene un repartidor asignado"
+                          }
+                        >
                       <td className="paquetes-id">
                         #{paquete.id}
                       </td>
@@ -280,7 +338,9 @@ function PaquetesEnCurso() {
 
                       <td>{paquete.tamanio}</td>
 
-                      <td>{paquete.repartidor || "Sin asignar"}</td>
+                      <td>
+                        {obtenerRepartidorTexto(paquete.repartidor)}
+                      </td>
 
                       <td>
                         <span
@@ -293,13 +353,15 @@ function PaquetesEnCurso() {
                   );
                 })}
 
-                {items.length === 0 && (
+                {paquetesFiltrados.length === 0 && (
                   <tr>
                     <td
                       colSpan={6}
                       className="paquetes-mensaje paquetes-vacio"
                     >
-                      No hay paquetes en curso.
+                      {soloSinAsignar
+                        ? "No hay paquetes sin asignar."
+                        : "No hay paquetes en curso."}
                     </td>
                   </tr>
                 )}
@@ -363,7 +425,9 @@ function PaquetesEnCurso() {
                 <div>
                   <span>Repartidor actual</span>
                   <strong>
-                    {paqueteSeleccionado.repartidor || "Sin asignar"}
+                    {obtenerRepartidorTexto(
+                      paqueteSeleccionado.repartidor
+                    )}
                   </strong>
                 </div>
               </div>
@@ -432,12 +496,6 @@ function PaquetesEnCurso() {
                       "No hay repartidores disponibles para este paquete."}
                   </p>
                 )}
-
-              {errorModal && (
-                <p className="asignar-error" role="alert">
-                  {errorModal}
-                </p>
-              )}
 
             </div>
 
