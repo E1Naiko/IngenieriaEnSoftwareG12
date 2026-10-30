@@ -20,6 +20,11 @@ def to_dict(paquete):
         "fecha_origen": str(paquete.fecha_origen) if paquete.fecha_origen else None,
         "fecha_destino": str(paquete.fecha_destino) if paquete.fecha_destino else None,
         "id_repartidor_asignado": paquete.repartidor.id if paquete.repartidor else None,
+        "nombre_repartidor": (
+            f"{paquete.repartidor.nombre} {paquete.repartidor.apellido}".strip()
+            if paquete.repartidor
+            else None
+        ),
         "id_comercio": paquete.comercio.id,
         "id_cliente": paquete.cliente.id,
     }

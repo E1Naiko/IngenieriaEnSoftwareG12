@@ -5,7 +5,7 @@ Rutas principales del backend.
 - /api/...    endpoints que consume el frontend React.
 - /media/...  archivos subidos (comprobantes), solo en desarrollo.
 """
-
+import asignarRepartidor
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -35,6 +35,8 @@ urlpatterns = [
     path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("paquetesEnCurso.urls")),
     path("api/", include("historialEnvios.urls")),
+    path("api/", include("asignarRepartidor.urls")),
+
     path("api/", include("pedidosAsignados.urls")),
 ]
 

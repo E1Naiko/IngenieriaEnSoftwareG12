@@ -11,6 +11,7 @@ import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import HistorialEnvios from "./pages/HistorialEnvios";
 import "./App.css";
+import ConsultarPaquete from "./pages/ConsultarEnvio";
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
         <Route path="/historialenvios" element={<HistorialEnvios />} />
+        <Route path="/seguimiento" element={<ConsultarPaquete />} />
       </Routes>
     </BrowserRouter>
   );
