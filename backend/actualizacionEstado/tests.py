@@ -57,6 +57,16 @@ class ActualizarPedidoTests(TestCase):
         self.assertEqual(data["message"], "Paquetes obtenidos correctamente.")
         self.assertEqual(len(data["paquetes"]), 1)
         self.assertEqual(data["paquetes"][0]["id"], self.paquete.id)
+        self.assertEqual(data["paquetes"][0]["nombre_repartidor"], "Ana Gómez")
+
+    def test_get_paquete_sin_repartidor_devuelve_nombre_null(self):
+        self.paquete.repartidor = None
+        self.paquete.save()
+
+        r = self._get()
+
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(r.json()["paquetes"][0]["nombre_repartidor"])
 
     def test_get_filtrar_por_cod_seguimiento(self):
         r = self._get({"cod_seguimiento": self.paquete.cod_seguimiento})
