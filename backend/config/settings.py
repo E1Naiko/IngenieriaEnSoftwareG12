@@ -60,6 +60,9 @@ INSTALLED_APPS = [
     "ingresarPedido",
     "actualizacionEstado",
     "consultarEstadoEnvio",
+    "repartidoresDisponibles",
+    "paquetesEnCurso",
+    "asignarRepartidor",
 ]
 
 MIDDLEWARE = [
