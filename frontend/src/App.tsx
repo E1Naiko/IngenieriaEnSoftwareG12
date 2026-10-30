@@ -9,7 +9,6 @@ import Flota from "./pages/Flota";
 import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
-import HistorialEnvios from "./pages/HistorialEnvios";
 import "./App.css";
 import ConsultarPaquete from "./pages/ConsultarEnvio";
 
@@ -27,7 +26,6 @@ function App() {
         <Route path="/loginrepartidor" element={<LoginRepartidor />} />
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
-        <Route path="/historialenvios" element={<HistorialEnvios />} />
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
       </Routes>
     </BrowserRouter>
