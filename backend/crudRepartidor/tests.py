@@ -59,3 +59,21 @@ class AltaRepartidorTests(TestCase):
         self.assertEqual(r.json()["dni"], MSG_DATO_REPETIDO)
         # Sigue habiendo un solo repartidor
         self.assertEqual(Repartidor.objects.count(), 1)
+
+
+    def test_nombre_y_apellido_se_guardan_con_mayuscula_inicial(self):
+        payload = {
+            "dni": "30777666", "nombre": "  jUAN   carlos ", "apellido": "PÉREZ",
+            "telefono": "1155551234", "mail": "Juan.Perez@MAIL.com",
+            "tipo_vehiculo": "moto",
+        }
+        r = self.client.post(
+            reverse("crud-repartidor"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 201)
+        repartidor = Repartidor.objects.get(dni=30777666)
+        self.assertEqual(repartidor.nombre, "Juan Carlos")
+        self.assertEqual(repartidor.apellido, "Pérez")
+        self.assertEqual(repartidor.mail, "juan.perez@mail.com")
