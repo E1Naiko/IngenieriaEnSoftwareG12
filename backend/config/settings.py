@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "ingresarPedido",
     "actualizacionEstado",
     "historialEnvios",
+    "pedidosAsignados",
     "consultarEstadoEnvio",
 ]
 

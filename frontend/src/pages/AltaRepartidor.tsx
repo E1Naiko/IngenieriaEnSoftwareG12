@@ -42,6 +42,7 @@ const TIPOS_VEHICULO = [
   { value: "moto", label: "Moto" },
   { value: "auto", label: "Auto" },
   { value: "camioneta", label: "Camioneta" },
+  { value: "camion", label: "Camión" },
 ];
 
 function validar(valores: Valores): Errores {
