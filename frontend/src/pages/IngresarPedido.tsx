@@ -180,7 +180,7 @@ export default function IngresarPedido() {
   const [fecha, setFecha] = useState(""); // fecha de entrega, formato AAAA-MM-DD
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
-  const [ok, setOk] = useState(false);
+  const [ok, setOk] = useState(""); // código de seguimiento del último pedido guardado
   const [aviso, setAviso] = useState<AvisoSimilar | null>(null);
 
   const completo = tamano !== "" && comercio !== null && cliente !== null && fecha !== "";
@@ -188,7 +188,7 @@ export default function IngresarPedido() {
   async function enviar(forzar: boolean) {
     if (tamano === "" || !comercio || !cliente || fecha === "") return;
     setError("");
-    setOk(false);
+    setOk("");
     setGuardando(true);
     try {
       const body: Record<string, unknown> = {
@@ -220,7 +220,8 @@ export default function IngresarPedido() {
         return;
       }
 
-      setOk(true);
+      const creado = await res.json();
+      setOk(creado.cod_seguimiento);
       setTamano("");
       setComercio(null);
       setCliente(null);
@@ -295,7 +296,11 @@ export default function IngresarPedido() {
       </div>
 
       {error && <p className="pedido-error">{error}</p>}
-      {ok && <p className="pedido-ok">Pedido guardado.</p>}
+      {ok && (
+        <p className="pedido-ok">
+          Pedido guardado. Código de seguimiento: <strong>{ok}</strong>
+        </p>
+      )}
 
       <button
         type="submit"
