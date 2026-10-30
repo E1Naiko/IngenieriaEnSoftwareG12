@@ -172,6 +172,48 @@ function Dashboard() {
           <h1>Bienvenido, {coordinador.username}</h1>
         </header>
 
+                {/* Sección desplegable: Paquetes en curso */}
+        <section
+          className={`dashboard-section ${
+            paquetesAbiertos ? "section-open" : ""
+          }`}
+        >
+          <button
+            type="button"
+            className="dashboard-section-toggle"
+            onClick={() => setPaquetesAbiertos(!paquetesAbiertos)}
+            aria-expanded={paquetesAbiertos}
+          >
+            <span className="section-heading">
+              <span className="section-icon paquetes-icon">📦</span>
+
+              <span className="section-title-group">
+                <span className="section-title">
+                  Paquetes en curso
+                </span>
+                <span className="section-subtitle">
+                  Consulta el estado de los envíos
+                </span>
+              </span>
+            </span>
+
+            <span className="section-action">
+              <span className="section-action-text">
+                {paquetesAbiertos ? "Ocultar" : "Ver información"}
+              </span>
+              <span className="accordion-arrow">
+                {paquetesAbiertos ? "⌃" : "⌄"}
+              </span>
+            </span>
+          </button>
+
+          {paquetesAbiertos && (
+            <div className="dashboard-section-content">
+              <PaquetesEnCurso />
+            </div>
+          )}
+        </section>
+
         {/* Sección desplegable: Flota */}
         <section
           className={`dashboard-section ${
@@ -214,47 +256,6 @@ function Dashboard() {
           )}
         </section>
 
-        {/* Sección desplegable: Paquetes en curso */}
-        <section
-          className={`dashboard-section ${
-            paquetesAbiertos ? "section-open" : ""
-          }`}
-        >
-          <button
-            type="button"
-            className="dashboard-section-toggle"
-            onClick={() => setPaquetesAbiertos(!paquetesAbiertos)}
-            aria-expanded={paquetesAbiertos}
-          >
-            <span className="section-heading">
-              <span className="section-icon paquetes-icon">📦</span>
-
-              <span className="section-title-group">
-                <span className="section-title">
-                  Paquetes en curso
-                </span>
-                <span className="section-subtitle">
-                  Consulta el estado de los envíos
-                </span>
-              </span>
-            </span>
-
-            <span className="section-action">
-              <span className="section-action-text">
-                {paquetesAbiertos ? "Ocultar" : "Ver información"}
-              </span>
-              <span className="accordion-arrow">
-                {paquetesAbiertos ? "⌃" : "⌄"}
-              </span>
-            </span>
-          </button>
-
-          {paquetesAbiertos && (
-            <div className="dashboard-section-content">
-              <PaquetesEnCurso />
-            </div>
-          )}
-        </section>
 
         {/* Sección desplegable: Comercios */}
         <section
