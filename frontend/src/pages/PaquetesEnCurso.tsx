@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "../styles/PaquetesEnCurso.css";
 
-// Define la estructura que debe tener cada paquete recibido desde el backend.
 interface Paquete {
   id: number;
   destinatario: string;
@@ -11,7 +10,17 @@ interface Paquete {
   tamanio: string;
 }
 
-// El backend guarda los estados con estos valores (Paquete.Estado).
+interface Repartidor {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  telefono: string;
+  mail: string;
+  tipo_vehiculo: string;
+  estado: string;
+}
+
 const ETIQUETAS_ESTADO: Record<string, string> = {
   pendiente: "Pendiente",
   retirado: "Retirado",
@@ -21,55 +30,158 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
 };
 
 function PaquetesEnCurso() {
-  // Guarda la lista de paquetes recibidos desde el backend.
   const [items, setItems] = useState<Paquete[]>([]);
-
-  // Indica si se están cargando los paquetes.
   const [loading, setLoading] = useState(false);
-
-  // Guarda un mensaje en caso de error.
   const [error, setError] = useState("");
 
-  // Solicita al backend la lista de paquetes en curso.
+  // Paquete seleccionado para asignarle un repartidor.
+  const [paqueteSeleccionado, setPaqueteSeleccionado] =
+    useState<Paquete | null>(null);
+
+  // Repartidores devueltos por Django.
+  const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
+
+  // Repartidor seleccionado en el modal.
+  const [repartidorSeleccionado, setRepartidorSeleccionado] =
+    useState("");
+
+  const [loadingRepartidores, setLoadingRepartidores] = useState(false);
+  const [asignando, setAsignando] = useState(false);
+  const [errorModal, setErrorModal] = useState("");
+  const [mensajeModal, setMensajeModal] = useState("");
+
+  // Carga los paquetes.
   async function load() {
     setLoading(true);
     setError("");
 
     try {
-      // Endpoint de ejemplo: debe coincidir con la URL configurada en Django.
-      const res = await fetch("api/dashboard/paquetes-en-curso/");
+      const res = await fetch("/api/dashboard/paquetes-en-curso/");
 
-      // Comprueba si la petición fue exitosa.
       if (!res.ok) {
-        throw new Error("No se pudieron cargar los paquetes");
+        throw new Error("No se pudieron cargar los paquetes.");
       }
 
-      // Convierte la respuesta JSON en un objeto JavaScript.
       const data = await res.json();
-
-      // Guarda la lista recibida. Si no existe, utiliza una lista vacía.
       setItems(data.paquetes ?? []);
     } catch (e) {
-      // Muestra el error ocurrido durante la petición.
       setError(
         e instanceof Error
           ? e.message
-          : "Error al cargar los paquetes"
+          : "Error al cargar los paquetes."
       );
     } finally {
-      // Finaliza el estado de carga.
       setLoading(false);
     }
   }
 
-  // Carga los paquetes cuando se muestra el componente.
+  // Abre el modal y consulta los repartidores compatibles.
+  async function abrirModal(paquete: Paquete) {
+    setPaqueteSeleccionado(paquete);
+    setRepartidores([]);
+    setRepartidorSeleccionado("");
+    setErrorModal("");
+    setMensajeModal("");
+    setLoadingRepartidores(true);
+
+    try {
+      const res = await fetch(
+        `/api/dashboard/asignar-repartidor/?paquete=${paquete.id}`
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail ||
+          data.paquete ||
+          "No se pudieron consultar los repartidores."
+        );
+      }
+
+      setRepartidores(data.repartidores ?? []);
+
+      if (data.mensaje) {
+        setMensajeModal(data.mensaje);
+      }
+    } catch (e) {
+      setErrorModal(
+        e instanceof Error
+          ? e.message
+          : "Error al consultar los repartidores."
+      );
+    } finally {
+      setLoadingRepartidores(false);
+    }
+  }
+
+  // Asigna el repartidor seleccionado al paquete.
+  async function asignarRepartidor() {
+    if (!paqueteSeleccionado || !repartidorSeleccionado) {
+      setErrorModal("Seleccioná un repartidor antes de continuar.");
+      return;
+    }
+
+    setAsignando(true);
+    setErrorModal("");
+
+    try {
+      const res = await fetch(
+        "/api/dashboard/asignar-repartidor/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paquete: paqueteSeleccionado.id,
+            repartidor: Number(repartidorSeleccionado),
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail ||
+          data.repartidor ||
+          data.paquete ||
+          "No se pudo asignar el repartidor."
+        );
+      }
+
+      // Cierra el modal y actualiza la información.
+      cerrarModal();
+      await load();
+
+    } catch (e) {
+      setErrorModal(
+        e instanceof Error
+          ? e.message
+          : "Error al asignar el repartidor."
+      );
+    } finally {
+      setAsignando(false);
+    }
+  }
+
+  // Limpia los datos del modal.
+  function cerrarModal() {
+    setPaqueteSeleccionado(null);
+    setRepartidores([]);
+    setRepartidorSeleccionado("");
+    setErrorModal("");
+    setMensajeModal("");
+  }
+
   useEffect(() => {
     load();
   }, []);
 
   return (
     <main className="paquetes-container">
-      {/* Encabezado de la página */}
+
       <header className="paquetes-header">
         <div>
           <h1 className="paquetes-titulo">
@@ -91,8 +203,8 @@ function PaquetesEnCurso() {
         </button>
       </header>
 
-      {/* Tarjeta principal */}
       <section className="paquetes-card">
+
         <div className="paquetes-toolbar">
           <h2 className="paquetes-toolbar-titulo">
             Listado de paquetes
@@ -104,24 +216,18 @@ function PaquetesEnCurso() {
           </span>
         </div>
 
-        {/* Estado de carga */}
         {loading && (
-          <p
-            className="paquetes-mensaje paquetes-cargando"
-            role="status"
-          >
+          <p className="paquetes-mensaje paquetes-cargando">
             Cargando paquetes...
           </p>
         )}
 
-        {/* Mensaje de error */}
         {error && (
           <p className="paquetes-error" role="alert">
             {error}
           </p>
         )}
 
-        {/* Tabla de paquetes */}
         {!loading && !error && (
           <div className="paquetes-tabla-wrapper">
             <table className="paquetes-tabla">
@@ -138,13 +244,10 @@ function PaquetesEnCurso() {
 
               <tbody>
                 {items.map((paquete) => {
-                  // Normaliza el estado para poder compararlo con los
-                  // valores del modelo y con etiquetas más antiguas.
                   const estado = (paquete.estado ?? "")
                     .trim()
                     .toLowerCase();
 
-                  // Asigna una clase CSS según el estado del paquete.
                   const claseEstado =
                     estado === "en curso" ||
                     estado === "en distribución" ||
@@ -159,7 +262,12 @@ function PaquetesEnCurso() {
                           : "paquetes-estado-otro";
 
                   return (
-                    <tr key={paquete.id}>
+                    <tr
+                      key={paquete.id}
+                      className="paquetes-fila-click"
+                      onClick={() => abrirModal(paquete)}
+                      title="Hacé clic para gestionar el repartidor"
+                    >
                       <td className="paquetes-id">
                         #{paquete.id}
                       </td>
@@ -169,8 +277,10 @@ function PaquetesEnCurso() {
                       </td>
 
                       <td>{paquete.direccion}</td>
+
                       <td>{paquete.tamanio}</td>
-                      <td>{paquete.repartidor}</td>
+
+                      <td>{paquete.repartidor || "Sin asignar"}</td>
 
                       <td>
                         <span
@@ -183,11 +293,10 @@ function PaquetesEnCurso() {
                   );
                 })}
 
-                {/* Mensaje cuando no existen paquetes */}
                 {items.length === 0 && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="paquetes-mensaje paquetes-vacio"
                     >
                       No hay paquetes en curso.
@@ -199,9 +308,169 @@ function PaquetesEnCurso() {
           </div>
         )}
       </section>
+
+      {/* MODAL DE ASIGNACIÓN */}
+      {paqueteSeleccionado && (
+        <div
+          className="asignar-modal-overlay"
+          onClick={cerrarModal}
+        >
+          <section
+            className="asignar-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="asignar-modal-header">
+              <div>
+                <h2>Asignar repartidor</h2>
+                <p>
+                  Paquete #{paqueteSeleccionado.id}
+                </p>
+              </div>
+
+              <button
+                className="asignar-modal-cerrar"
+                onClick={cerrarModal}
+                aria-label="Cerrar modal"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="asignar-modal-contenido">
+
+              <div className="asignar-paquete-info">
+                <div>
+                  <span>Destinatario</span>
+                  <strong>
+                    {paqueteSeleccionado.destinatario}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Dirección</span>
+                  <strong>
+                    {paqueteSeleccionado.direccion}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Tamaño del paquete</span>
+                  <strong>
+                    {paqueteSeleccionado.tamanio}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Repartidor actual</span>
+                  <strong>
+                    {paqueteSeleccionado.repartidor || "Sin asignar"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="asignar-separador" />
+
+              <h3>Repartidores disponibles</h3>
+
+              <p className="asignar-descripcion">
+                Se muestran únicamente los repartidores disponibles
+                cuyo vehículo puede transportar este paquete.
+              </p>
+
+              {loadingRepartidores && (
+                <p className="asignar-mensaje">
+                  Buscando repartidores compatibles...
+                </p>
+              )}
+
+              {!loadingRepartidores && errorModal && (
+                <p className="asignar-error" role="alert">
+                  {errorModal}
+                </p>
+              )}
+
+              {!loadingRepartidores &&
+                !errorModal &&
+                repartidores.length > 0 && (
+                  <div className="asignar-selector-container">
+                    <label htmlFor="repartidor-select">
+                      Seleccionar repartidor
+                    </label>
+
+                    <select
+                      id="repartidor-select"
+                      value={repartidorSeleccionado}
+                      onChange={(e) =>
+                        setRepartidorSeleccionado(e.target.value)
+                      }
+                    >
+                      <option value="">
+                        Seleccioná un repartidor
+                      </option>
+
+                      {repartidores.map((repartidor) => (
+                        <option
+                          key={repartidor.id}
+                          value={repartidor.id}
+                        >
+                          {repartidor.nombre} {repartidor.apellido}
+                          {" — "}
+                          {repartidor.tipo_vehiculo}
+                          {" — DNI: "}
+                          {repartidor.dni}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+              {!loadingRepartidores &&
+                !errorModal &&
+                repartidores.length === 0 && (
+                  <p className="asignar-sin-resultados">
+                    {mensajeModal ||
+                      "No hay repartidores disponibles para este paquete."}
+                  </p>
+                )}
+
+              {errorModal && (
+                <p className="asignar-error" role="alert">
+                  {errorModal}
+                </p>
+              )}
+
+            </div>
+
+            <footer className="asignar-modal-footer">
+              <button
+                className="asignar-btn-cancelar"
+                onClick={cerrarModal}
+                disabled={asignando}
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="asignar-btn-confirmar"
+                onClick={asignarRepartidor}
+                disabled={
+                  !repartidorSeleccionado ||
+                  asignando ||
+                  loadingRepartidores ||
+                  repartidores.length === 0
+                }
+              >
+                {asignando
+                  ? "Asignando..."
+                  : "Confirmar asignación"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
     </main>
   );
 }
 
-// Permite importar el componente desde otros archivos de React.
 export default PaquetesEnCurso;

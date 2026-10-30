@@ -180,3 +180,252 @@
     flex-direction: column;
   }
 }
+
+
+/* ---------- FILAS INTERACTIVAS ---------- */
+
+.paquetes-fila-click {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.paquetes-fila-click:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- MODAL ---------- */
+
+.asignar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(5px);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+}
+
+.asignar-modal {
+  width: 100%;
+  max-width: 560px;
+  background: #1c1c25;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: asignar-modal-entrada 0.2s ease;
+}
+
+@keyframes asignar-modal-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------- CABECERA ---------- */
+
+.asignar-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.asignar-modal-header h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.asignar-modal-header p {
+  margin: 6px 0 0;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.asignar-modal-cerrar {
+  border: none;
+  background: transparent;
+  color: #aaa;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.asignar-modal-cerrar:hover {
+  color: white;
+}
+
+/* ---------- CONTENIDO ---------- */
+
+.asignar-modal-contenido {
+  padding: 25px;
+}
+
+.asignar-paquete-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.asignar-paquete-info div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.asignar-paquete-info span {
+  color: #999;
+  font-size: 12px;
+}
+
+.asignar-paquete-info strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.asignar-separador {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 25px 0;
+}
+
+.asignar-modal-contenido h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.asignar-descripcion {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* ---------- SELECTOR ---------- */
+
+.asignar-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.asignar-selector-container label {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.asignar-selector-container select {
+  width: 100%;
+  padding: 13px;
+  border-radius: 8px;
+  border: 1px solid #444454;
+  background: #292936;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.asignar-selector-container select:focus {
+  border-color: #8b5cf6;
+}
+
+.asignar-selector-container option {
+  background: #292936;
+  color: white;
+}
+
+/* ---------- MENSAJES ---------- */
+
+.asignar-mensaje,
+.asignar-sin-resultados {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: #bbb;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.asignar-error {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(220, 50, 50, 0.12);
+  color: #ff7777;
+  font-size: 13px;
+}
+
+/* ---------- BOTONES ---------- */
+
+.asignar-modal-footer {
+  padding: 18px 25px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.asignar-modal-footer button {
+  padding: 11px 17px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.asignar-btn-cancelar {
+  background: #30303d;
+  border: 1px solid #444454;
+  color: #ddd;
+}
+
+.asignar-btn-cancelar:hover {
+  background: #414150;
+}
+
+.asignar-btn-confirmar {
+  background: #8055d9;
+  border: none;
+  color: white;
+}
+
+.asignar-btn-confirmar:hover:not(:disabled) {
+  background: #956bea;
+}
+
+.asignar-modal-footer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 500px) {
+  .asignar-modal {
+    max-width: 100%;
+  }
+
+  .asignar-paquete-info {
+    grid-template-columns: 1fr;
+  }
+
+  .asignar-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .asignar-modal-footer button {
+    width: 100%;
+  }
+}
