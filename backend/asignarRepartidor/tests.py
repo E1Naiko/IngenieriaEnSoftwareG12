@@ -125,6 +125,16 @@ class ListadoFiltradoPorVehiculoTests(AsignarRepartidorTestBase):
 
         self.assertIn(disponible.id, self._ids(response))
 
+    def test_devuelve_el_estado_real_del_repartidor(self):
+        paquete = self._paquete(Paquete.Tamanio.CHICO)
+        self.moto.estado = "DISPONIBLE"
+        self.moto.save()
+
+        response = self.client.get(self.url, {"paquete": paquete.id})
+
+        datos = next(r for r in response.json()["repartidores"] if r["id"] == self.moto.id)
+        self.assertEqual(datos["estado"], "DISPONIBLE")
+
     def test_escenario_2_sin_vehiculo_adecuado_muestra_mensaje(self):
         """Escenario 2: no hay camiones disponibles para un paquete grande."""
         # Solo hay moto y auto disponibles: ninguno alcanza el tamaño grande.
