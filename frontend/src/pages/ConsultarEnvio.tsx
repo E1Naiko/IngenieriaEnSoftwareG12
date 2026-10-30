@@ -12,6 +12,7 @@ interface Paquete {
   fecha_origen: string | null;
   fecha_destino: string | null;
   id_repartidor_asignado: number | null;
+  nombre_repartidor: string | null; // NUEVO
   id_comercio: number;
   id_cliente: number;
 }
@@ -231,8 +232,8 @@ function ConsultarPaquete() {
               <div className="detalle-item">
                 <span>Repartidor asignado</span>
                 <strong>
-                  {paquete.id_repartidor_asignado !== null
-                    ? "Asignado"
+                  {paquete.nombre_repartidor
+                    ? paquete.nombre_repartidor
                     : "Aún sin asignar"}
                 </strong>
               </div>
