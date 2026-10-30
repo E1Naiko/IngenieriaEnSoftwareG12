@@ -1,236 +1,374 @@
-import { useCallback, useEffect, useState } from "react";
+
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/HistorialEnvios.css";
 
-// Dirección base del backend Django.
-const API_URL = "http://127.0.0.1:8000/api";
+// Endpoint del historial
+const HISTORIAL_URL = "/api/historial/";
 
-// Datos que esperamos recibir de un repartidor.
+// Estructura de los datos de cada repartidor
 interface Repartidor {
   id: number;
-  dni: string;
   nombre: string;
   apellido: string;
-  telefono: string;
-  mail: string;
-  tipo_vehiculo: "moto" | "auto" | "camioneta" | "camion";
+  dado_de_baja: boolean;
+  cantidad_envios: number;
 }
 
-// Datos que esperamos recibir de un envío.
+// Estructura de cada paquete del historial
 interface Envio {
   id: number;
-  fecha: string;
-  direccion_entrega: string;
-  cliente: string;
+  cod_seguimiento: string;
   estado: string;
+  fecha_origen: string | null;
+  fecha_destino: string | null;
+  comercio: string;
+  cliente: string;
+  direccion: string;
 }
 
-// El backend puede devolver una lista o una respuesta paginada.
-type Respuesta<T> = T[] | { results: T[] };
-
-// Obtiene la lista independientemente del formato de respuesta.
-const extraerLista = <T,>(data: Respuesta<T>): T[] =>
-  Array.isArray(data) ? data : data.results;
-
-// Función reutilizable para consultar el backend.
-async function pedir<T>(ruta: string): Promise<T> {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}${ruta}`, {
-    headers: {
-      "Content-Type": "application/json",
-
-      // Se envía el token si existe.
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (res.status === 401 || res.status === 403) {
-    throw new Error("No tenés permiso para consultar esta información.");
-  }
-
-  if (!res.ok) {
-    throw new Error("No se pudo cargar la información. Intentá de nuevo.");
-  }
-
-  return res.json();
+// Respuesta del backend al consultar los repartidores
+interface RespuestaRepartidores {
+  results: Repartidor[];
+  count: number;
 }
 
-export default function HistorialEnvios() {
-  // Lista de repartidores disponibles para seleccionar.
+// Respuesta del backend al consultar el historial individual
+interface RespuestaHistorial {
+  repartidor: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    dado_de_baja: boolean;
+  };
+  results: Envio[];
+  count: number;
+}
+
+function HistorialEnvios() {
+
+  // Permite navegar entre las páginas
+  const navigate = useNavigate();
+
+  // Lista de repartidores obtenida desde Django
   const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
 
-  // ID del repartidor seleccionado.
-  const [repartidorId, setRepartidorId] = useState<number | null>(null);
+  // ID del repartidor seleccionado
+  const [repartidorSeleccionado, setRepartidorSeleccionado] =
+    useState<number | "">("");
 
-  // Historial del repartidor seleccionado.
+  // Información del repartidor seleccionado
+  const [nombreRepartidor, setNombreRepartidor] = useState("");
+
+  // Lista de paquetes del repartidor seleccionado
   const [envios, setEnvios] = useState<Envio[]>([]);
 
-  // Estados de carga.
-  const [cargandoRepartidores, setCargandoRepartidores] = useState(true);
-  const [cargandoEnvios, setCargandoEnvios] = useState(false);
+  // Cantidad de envíos encontrados
+  const [cantidadEnvios, setCantidadEnvios] = useState(0);
 
-  // Mensaje de error, si ocurre algún problema.
-  const [error, setError] = useState<string | null>(null);
+  // Control de carga de los datos
+  const [loadingRepartidores, setLoadingRepartidores] = useState(false);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
-  // Al abrir la pantalla, se solicita la lista de repartidores.
+  // Mensaje de error
+  const [error, setError] = useState("");
+
+  // ------------------------------------------------
+  // 1. OBTENER LA LISTA DE REPARTIDORES
+  // ------------------------------------------------
+
   useEffect(() => {
-    pedir<Respuesta<Repartidor>>("/historial")
-      .then((data) => {
-        setRepartidores(extraerLista(data));
-      })
-      .catch((e: Error) => {
-        setError(e.message);
-      })
-      .finally(() => {
-        setCargandoRepartidores(false);
-      });
+
+    // Función que consulta los repartidores al backend
+    const obtenerRepartidores = async () => {
+
+      setLoadingRepartidores(true);
+      setError("");
+
+      try {
+
+        // Petición GET para obtener todos los repartidores
+        const respuesta = await fetch(HISTORIAL_URL, {
+          method: "GET",
+          credentials: "same-origin",
+        });
+
+        // Verificar si Django respondió correctamente
+        if (!respuesta.ok) {
+          throw new Error("No se pudieron obtener los repartidores");
+        }
+
+        // Convertir la respuesta JSON a un objeto TypeScript
+        const datos: RespuestaRepartidores = await respuesta.json();
+
+        // Guardar la lista de repartidores
+        setRepartidores(datos.results);
+
+      } catch (error) {
+
+        console.error(error);
+        setError("Error al cargar la lista de repartidores");
+
+      } finally {
+
+        // Finalizar el estado de carga
+        setLoadingRepartidores(false);
+      }
+    };
+
+    // Ejecutar la consulta al entrar en la pantalla
+    obtenerRepartidores();
+
   }, []);
 
-  // Solicita el historial de un repartidor específico.
-  const cargarHistorial = useCallback(async (id: number) => {
-    setCargandoEnvios(true);
-    setError(null);
+  // ------------------------------------------------
+  // 2. OBTENER EL HISTORIAL DE UN REPARTIDOR
+  // ------------------------------------------------
+
+  const obtenerHistorial = async (id: number) => {
+
+    setLoadingHistorial(true);
+    setError("");
+
+    // Limpiar los envíos anteriores
     setEnvios([]);
+    setCantidadEnvios(0);
 
     try {
-      const data = await pedir<Respuesta<Envio>>(
-      `/historial/${id}`
-     );
 
-      setEnvios(extraerLista(data));
-    } catch (e) {
-      setError((e as Error).message);
+      // Consultar el historial del repartidor seleccionado
+      const respuesta = await fetch(`${HISTORIAL_URL}${id}/`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+
+      // Comprobar si ocurrió algún error
+      if (!respuesta.ok) {
+        throw new Error("No se pudo obtener el historial");
+      }
+
+      // Convertir el JSON recibido
+      const datos: RespuestaHistorial = await respuesta.json();
+
+      // Guardar los datos del repartidor
+      setNombreRepartidor(
+        `${datos.repartidor.nombre} ${datos.repartidor.apellido}`
+      );
+
+      // Guardar los paquetes recibidos
+      setEnvios(datos.results);
+
+      // Guardar la cantidad de envíos
+      setCantidadEnvios(datos.count);
+
+    } catch (error) {
+
+      console.error(error);
+      setError("Error al cargar el historial del repartidor");
+
     } finally {
-      setCargandoEnvios(false);
-    }
-  }, []);
 
-  // Se ejecuta cuando el usuario selecciona un repartidor.
-  const alElegirRepartidor = (valor: string) => {
-    if (!valor) {
-      setRepartidorId(null);
+      // Finalizar la carga
+      setLoadingHistorial(false);
+    }
+  };
+
+  // ------------------------------------------------
+  // 3. SELECCIONAR UN REPARTIDOR
+  // ------------------------------------------------
+
+  const manejarSeleccion = (
+    evento: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+
+    // Obtener el ID seleccionado
+    const id = evento.target.value;
+
+    // Si no seleccionó ningún repartidor
+    if (id === "") {
+
+      setRepartidorSeleccionado("");
+      setNombreRepartidor("");
       setEnvios([]);
-      setError(null);
+      setCantidadEnvios(0);
+      setError("");
+
       return;
     }
 
-    const id = Number(valor);
+    // Convertir el ID de texto a número
+    const idNumerico = Number(id);
 
-    setRepartidorId(id);
-    cargarHistorial(id);
+    // Guardar el repartidor seleccionado
+    setRepartidorSeleccionado(idNumerico);
+
+    // Consultar su historial
+    obtenerHistorial(idNumerico);
   };
 
-  // Busca los datos del repartidor elegido.
-  const repartidorElegido = repartidores.find(
-    (r) => r.id === repartidorId
-  );
+  // ------------------------------------------------
+  // 4. MOSTRAR LOS DATOS EN PANTALLA
+  // ------------------------------------------------
 
   return (
-    <section className="historial">
-      <h1 className="historial-titulo">Historial de envíos</h1>
 
-      <label className="historial-campo">
-        <span>Repartidor</span>
+    <div className="historial-container">
+
+      {/* Encabezado de la pantalla */}
+      <header className="historial-header">
+
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+        >
+          Volver
+        </button>
+
+        <h1>Historial de envíos</h1>
+
+        <p>
+          Consultá el historial de envíos de cada repartidor.
+        </p>
+
+      </header>
+
+      {/* Selección del repartidor */}
+      <section className="historial-filtros">
+
+        <label htmlFor="repartidor">
+          Seleccionar repartidor:
+        </label>
 
         <select
-          value={repartidorId ?? ""}
-          onChange={(e) => alElegirRepartidor(e.target.value)}
-          disabled={cargandoRepartidores}
+          id="repartidor"
+          value={repartidorSeleccionado}
+          onChange={manejarSeleccion}
+          disabled={loadingRepartidores}
         >
+
           <option value="">
-            {cargandoRepartidores
-              ? "Cargando repartidores…"
-              : "Elegí un repartidor"}
+            {loadingRepartidores
+              ? "Cargando repartidores..."
+              : "Seleccioná un repartidor"}
           </option>
 
-          {repartidores.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.apellido}, {r.nombre} — DNI {r.dni}
-            </option>
-          ))}
-        </select>
-      </label>
+          {repartidores.map((repartidor) => (
 
+            <option
+              key={repartidor.id}
+              value={repartidor.id}
+            >
+              {repartidor.nombre} {repartidor.apellido}
+              {" - "}
+              {repartidor.cantidad_envios} envíos
+              {repartidor.dado_de_baja ? " (Dado de baja)" : ""}
+            </option>
+
+          ))}
+
+        </select>
+
+      </section>
+
+      {/* Mensaje cuando no existen repartidores */}
+      {!loadingRepartidores && repartidores.length === 0 && !error && (
+        <p>No hay repartidores registrados.</p>
+      )}
+
+      {/* Mensajes de error */}
       {error && (
-        <p className="historial-error" role="alert">
+        <p className="historial-error">
           {error}
         </p>
       )}
 
-      {!cargandoRepartidores &&
-        !error &&
-        repartidores.length === 0 && (
-          <p className="historial-vacio">
-            No hay repartidores registrados.
+      {/* Indicador de carga del historial */}
+      {loadingHistorial && (
+        <p>Cargando historial...</p>
+      )}
+
+      {/* Mostrar historial cuando se seleccionó un repartidor */}
+      {repartidorSeleccionado !== "" &&
+        !loadingHistorial &&
+        !error && (
+
+        <section className="historial-resultados">
+
+          <h2>
+            Historial de {nombreRepartidor}
+          </h2>
+
+          <p>
+            Total de envíos: {cantidadEnvios}
           </p>
-        )}
 
-      {repartidorId === null && !error && (
-        <p className="historial-vacio">
-          Elegí un repartidor para ver todos sus envíos.
-        </p>
+          {/* Comprobar si tiene envíos registrados */}
+          {envios.length === 0 ? (
+
+            <p>
+              Este repartidor no tiene envíos en su historial.
+            </p>
+
+          ) : (
+
+            <div className="historial-tabla">
+
+              <table>
+
+                <thead>
+                  <tr>
+                    <th>Código de seguimiento</th>
+                    <th>Estado</th>
+                    <th>Comercio</th>
+                    <th>Cliente</th>
+                    <th>Dirección</th>
+                    <th>Fecha de origen</th>
+                    <th>Fecha de destino</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  {envios.map((envio) => (
+
+                    <tr key={envio.id}>
+
+                      <td>{envio.cod_seguimiento}</td>
+
+                      <td>{envio.estado}</td>
+
+                      <td>{envio.comercio}</td>
+
+                      <td>{envio.cliente}</td>
+
+                      <td>{envio.direccion}</td>
+
+                      <td>
+                        {envio.fecha_origen ?? "Sin fecha"}
+                      </td>
+
+                      <td>
+                        {envio.fecha_destino ?? "Sin fecha"}
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+        </section>
+
       )}
 
-      {repartidorId !== null && cargandoEnvios && (
-        <p className="historial-vacio">
-          Cargando historial…
-        </p>
-      )}
-
-      {repartidorId !== null &&
-        !cargandoEnvios &&
-        !error &&
-        envios.length === 0 && (
-          <p className="historial-vacio">
-            {repartidorElegido?.nombre ?? "El repartidor"} todavía no
-            tiene envíos registrados.
-          </p>
-        )}
-
-      {envios.length > 0 && (
-        <div className="historial-tabla-wrap">
-          <table className="historial-tabla">
-            <caption>
-              {envios.length} envíos de {repartidorElegido?.nombre}{" "}
-              {repartidorElegido?.apellido}
-            </caption>
-
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Dirección de entrega</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {envios.map((envio) => (
-                <tr key={envio.id}>
-                  <td>
-                    {new Date(envio.fecha).toLocaleString("es-AR", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </td>
-
-                  <td>{envio.cliente}</td>
-
-                  <td>{envio.direccion_entrega}</td>
-
-                  <td>
-                    <span
-                      className={`estado estado-${envio.estado}`}
-                    >
-                      {envio.estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
+
+export default HistorialEnvios;
