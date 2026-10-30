@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "loginRepartidor",
     "ingresarPedido",
     "actualizacionEstado",
+    "pedidosAsignados",
 ]
 
 MIDDLEWARE = [

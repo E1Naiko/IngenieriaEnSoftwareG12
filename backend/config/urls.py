@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/", include("actualizacionEstado.urls")),
     path("api/", include("repartidoresDisponibles.urls")),
     path("api/", include("paquetesEnCurso.urls")),
+    path("api/", include("pedidosAsignados.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde
