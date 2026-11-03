@@ -106,6 +106,8 @@ def _validar_y_aplicar(comercio, data, parcial=False):
       Obligatorios si ``parcial is False`` (``POST``/``PUT``). En ``PATCH`` solo
       se validan si vienen en ``data``.
     - Cualquier otra clave de ``data`` se ignora: no se guarda ni se rechaza.
+    - ``nombre`` y ``direccion`` no pueden repetirse con otro comercio
+      (comparación sin importar mayúsculas).
 
     Args:
         comercio: instancia ``Comercio`` a mutar (puede ser ``Comercio()`` nuevo).
@@ -153,6 +155,20 @@ def _validar_y_aplicar(comercio, data, parcial=False):
     elif not parcial:
         return False, JsonResponse(
             {"direccion": "La dirección es obligatoria."}, status=400
+        )
+
+    # No puede haber dos comercios con el mismo nombre o dirección (sin importar
+    # mayúsculas). Se excluye el propio comercio para que editarlo no choque consigo.
+    # Solo se revisan los campos enviados: así los repetidos que ya existen en dev
+    # se pueden seguir editando (por ejemplo, el teléfono).
+    otros = Comercio.objects.exclude(pk=comercio.pk)
+    if "nombre" in data and otros.filter(nombre__iexact=comercio.nombre).exists():
+        return False, JsonResponse(
+            {"nombre": "Ya existe un comercio con ese nombre."}, status=400
+        )
+    if "direccion" in data and otros.filter(direccion__iexact=comercio.direccion).exists():
+        return False, JsonResponse(
+            {"direccion": "Ya existe un comercio con esa dirección."}, status=400
         )
 
     return True, None

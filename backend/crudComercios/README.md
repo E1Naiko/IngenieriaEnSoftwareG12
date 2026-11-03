@@ -14,7 +14,7 @@ cliente HTTP que hable JSON.
 
 Centralizar toda la lógica de **alta, listado, detalle, edición y borrado** de comercios:
 
-- Desacopla el CRUD de comercios del resto del dominio (`core`, `repatidoresDisponibles`).
+- Desacopla el CRUD de comercios del resto del dominio (`core`, `repartidoresDisponibles`).
 - Mantiene dependencias mínimas: **no usa DRF**, solo `JsonResponse` + vistas funcionales.
 - Define el contrato JSON que el frontend ya consume.
 

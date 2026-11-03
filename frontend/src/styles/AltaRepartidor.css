@@ -1,0 +1,424 @@
+
+/* Fondo oscuro que cubre toda la pantalla */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+
+  overflow-y: auto;
+}
+
+/* Contenedor principal del modal */
+.modal-card {
+  position: relative;
+
+  width: 100%;
+  max-width: 650px;
+
+  max-height: 90vh;
+  overflow-y: auto;
+
+  padding: 32px;
+
+  background: #ffffff;
+  border-radius: 14px;
+
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+
+  animation: modalEntrada 0.2s ease-out;
+}
+
+/* Animación de apertura */
+@keyframes modalEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Botón para cerrar */
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: transparent;
+  color: #64748b;
+
+  font-size: 28px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #f1f5f9;
+  color: #111827;
+}
+
+.modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Título del formulario */
+.modal-card h2 {
+  margin: 0 0 8px;
+
+  color: #1e293b;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+/* Subtítulo */
+.modal-subtitulo {
+  margin: 0 0 24px;
+
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Campos del formulario */
+.modal-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+  margin-bottom: 17px;
+}
+
+/* Etiquetas */
+.modal-field label {
+  color: #334155;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Inputs y select */
+.modal-field input,
+.modal-field select {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 12px 13px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #1e293b;
+
+  font-size: 14px;
+
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Cuando el campo recibe el foco */
+.modal-field input:focus,
+.modal-field select:focus {
+  border-color: #2563eb;
+
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Placeholder */
+.modal-field input::placeholder {
+  color: #94a3b8;
+}
+
+/* Campo con error */
+.modal-field input.input-error,
+.modal-field select.input-error {
+  border-color: #dc2626;
+  background: #fffafa;
+}
+
+/* Mensaje de error debajo del campo */
+.modal-field-error {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+/* Error general */
+.modal-error {
+  margin: 12px 0;
+
+  padding: 11px 13px;
+
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 13px;
+}
+
+/* Contenedor de botones */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 12px;
+  margin-top: 25px;
+}
+
+/* Estilos generales de botones */
+.modal-btn-primary,
+.modal-btn-secondary {
+  padding: 11px 19px;
+
+  border: none;
+  border-radius: 7px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+/* Botón principal */
+.modal-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.modal-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* Botón secundario */
+.modal-btn-secondary {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.modal-btn-secondary:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+/* Botones deshabilitados */
+.modal-btn-primary:disabled,
+.modal-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========================= */
+/* PANTALLA DE ALTA EXITOSA   */
+/* ========================= */
+
+.modal-success {
+  text-align: center;
+}
+
+/* Ícono de confirmación */
+.success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 55px;
+  height: 55px;
+
+  margin: 0 auto 15px;
+
+  border-radius: 50%;
+
+  background: #dcfce7;
+  color: #15803d;
+
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.modal-success h2 {
+  color: #166534;
+  font-size: 22px;
+}
+
+.success-description {
+  margin: 8px 0 22px;
+
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Contenedor del token */
+.token-container {
+  margin: 20px 0;
+  padding: 17px;
+
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+
+  background: #eff6ff;
+}
+
+.token-label {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Token y botón copiar */
+.modal-token {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  gap: 14px;
+}
+
+.modal-token strong {
+  color: #1e3a8a;
+
+  font-size: 25px;
+  letter-spacing: 5px;
+}
+
+/* Botón copiar token */
+.modal-token button {
+  padding: 8px 12px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: #2563eb;
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.modal-token button:hover {
+  background: #1d4ed8;
+}
+
+.modal-token button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Título de los datos */
+.datos-titulo {
+  margin: 25px 0 12px;
+
+  color: #334155;
+  font-size: 16px;
+  text-align: left;
+}
+
+/* Lista de datos del repartidor */
+.modal-datos {
+  display: flex;
+  flex-direction: column;
+
+  margin: 0;
+  padding: 0;
+
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Cada fila */
+.modal-datos div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 15px;
+
+  padding: 11px 5px;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  text-align: left;
+}
+
+/* Nombre de cada dato */
+.modal-datos dt {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Valor de cada dato */
+.modal-datos dd {
+  margin: 0;
+
+  color: #1e293b;
+  font-size: 13px;
+
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Estado activo */
+.modal-datos .estado-activo {
+  color: #15803d;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+/* Adaptación para celulares */
+@media (max-width: 600px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .modal-card {
+    padding: 25px 18px;
+    margin: auto 0;
+    max-height: 94vh;
+  }
+
+  .modal-card h2 {
+    font-size: 21px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  .modal-token {
+    flex-direction: column;
+  }
+
+  .modal-datos div {
+    gap: 8px;
+  }
+}

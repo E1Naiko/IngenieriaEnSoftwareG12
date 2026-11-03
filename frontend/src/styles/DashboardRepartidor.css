@@ -1,0 +1,171 @@
+.repartidor-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.repartidor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.repartidor-titulo { margin: 0; font-size: 1.6rem; }
+.repartidor-saludo { margin: 4px 0 0; color: #555; }
+
+.repartidor-card {
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.repartidor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.repartidor-subtitulo { margin: 0; font-size: 1.1rem; }
+
+/* ===== Botones ===== */
+.repartidor-primario,
+.repartidor-secundario {
+  padding: 8px 14px;
+  min-height: 40px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.repartidor-primario {
+  background: #1f6feb;
+  color: #fff;
+  border: none;
+}
+
+.repartidor-primario:hover:not(:disabled) { background: #1858c0; }
+
+.repartidor-secundario {
+  background: transparent;
+  color: #333;
+  border: 1px solid #bbb;
+}
+
+.repartidor-secundario:hover:not(:disabled) { background: #f5f5f5; }
+
+.repartidor-primario:disabled,
+.repartidor-secundario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== Mensajes ===== */
+.repartidor-mensaje { margin: 24px 0; text-align: center; color: #555; }
+.repartidor-vacio { font-size: 1.05rem; }
+.repartidor-error { margin: 12px 0; color: #b42318; }
+
+/* ===== Lista de pedidos ===== */
+.repartidor-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.repartidor-item {
+  border: 1px solid #e2e2e2;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.repartidor-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* ===== Estados ===== */
+.repartidor-estado {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: #eee;
+}
+.repartidor-estado-pendiente { background: #fff4d6; color: #8a5a00; }
+.repartidor-estado-retirado  { background: #e0ecff; color: #1a4fa0; }
+.repartidor-estado-en_camino { background: #dff5e3; color: #1d6b32; }
+.repartidor-estado-entregado { background: #c8f0d2; color: #0f5224; }
+.repartidor-estado-cancelado { background: #fde2e0; color: #b42318; }
+
+/* ===== Datos ===== */
+.repartidor-datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.repartidor-datos dt { color: #666; }
+.repartidor-datos dd { margin: 0; }
+
+/* ===== Actualizar estado ===== */
+.repartidor-actualizar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.repartidor-actualizar label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.repartidor-actualizar textarea,
+.repartidor-actualizar input[type="file"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.repartidor-actualizar textarea { resize: vertical; }
+
+.repartidor-actualizar textarea:focus,
+.repartidor-actualizar input[type="file"]:focus {
+  outline: 2px solid #1f6feb;
+  outline-offset: 1px;
+}
+
+.repartidor-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Los avisos dentro de la tarjeta del pedido van alineados a la izquierda */
+.repartidor-actualizar .repartidor-mensaje {
+  margin: 0;
+  text-align: left;
+  color: #1d6b32;
+}
+.repartidor-actualizar .repartidor-error { margin: 0; }
+
+/* ===== Celulares ===== */
+@media (max-width: 480px) {
+  .repartidor-header { flex-direction: column; }
+
+  .repartidor-acciones > button { flex: 1 1 100%; }
+}

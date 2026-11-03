@@ -53,9 +53,23 @@ INSTALLED_APPS = [
     "corsheaders",
     # Proyecto
     "core",
+  
     "crudComercios",
+  
     "loginCoordinador",
+  
+    "crudRepartidor",
     "loginRepartidor",
+    "repartidoresDisponibles",
+    "asignarRepartidor",
+    
+    "consultarEstadoEnvio",
+    
+    "ingresarPedido",
+    "paquetesEnCurso",
+    "actualizacionEstado",
+    "pedidosAsignados",
+    "historialEnvios",
 ]
 
 MIDDLEWARE = [

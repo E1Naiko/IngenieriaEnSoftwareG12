@@ -54,7 +54,7 @@ function LoginRepartidor() {
       // Escenario 1: éxito → guarda al repartidor y va al panel de paquetes
       const repartidor = await response.json();
       localStorage.setItem("repartidor", JSON.stringify(repartidor));
-      navigate("/dashboard-repartidor");
+      navigate("/dashboardrepartidor");
     } catch {
       setMessage("No se pudo conectar con el servidor");
     } finally {
