@@ -1,0 +1,37 @@
+Marcos:
+Objetivo:
+Estado:
+Complicaciones:
+
+Valen:
+Objetivo:
+Estado:
+Complicaciones:
+
+Giula:
+Objetivo:
+Estado:
+Complicaciones:
+
+Herlan:
+Objetivo:
+Estado:
+Complicaciones:
+
+Jose:
+Objetivo:
+Estado:
+Complicaciones:
+
+Luciano:
+Objetivo:
+Estado:
+Complicaciones:
+
+Nicolás:
+Objetivo:
+Estado:
+Complicaciones:
+
+Bloqueos Identificados:
+ -
