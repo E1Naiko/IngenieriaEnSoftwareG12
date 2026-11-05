@@ -1,37 +1,37 @@
-Marcos: #41 y #42
-Objetivo:
-Estado:
-Complicaciones:
+Marcos:
+Objetivo: #41 Buscador de Paquetes en curso y #42 Buscador de Comercio
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Valen: #41 y #42
-Objetivo:
-Estado:
-Complicaciones:
+Valen:
+Objetivo: #41 Buscador de Paquetes en curso y #42 Buscador de Comercio
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Giula: #39
-Objetivo: #
-Estado:
-Complicaciones:
+Giula:
+Objetivo: #39 Edición de repartidores
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Herlan: #39
-Objetivo:
-Estado:
-Complicaciones:
+Herlan:
+Objetivo: #39 Edición de repartidores
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Jose: #38
-Objetivo:
-Estado:
-Complicaciones:
+Jose:
+Objetivo: #38 Baja de repartidores
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Luciano: #28 y #29
-Objetivo:
-Estado:
-Complicaciones:
+Luciano:
+Objetivo: #28 Recuperar contraseña y #29 Recuperar token
+Estado: desarrollando Pagina Principal y comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
-Nicolás: #28 y #29
-Objetivo:
-Estado:
-Complicaciones:
+Nicolás:
+Objetivo: #28 Recuperar contraseña y #29 Recuperar token
+Estado: Limpiando y optimizando la DB, comenzando a desarrollar la HU asignada.
+Complicaciones:.
 
 Bloqueos Identificados:
- -
+ -  La DB se esta conectando a un servidor en USA-W genera mucha latencia.

@@ -1,37 +1,40 @@
 Marcos:
-Objetivo:
-Estado:
-Complicaciones:
+Objetivo: #34 Actualizar estados del envío
+ y #17 Ver pedidos asignados
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: .
 
-Valen: #34 y #17
-Objetivo:
-Estado:
-Complicaciones:
+Valen:
+Objetivo: #34 Actualizar estados del envío
+ y #17 Ver pedidos asignados
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: .
 
-Giula: testear #9 y #25, #10
-Objetivo:
-Estado:
+Giula:
+Objetivo: testear #9 Inicio de sesión vía token y #25 Dar de alta a un repartidor, comenzar #10 Ver historial de envios
+Estado: testeando HU #9 y en standby por el front de HU #25.
 Complicaciones: Mal formato en url de login repartidor, pero solucionado.
 
-Herlan: testear #9, #25 y #10
-Objetivo:
-Estado:
-Complicaciones:
+Herlan:
+Objetivo: testear #9 Inicio de sesión vía token, #25 Dar de alta a un repartidor y comenzar #10 Ver historial de envios
+Estado: terminando HU # 10.
+Complicaciones: Interfaz de HU#25 sin terminar por examenes.
 
-Jose: #14
-Objetivo:
-Estado:
-Complicaciones:
+Jose:
+Objetivo: #14 Consultar el estado del envío
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: HU #34 trajo erroneamente toda la base de datos, lo arreglo Marcos.
 
-Luciano: #32
-Objetivo:
-Estado:
-Complicaciones:
+Luciano:
+Objetivo: #32 Asignar repartidor según vehículo y disponibilidad
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: No existe Pagina Principal en las HU, queda para proximo sprint.
 
-Nicolás: #32
-Objetivo:
-Estado:
-Complicaciones:
+Nicolás:
+Objetivo: #32 Asignar repartidor según vehículo y disponibilidad
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Se necesito modificar aun mas la DB, se prioriza eso.
 
 Bloqueos Identificados:
- -
+ - No tenemos una Pagina Principal.
+ - La db se esta conectando a un servidor en USA-W genera mucha latencia.
