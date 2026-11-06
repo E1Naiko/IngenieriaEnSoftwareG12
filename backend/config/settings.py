@@ -26,6 +26,43 @@ def _env_bool(nombre, por_defecto="True"):
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "si", "sí")
 
 
+def _hosts(valor):
+    """Lista de hosts a partir de una variable separada por comas.
+
+    Tolera que se pegue un host con esquema o barra final
+    (``https://api.onrender.com/``), error común al configurar Render.
+    """
+    hosts = []
+    for bruto in valor.split(","):
+        host = re.sub(r"^https?://", "", bruto.strip().lower()).split("/")[0]
+        if host and host not in hosts:
+            hosts.append(host)
+    return hosts
+
+
+def _origenes(valor):
+    """Lista de orígenes CORS a partir de una variable separada por comas.
+
+    django-cors-headers valida cada origen y aborta el arranque
+    (``corsheaders.E014``) si alguno trae path o barra final; un valor pegado
+    desde la barra del navegador (``https://app.vercel.app/``) tumbaba el
+    deploy en Render. Acá lo dejamos como esquema + host + puerto.
+    """
+    origenes = []
+    for bruto in valor.split(","):
+        origen = bruto.strip()
+        if not origen:
+            continue
+        match = re.match(r"^(https?://[^/]+)", origen, re.IGNORECASE)
+        if match:  # descarta path, query y barra final
+            origen = match.group(1)
+        else:  # sin esquema: no es un origen válido para CORS
+            continue
+        if origen not in origenes:
+            origenes.append(origen)
+    return origenes
+
+
 # WARNING: mantener la clave secreta en producción fuera del código.
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or (
     "django-insecure-solo-para-desarrollo-no-usar-en-produccion"
@@ -33,9 +70,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or (
 
 DEBUG = _env_bool("DJANGO_DEBUG", "True")
 
-ALLOWED_HOSTS = [
-    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
-]
+ALLOWED_HOSTS = _hosts(os.getenv("DJANGO_ALLOWED_HOSTS", ""))
 if DEBUG and not ALLOWED_HOSTS:
     # En desarrollo aceptamos cualquier host (incluye previews tipo *.e2b.app).
     ALLOWED_HOSTS = ["*"]
@@ -230,11 +265,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #     prueba desde el tunnel de otro o una IP de la red.
 # Con la allowlist vacía y DEBUG=False no se acepta ningún origen cross-site:
 # en producción hay que listar el dominio del frontend explícitamente.
-CORS_ALLOWED_ORIGINS = [
-    o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
-]
+# OJO: cada origen va SIN barra final ni path (django-cors-headers aborta el
+# arranque con corsheaders.E014 si no cumplen ese formato).
+CORS_ALLOWED_ORIGINS = _origenes(os.getenv("CORS_ALLOWED_ORIGINS", ""))
 if not CORS_ALLOWED_ORIGINS:
-    CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173","https://ingenieria-en-software-g12-261h.vercel.app/"]
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://ingenieria-en-software-g12-261h.vercel.app",
+    ]
     if DEBUG:
         CORS_ALLOW_ALL_ORIGINS = True
 
