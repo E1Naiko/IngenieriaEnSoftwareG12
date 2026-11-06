@@ -9,7 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 from django.urls import get_resolver
 
-from .settings import _configurar_db, _resolver_modo_db
+from .settings import _configurar_db, _hosts, _origenes, _resolver_modo_db
 
 
 class DatabaseModeTests(SimpleTestCase):
@@ -89,6 +89,47 @@ class DatabaseModeTests(SimpleTestCase):
     def test_modo_desconocido_falla_con_mensaje_claro(self):
         with self.assertRaisesMessage(ImproperlyConfigured, "DATABASE_MODE"):
             _resolver_modo_db({"DATABASE_MODE": "dockerhub"}, debug=True)
+
+
+class OrigenesCorsYHostsTests(SimpleTestCase):
+    """Un origen con barra final abortaba el arranque en Render (corsheaders.E014).
+
+    Al pegar en la variable de entorno la URL tal cual se copia del navegador
+    (``https://app.vercel.app/``) Django fallaba con SystemCheckError y el
+    deploy salía con status 1. Los helpers normalizan esos valores.
+    """
+
+    def test_origen_quita_espacios_y_barra_final(self):
+        self.assertEqual(
+            _origenes(" https://app.vercel.app/ , http://localhost:5173/ "),
+            ["https://app.vercel.app", "http://localhost:5173"],
+        )
+
+    def test_origen_descarta_path_y_query(self):
+        self.assertEqual(
+            _origenes("https://app.vercel.app/login?next=/panel"),
+            ["https://app.vercel.app"],
+        )
+
+    def test_origen_ignora_vacios_duplicados_y_valores_sin_esquema(self):
+        self.assertEqual(
+            _origenes(",,https://app.vercel.app,https://app.vercel.app/,app.vercel.app,"),
+            ["https://app.vercel.app"],
+        )
+
+    def test_origenes_cargados_no_tienen_barra_final(self):
+        # Es exactamente lo que valida corsheaders.E014.
+        self.assertTrue(settings.CORS_ALLOWED_ORIGINS)
+        for origen in settings.CORS_ALLOWED_ORIGINS:
+            with self.subTest(origen=origen):
+                self.assertRegex(origen, r"^https?://[^/]+$")
+
+    def test_host_quita_esquema_y_path(self):
+        self.assertEqual(
+            _hosts(" https://api.onrender.com/ , api2.com:8000 , "),
+            ["api.onrender.com", "api2.com:8000"],
+        )
+
 
 
 class CableadoDeAppsTests(SimpleTestCase):
