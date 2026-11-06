@@ -69,10 +69,10 @@ interface RepartidorCreado {
 }
 
 // Estructura de la respuesta exitosa del backend.
-interface RespuestaAlta {
-  message: string;
-  repartidor: RepartidorCreado;
-}
+//interface RespuestaAlta {
+//  message: string;
+//  repartidor: RepartidorCreado;
+//}
 
 // Propiedades que recibe el modal desde el componente padre.
 interface Props {
