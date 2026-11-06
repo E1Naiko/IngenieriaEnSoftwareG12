@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../styles/Comercios.css";
 
 // Representa los datos de un comercio.
@@ -9,13 +9,23 @@ interface Comercio {
   direccion: string;
 }
 
-// Permite actualizar el listado desde el componente padre.
+// Permite actualizar el listado y filtrarlo desde el componente padre.
 interface ComerciosProps {
   refreshKey?: number;
+  busqueda?: string;
+}
+
+// Quita tildes y pasa a minúsculas para comparar textos.
+function normalizar(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 }
 
 export default function Comercios({
   refreshKey = 0,
+  busqueda = "",
 }: ComerciosProps) {
   // Almacena los comercios recibidos desde Django.
   const [items, setItems] = useState<Comercio[]>([]);
@@ -56,6 +66,24 @@ export default function Comercios({
     load();
   }, [refreshKey]);
 
+  // Texto de búsqueda ya limpio.
+  const textoBusqueda = busqueda.trim();
+
+  // Filtra por nombre, teléfono, dirección o ID.
+  const itemsFiltrados = useMemo(() => {
+    const q = normalizar(textoBusqueda);
+
+    if (!q) return items;
+
+    return items.filter((comercio) =>
+      normalizar(
+        `${comercio.id} ${comercio.nombre ?? ""} ${
+          comercio.telefono ?? ""
+        } ${comercio.direccion ?? ""}`
+      ).includes(q)
+    );
+  }, [items, textoBusqueda]);
+
   return (
     <div className="comercios-container">
       {/* Encabezado de la sección */}
@@ -85,7 +113,9 @@ export default function Comercios({
           </h2>
 
           <span className="comercios-contador">
-            Total: {items.length}
+            {textoBusqueda
+              ? `Mostrando ${itemsFiltrados.length} de ${items.length}`
+              : `Total: ${items.length}`}
           </span>
         </div>
 
@@ -113,8 +143,18 @@ export default function Comercios({
           </p>
         )}
 
+        {/* Mensaje cuando la búsqueda no encuentra resultados */}
+        {!loading &&
+          !error &&
+          items.length > 0 &&
+          itemsFiltrados.length === 0 && (
+            <p className="comercios-mensaje comercios-vacio">
+              No se encontraron comercios para “{textoBusqueda}”.
+            </p>
+          )}
+
         {/* Tabla de comercios */}
-        {!loading && !error && items.length > 0 && (
+        {!loading && !error && itemsFiltrados.length > 0 && (
           <div className="comercios-tabla-wrapper">
             <table className="comercios-tabla">
               <thead>
@@ -127,7 +167,7 @@ export default function Comercios({
               </thead>
 
               <tbody>
-                {items.map((comercio) => (
+                {itemsFiltrados.map((comercio) => (
                   <tr key={comercio.id}>
                     <td className="comercios-id">
                       {comercio.id}

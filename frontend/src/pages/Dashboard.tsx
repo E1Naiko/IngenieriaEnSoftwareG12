@@ -12,7 +12,6 @@ import AltaRepartidor from "./AltaRepartidor";
 function Dashboard() {
   const navigate = useNavigate();
   const guardado = localStorage.getItem("coordinador");
-
   // Controla la visibilidad del panel lateral.
   const [sidebarAbierto, setSidebarAbierto] = useState(true);
 
@@ -33,6 +32,9 @@ function Dashboard() {
 
   // Permite actualizar el listado después de modificar comercios.
   const [refreshComercios, setRefreshComercios] = useState(0);
+
+  // Texto del buscador de comercios.
+  const [busquedaComercios, setBusquedaComercios] = useState("");
 
   // Contrae el sidebar al hacer clic fuera de él.
   useEffect(() => {
@@ -292,7 +294,22 @@ function Dashboard() {
 
           {comerciosAbiertos && (
             <div className="dashboard-section-content">
-              <Comercios refreshKey={refreshComercios} />
+              {/* Buscador de comercios */}
+              <div className="buscador-comercios">
+                <input
+                  type="search"
+                  className="buscador-comercios-input"
+                  placeholder="🔍 Buscar comercio por nombre, dirección o teléfono..."
+                  value={busquedaComercios}
+                  onChange={(e) => setBusquedaComercios(e.target.value)}
+                  aria-label="Buscar comercio"
+                />
+              </div>
+
+              <Comercios
+                refreshKey={refreshComercios}
+                busqueda={busquedaComercios}
+              />
             </div>
           )}
         </section>
