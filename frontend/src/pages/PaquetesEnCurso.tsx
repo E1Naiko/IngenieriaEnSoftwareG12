@@ -21,6 +21,11 @@ interface Repartidor {
   estado: string;
 }
 
+// Permite filtrar el listado desde el componente padre.
+interface PaquetesEnCursoProps {
+  busqueda?: string;
+}
+
 const ETIQUETAS_ESTADO: Record<string, string> = {
   pendiente: "Pendiente",
   retirado: "Retirado",
@@ -29,7 +34,15 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
-function PaquetesEnCurso() {
+// Quita tildes y pasa a minúsculas para comparar textos.
+function normalizar(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function PaquetesEnCurso({ busqueda = "" }: PaquetesEnCursoProps) {
   const [items, setItems] = useState<Paquete[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -75,10 +88,40 @@ function PaquetesEnCurso() {
     return repartidor.toLowerCase() === "sin asignar";
   }
 
-  // Lista que se muestra según el filtro seleccionado.
-  const paquetesFiltrados = soloSinAsignar
-    ? items.filter(estaSinAsignar)
-    : items;
+  // Comprueba si un paquete coincide con el texto buscado.
+  // Busca en ID, destinatario, dirección, tamaño, repartidor y estado.
+  function coincideConBusqueda(paquete: Paquete, texto: string): boolean {
+    const q = normalizar(texto);
+
+    if (!q) return true;
+
+    const estado = (paquete.estado ?? "").trim().toLowerCase();
+
+    const contenido = normalizar(
+      [
+        paquete.id,
+        `#${paquete.id}`,
+        paquete.destinatario ?? "",
+        paquete.direccion ?? "",
+        paquete.tamanio ?? "",
+        obtenerRepartidorTexto(paquete.repartidor),
+        paquete.estado ?? "",
+        ETIQUETAS_ESTADO[estado] ?? "",
+      ].join(" ")
+    );
+
+    return contenido.includes(q);
+  }
+
+  // Texto de búsqueda ya limpio.
+  const textoBusqueda = busqueda.trim();
+
+  // Lista que se muestra según el filtro y la búsqueda.
+  const paquetesFiltrados = items.filter(
+    (paquete) =>
+      (!soloSinAsignar || estaSinAsignar(paquete)) &&
+      coincideConBusqueda(paquete, textoBusqueda)
+  );
 
   // Carga los paquetes.
   async function load() {
@@ -359,9 +402,11 @@ function PaquetesEnCurso() {
                       colSpan={6}
                       className="paquetes-mensaje paquetes-vacio"
                     >
-                      {soloSinAsignar
-                        ? "No hay paquetes sin asignar."
-                        : "No hay paquetes en curso."}
+                      {textoBusqueda
+                        ? `No se encontraron paquetes para “${textoBusqueda}”.`
+                        : soloSinAsignar
+                          ? "No hay paquetes sin asignar."
+                          : "No hay paquetes en curso."}
                     </td>
                   </tr>
                 )}
