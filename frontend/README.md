@@ -18,9 +18,10 @@ usa **rutas relativas**: no escribir `http://127.0.0.1:8000/...` en los
 cookie de sesión al volverse cross-origin.
 
 En producción (Vercel) la configuración está en `vercel.json`: build
-`npm run build`, salida `dist`, un rewrite de `/api/:path*` al host público
-del backend y un rewrite del resto al `index.html` para las rutas de React
-Router. El detalle y los pasos del deploy están en el
+`npm run build`, salida `dist`, un rewrite de `/api/:path*` al backend en Render
+(`https://ingenieriaensoftwareg12.onrender.com`) y un rewrite del resto a
+`/index.html` para las rutas de React Router. El detalle y los pasos del deploy
+están en el
 [README del repositorio](../README.md#despliegue-del-frontend-en-vercel).
 
 ---

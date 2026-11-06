@@ -82,14 +82,31 @@ El frontend llama a la API con **rutas relativas** (`/api/...`) para que la
 sesión de Django siga siendo *same-origin*: en desarrollo las proxifica Vite
 (`server.proxy` en `vite.config.ts`, configurable con `VITE_BACKEND_URL`) y en
 producción las proxifica Vercel con el rewrite `/api/:path*` de
-`frontend/vercel.json`, que debe apuntar al host público del backend. Las
+`frontend/vercel.json`, que apunta al backend en Render
+(`https://ingenieriaensoftwareg12.onrender.com`). Las
 rutas de React Router se resuelven con el rewrite a `/index.html`, para que
 recargar `/dashboard` no dé 404.
 
-Como todo sale del mismo origen no hace falta tocar CORS. Si en cambio el
-front llamara al backend en otro dominio, habría que listar el dominio de
-Vercel en `CORS_ALLOWED_ORIGINS`, habilitar credenciales y revisar la cookie
-de sesión (`SameSite`), porque el login de coordinador depende de ella.
+Como todo sale del mismo origen, la cookie `sessionid` que crea
+`login_coordinador` se guarda contra el dominio de Vercel y viaja en los
+pedidos siguientes: no hace falta tocar CORS. Si en cambio el front llamara al
+backend en otro dominio, habría que listar el dominio de Vercel en
+`CORS_ALLOWED_ORIGINS`, habilitar credenciales y revisar la cookie de sesión
+(`SameSite`), porque el login de coordinador depende de ella.
+
+Dos cosas a tener en cuenta con el proxy:
+
+- `vercel.json` no varía por entorno, así que los **deploys preview** (uno por
+  pull request) también consultan el backend de producción.
+- Si el servicio de Render está en el plan gratuito se duerme, y el primer
+  pedido puede tardar alrededor de un minuto; Vercel puede cortarlo antes.
+  Conviene verificar el backend con
+  `curl https://ingenieriaensoftwareg12.onrender.com/api/ping/` y, si se
+  repite, mantener la instancia caliente o subir de plan.
+
+En el backend, `DJANGO_ALLOWED_HOSTS` tiene que incluir
+`ingenieriaensoftwareg12.onrender.com` y `DJANGO_DEBUG=False`, con las
+credenciales del proyecto Supabase de producción.
 
 ## CI y publicación en Docker Hub
 
