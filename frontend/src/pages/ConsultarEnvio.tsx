@@ -2,7 +2,9 @@
 import { useState } from "react";
 import "../styles/ConsultarEnvio.css";
 
-const API_URL = "http://127.0.0.1:8000/api/cambiar-estado-pedido/";
+// Ruta relativa al origen del sitio: la proxifica Vite en desarrollo y Vercel
+// en producción (ver frontend/vercel.json).
+const API_URL = "/api/cambiar-estado-pedido/";
 
 interface Paquete {
   id: number;

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import "../styles/DashboardRepartidor.css";
 
-const API_URL = "http://127.0.0.1:8000/api";
+// Ruta relativa al origen del sitio: la proxifica Vite en desarrollo y Vercel
+// en producción (ver frontend/vercel.json).
+const API_URL = "/api";
 
 interface PaqueteAsignado {
   id: number;

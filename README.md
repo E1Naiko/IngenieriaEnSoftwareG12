@@ -58,6 +58,39 @@ Instrucciones completas en [backend/README.md](backend/README.md).
 Configuración de desarrollo/producción en [Info/Ambientes.md](Info/Ambientes.md);
 documentación del esquema en [Info/DB.md](Info/DB.md).
 
+## Despliegue del frontend en Vercel
+
+El proyecto de Vercel usa **Root Directory = `frontend`** y la configuración
+de build vive en [frontend/vercel.json](frontend/vercel.json):
+
+| Ajuste | Valor |
+|---|---|
+| Framework Preset | Vite |
+| Install Command | `npm ci` |
+| Build Command | `npm run build` (`tsc -b && vite build`) |
+| Output Directory | `dist` |
+
+> **Ojo con el Build Command overrideado.** Si en *Settings → Build &
+> Development Settings* quedó `npm run dev`, el deploy nunca termina: ese
+> comando levanta el servidor de desarrollo de Vite, que se queda escuchando
+> en vez de generar archivos, y la build muere por timeout sin `dist` (en el
+> log se ve `> frontend@0.0.0 dev` y después `VITE ready`). Hay que desactivar
+> el override o poner `npm run build`; los ajustes del dashboard pueden tener
+> prioridad sobre `vercel.json`.
+
+El frontend llama a la API con **rutas relativas** (`/api/...`) para que la
+sesión de Django siga siendo *same-origin*: en desarrollo las proxifica Vite
+(`server.proxy` en `vite.config.ts`, configurable con `VITE_BACKEND_URL`) y en
+producción las proxifica Vercel con el rewrite `/api/:path*` de
+`frontend/vercel.json`, que debe apuntar al host público del backend. Las
+rutas de React Router se resuelven con el rewrite a `/index.html`, para que
+recargar `/dashboard` no dé 404.
+
+Como todo sale del mismo origen no hace falta tocar CORS. Si en cambio el
+front llamara al backend en otro dominio, habría que listar el dominio de
+Vercel en `CORS_ALLOWED_ORIGINS`, habilitar credenciales y revisar la cookie
+de sesión (`SameSite`), porque el login de coordinador depende de ella.
+
 ## CI y publicación en Docker Hub
 
 El workflow de GitHub Actions corre **tests y build en cualquier rama** y en

@@ -2,9 +2,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "../styles/AltaRepartidor.css";
 
-// Endpoint del backend.
-const ALTA_REPARTIDOR_URL =
-  "http://127.0.0.1:8000/api/repartidores/";
+// Endpoint del backend. Ruta relativa al origen del sitio: la proxifica Vite
+// en desarrollo y Vercel en producción (ver frontend/vercel.json).
+const ALTA_REPARTIDOR_URL = "/api/repartidores/";
 
 const MSG_OBLIGATORIO = "Campo obligatorio";
 const MSG_REPETIDO = "Este dato ya existe en el sistema";

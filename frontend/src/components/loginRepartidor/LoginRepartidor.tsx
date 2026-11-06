@@ -2,7 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "../login/login.css"; // reutiliza los estilos del login existente
 
-const API_URL = "http://127.0.0.1:8000/api";
+// Ruta relativa al origen del sitio: en desarrollo la proxifica Vite a Django
+// (server.proxy en vite.config.ts) y en producción la proxifica Vercel al
+// backend (rewrites en frontend/vercel.json). Con una URL absoluta a
+// 127.0.0.1:8000 el pedido apuntaba a la máquina de quien abría el sitio y
+// además rompía la cookie de sesión por ser cross-origin.
+const API_URL = "/api";
 
 function LoginRepartidor() {
   const [token, setToken] = useState("");

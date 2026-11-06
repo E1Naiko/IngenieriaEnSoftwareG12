@@ -1,5 +1,30 @@
 # React + TypeScript + Vite
 
+## Scripts y despliegue
+
+```bash
+npm install     # o npm ci, que es lo que usa Vercel
+npm run dev     # servidor de desarrollo en http://localhost:5173
+npm run build   # tsc -b && vite build → genera dist/ (esto es lo que Vercel necesita)
+npm run preview # sirve dist/ localmente para probar el build de producción
+npm run lint    # oxlint
+```
+
+En desarrollo, los pedidos a `/api/*` los proxifica Vite al backend Django
+(`server.proxy` en `vite.config.ts`, por defecto `http://127.0.0.1:8000`,
+cambiable con la variable de entorno `VITE_BACKEND_URL`). Por eso el código
+usa **rutas relativas**: no escribir `http://127.0.0.1:8000/...` en los
+`fetch`, porque en producción eso apunta a la máquina del visitante y rompe la
+cookie de sesión al volverse cross-origin.
+
+En producción (Vercel) la configuración está en `vercel.json`: build
+`npm run build`, salida `dist`, un rewrite de `/api/:path*` al host público
+del backend y un rewrite del resto al `index.html` para las rutas de React
+Router. El detalle y los pasos del deploy están en el
+[README del repositorio](../README.md#despliegue-del-frontend-en-vercel).
+
+---
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
