@@ -268,3 +268,52 @@
     padding: 14px 16px;
   }
 }
+/* ---------- Buscador dentro de los popups ---------- */
+
+.pedido-buscador {
+  flex-shrink: 0;
+  padding: 14px 22px;
+  border-bottom: 1px solid #e5eaf2;
+}
+
+.pedido-buscador-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px 10px 44px;
+  box-sizing: border-box;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  background-color: #f8fafc;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px center;
+  background-size: 18px;
+
+  color: #1e293b;
+  font-family: inherit;
+  font-size: 15px;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.pedido-buscador-input::placeholder {
+  color: #94a3b8;
+}
+
+.pedido-buscador-input:focus {
+  border-color: #2563eb;
+  background-color: #ffffff;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+@media (max-width: 600px) {
+  .pedido-buscador {
+    padding: 12px 16px;
+  }
+}
