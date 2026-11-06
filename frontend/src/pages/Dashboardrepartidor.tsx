@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import "../styles/DashboardRepartidor.css";
 
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = "/api";
 
 interface PaqueteAsignado {
   id: number;

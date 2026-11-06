@@ -2,7 +2,7 @@
 import { useState } from "react";
 import "../styles/ConsultarEnvio.css";
 
-const API_URL = "http://127.0.0.1:8000/api/cambiar-estado-pedido/";
+const API_URL = "/api/cambiar-estado-pedido/";
 
 interface Paquete {
   id: number;
