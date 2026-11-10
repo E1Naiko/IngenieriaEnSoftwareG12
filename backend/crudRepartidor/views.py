@@ -1,7 +1,7 @@
 import json
 
 from django.db import IntegrityError
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -51,6 +51,22 @@ def _repartidor_to_dict(repartidor):
     }
 
 
+def _repartidor_edicion_to_dict(repartidor):
+    """Datos que el front necesita para precargar el formulario de edición.
+
+    Son solo los campos de la HU #39 (no incluye el id ni el estado).
+    """
+    return {
+        "nombre": repartidor.nombre,
+        "apellido": repartidor.apellido,
+        "dni": repartidor.dni,
+        "telefono": repartidor.telefono,
+        "mail": repartidor.mail,
+        "tipo_vehiculo": repartidor.tipo_vehiculo,
+        "token": repartidor.token,
+    }
+
+
 # Campos que el coordinador debe completar al dar de alta un repartidor.
 # El token no se solicita en la petición.
 CAMPOS_OBLIGATORIOS = [
@@ -62,19 +78,32 @@ CAMPOS_OBLIGATORIOS = [
     "tipo_vehiculo",
 ]
 
-# Mensajes requeridos por la historia de usuario.
+# Mensajes requeridos por la historia de usuario #25.
 MSG_ALTA_EXITOSA = "Repartidor cargado con éxito"
 MSG_CAMPO_OBLIGATORIO = "Campo obligatorio"
 MSG_DATO_REPETIDO = "Este dato ya existe en el sistema"
 
+# Mensajes requeridos por la historia de usuario #39.
+MSG_EDICION_EXITOSA = "Repartidor modificado con éxito"
+MSG_NO_ENCONTRADO = "Repartidor no encontrado."
 
-def _validar_alta(data):
-    """Valida los datos del alta.
+
+def _validar_datos(data, excluir_pk=None):
+    """Valida los datos del alta o de la edición de un repartidor.
+
+    excluir_pk: en una edición, es el id del repartidor que se está editando.
+    Se lo excluye de la búsqueda de repetidos para que no choque consigo mismo.
 
     Devuelve un diccionario con los errores encontrados, usando el nombre
     del campo como clave. Si no hay errores, devuelve un diccionario vacío.
     """
     errores = {}
+
+    # En el alta se compara con todos los repartidores; en la edición,
+    # con todos menos el que se está editando.
+    otros = Repartidor.objects.all()
+    if excluir_pk is not None:
+        otros = otros.exclude(pk=excluir_pk)
 
     # Escenario 2: comprueba que todos los campos requeridos tengan contenido.
     # También considera vacío un texto compuesto solo por espacios.
@@ -90,7 +119,7 @@ def _validar_alta(data):
         except ValueError:
             errores["dni"] = "El DNI debe ser un número"
         else:
-            if Repartidor.objects.filter(dni=dni).exists():
+            if otros.filter(dni=dni).exists():
                 errores["dni"] = MSG_DATO_REPETIDO
 
     # Escenario 3: el mail y el teléfono tampoco pueden repetirse.
@@ -98,7 +127,7 @@ def _validar_alta(data):
         if campo not in errores:
             valor = str(data[campo]).strip()
 
-            if Repartidor.objects.filter(**{f"{campo}__iexact": valor}).exists():
+            if otros.filter(**{f"{campo}__iexact": valor}).exists():
                 errores[campo] = MSG_DATO_REPETIDO
 
     # Comprueba que el tipo de vehículo coincida con una opción definida
@@ -108,6 +137,7 @@ def _validar_alta(data):
             errores["tipo_vehiculo"] = "Tipo de vehículo inválido"
 
     return errores
+
 
 def _normalizar_nombre(texto):
     """Deja el texto con la primera letra de cada palabra en mayúscula.
@@ -138,7 +168,7 @@ def repartidores_alta(request):
         )
 
     # Valida campos obligatorios, duplicados y tipo de vehículo.
-    errores = _validar_alta(data)
+    errores = _validar_datos(data)
 
     # Si hay errores, los devuelve asociados a cada campo.
     if errores:
@@ -168,3 +198,57 @@ def repartidores_alta(request):
         },
         status=201,
     )
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT"])
+def repartidor_detalle(request, pk):
+    """/api/repartidores/<pk>/ — datos y edición de un repartidor.
+
+    GET: devuelve los datos para precargar el formulario de edición.
+    PUT: guarda los cambios (HU #39).
+
+    Devuelve:
+        200: GET con los datos, o PUT con el mensaje de éxito.
+        400: Si el JSON es inválido o hay errores de validación.
+        404: Si el repartidor no existe.
+    """
+    # Busca el repartidor; si no existe, first() devuelve None.
+    repartidor = Repartidor.objects.filter(pk=pk).first()
+    if repartidor is None:
+        return JsonResponse({"message": MSG_NO_ENCONTRADO}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"repartidor": _repartidor_edicion_to_dict(repartidor)})
+
+    # --- PUT ---
+    data = _parse_body(request)
+    if data is None:
+        return JsonResponse(
+            {"message": "El cuerpo debe ser JSON válido."},
+            status=400,
+        )
+
+    # Misma validación que el alta, pero sin contar al propio repartidor
+    # como "repetido".
+    errores = _validar_datos(data, excluir_pk=repartidor.pk)
+    if errores:
+        return JsonResponse(errores, status=400)
+
+    # Se actualizan solo los datos editables.
+    # El token y el estado NO se tocan: el token se mantiene al editar.
+    repartidor.dni = int(str(data["dni"]).strip())
+    repartidor.nombre = _normalizar_nombre(data["nombre"])
+    repartidor.apellido = _normalizar_nombre(data["apellido"])
+    repartidor.telefono = str(data["telefono"]).strip()
+    repartidor.mail = str(data["mail"]).strip().lower()
+    repartidor.tipo_vehiculo = data["tipo_vehiculo"]
+
+    try:
+        repartidor.save()
+    except IntegrityError:
+        # Dos ediciones simultáneas podrían chocar en la base de datos.
+        return JsonResponse({"dni": MSG_DATO_REPETIDO}, status=400)
+
+    # El front solo necesita el mensaje.
+    return JsonResponse({"message": MSG_EDICION_EXITOSA})
