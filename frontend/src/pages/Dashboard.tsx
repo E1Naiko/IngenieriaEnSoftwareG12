@@ -108,17 +108,25 @@ function Dashboard() {
           </button>
 
           
-        {/* Botón para abrir el modal de alta de repartidores */}
-        <button
-          type="button"
-          className="sidebar-link"
-          title="Alta Repartidor"
-          onClick={() => setModalRepartidorAbierto(true)}
-        >
-          <span className="sidebar-icon">🚚</span>
-          {sidebarAbierto && <span>Alta Repartidor</span>}
-        </button>
+          {/* Botón para abrir el modal de alta de repartidores */}
+          <button
+            type="button"
+            className="sidebar-link"
+            title="Alta Repartidor"
+            onClick={() => setModalRepartidorAbierto(true)}
+          >
+            <span className="sidebar-icon">🚚</span>
+            {sidebarAbierto && <span>Alta Repartidor</span>}
+          </button>
 
+          {/* Botón para abrir pagina Editar de repartidores */}
+          <button
+            type="button"
+            onClick={() => navigate("/editarrepartidor")}
+          >
+            Editar repartidor
+          </button>
+          
           {/* Abre el modal para ingresar un pedido. */}
           <button
             type="button"

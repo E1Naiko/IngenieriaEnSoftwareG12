@@ -10,9 +10,8 @@ import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import HistorialEnvios from "./pages/HistorialEnvios";
-import "./App.css";
 import ConsultarPaquete from "./pages/ConsultarEnvio";
-
+import "./App.css";
 
 function App() {
   return (

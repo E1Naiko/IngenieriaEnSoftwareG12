@@ -1,0 +1,221 @@
+.editar-pagina {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  color: #1f2937;
+}
+
+.editar-lista,
+.editar-formulario {
+  padding: 30px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+.editar-lista h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.editar-repartidor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.editar-repartidor-item p {
+  margin: 5px 0 0;
+  color: #64748b;
+}
+
+.editar-repartidor-item button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 7px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.editar-repartidor-item button:hover {
+  background: #1d4ed8;
+}
+
+.editar-formulario h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .editar-lista,
+  .editar-formulario {
+    padding: 20px 15px;
+  }
+
+  .editar-repartidor-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Cada campo contiene una etiqueta, un input y su posible error. */
+.editar-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.editar-campo label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.editar-campo input,
+.editar-campo select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1f2937;
+  font: inherit;
+  outline: none;
+}
+
+/* Resalta el campo cuando tiene un error. */
+.editar-campo input:focus,
+.editar-campo select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.editar-campo .editar-input-error {
+  border-color: #dc2626;
+}
+
+/* Mensaje que aparece debajo del campo inválido. */
+.editar-error {
+  color: #dc2626;
+  font-size: 0.82rem;
+}
+
+/* Mensaje general, por ejemplo, si falla la conexión. */
+.editar-error-general {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+/* Contenedor de los botones. */
+.editar-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* Estilos compartidos de los botones. */
+.editar-btn {
+  padding: 11px 17px;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editar-btn:disabled,
+.editar-modal-close:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botón para guardar los cambios. */
+.editar-btn-principal {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.editar-btn-principal:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* Botón para cancelar. */
+.editar-btn-secundario {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.editar-btn-secundario:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+/* Pantalla de confirmación de modificación exitosa. */
+.editar-exito {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 25px 5px 10px;
+  text-align: center;
+}
+
+.editar-exito h2 {
+  margin: 0;
+  color: #166534;
+}
+
+.editar-exito p {
+  margin: 0 0 10px;
+  color: #64748b;
+}
+
+.editar-exito-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 2rem;
+  font-weight: 700;
+}
+.editar-input-solo-lectura {
+  background-color: #f1f3f5;
+  color: #555;
+  cursor: default;
+}
+
+/* Adaptación para pantallas pequeñas. */
+@media (max-width: 600px) {
+  .editar-modal-overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .editar-modal-card {
+    max-height: none;
+    padding: 24px 18px;
+  }
+
+  .editar-acciones {
+    flex-direction: column-reverse;
+  }
+
+  .editar-acciones .editar-btn {
+    width: 100%;
+  }
+}
