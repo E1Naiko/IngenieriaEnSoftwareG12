@@ -368,14 +368,15 @@ function EditarRepartidor() {
                 </button>
               </div>
             ))}
-
+            
+            {/*Boton para volver al Dashboard o pagina principal */}
           <div className="editar-acciones">
             <button
               type="button"
               className="editar-btn editar-btn-secundario"
               onClick={() => navigate("/dashboard")}
             >
-              Volver al dashboard
+              Volver
             </button>
           </div>
         </section>

@@ -122,11 +122,14 @@ function Dashboard() {
           {/* Botón para abrir pagina Editar de repartidores */}
           <button
             type="button"
+            className="sidebar-link"
+            title="Editar Repartidor"
             onClick={() => navigate("/editarrepartidor")}
           >
-            Editar repartidor
+            <span className="sidebar-icon">✏️</span>
+            {sidebarAbierto && <span>Editar Repartidor</span>}
           </button>
-          
+
           {/* Abre el modal para ingresar un pedido. */}
           <button
             type="button"
