@@ -365,6 +365,13 @@ function DashboardRepartidor() {
           >
             {loading ? "Actualizando..." : "Actualizar"}
           </button>
+          <button
+            type="button"
+            className="repartidor-secundario"
+            onClick={() => navigate("/dashboardrepartidor/reasignar")}
+          >
+            Pedidos por Reasignar
+          </button>
         </div>
 
         {loading && (

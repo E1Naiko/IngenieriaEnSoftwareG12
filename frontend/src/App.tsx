@@ -12,6 +12,7 @@ import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import HistorialEnvios from "./pages/HistorialEnvios";
 import "./App.css";
 import ConsultarPaquete from "./pages/ConsultarEnvio";
+import PedidosPorReasignar from "./pages/PedidosPorReasignar";
 
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
         <Route path="/historialenvios" element={<HistorialEnvios />} />
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
+        <Route path="/dashboardrepartidor/reasignar" element={<PedidosPorReasignar />} />
       </Routes>
     </BrowserRouter>
   );
