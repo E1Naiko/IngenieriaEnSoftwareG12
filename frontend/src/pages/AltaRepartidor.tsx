@@ -4,7 +4,7 @@ import "../styles/AltaRepartidor.css";
 
 // Endpoint del backend.
 const ALTA_REPARTIDOR_URL =
-  "http://127.0.0.1:8000/api/repartidores/";
+  "/api/repartidores/";
 
 const MSG_OBLIGATORIO = "Campo obligatorio";
 const MSG_REPETIDO = "Este dato ya existe en el sistema";
@@ -69,10 +69,10 @@ interface RepartidorCreado {
 }
 
 // Estructura de la respuesta exitosa del backend.
-interface RespuestaAlta {
-  message: string;
-  repartidor: RepartidorCreado;
-}
+//interface RespuestaAlta {
+//  message: string;
+//  repartidor: RepartidorCreado;
+//}
 
 // Propiedades que recibe el modal desde el componente padre.
 interface Props {

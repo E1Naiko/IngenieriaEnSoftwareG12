@@ -309,6 +309,13 @@ CORS_ALLOWED_ORIGINS=https://mi-front.vercel.app,https://www.mi-front.com
 
 Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 
+Cada origen va **sin barra final y sin path**: `https://mi-front.vercel.app` sí,
+`https://mi-front.vercel.app/` no. Si se cuela una barra final o un path,
+django-cors-headers falla con `corsheaders.E014` y Django no arranca
+(**SystemCheckError**, deploy en Render con status 1). `settings.py` normaliza
+esos valores (quita espacios, barras finales y path) y también limpia
+`DJANGO_ALLOWED_HOSTS` si se pega con `https://`, pero conviene escribirlos bien.
+
 ## Variables del `.env`
 
 | Variable | Descripción |
@@ -323,8 +330,8 @@ Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 | `DB_SQLITE_PATH` | Ruta del archivo SQLite cuando `DATABASE_MODE=sqlite`. Por defecto, `backend/db.sqlite3`. |
 | `DJANGO_SECRET_KEY` | Clave secreta de Django (definir una propia en producción). |
 | `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción. |
-| `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |
-| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, separados por coma. |
+| `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma, sin esquema ni path (`api.mi-back.com,localhost`). |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, separados por coma, sin barra final ni path (`https://mi-front.vercel.app`). |
 
 ### Representación numérica del tamaño de paquetes (migración 0008)
 

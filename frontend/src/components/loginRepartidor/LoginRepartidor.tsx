@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "../login/login.css"; // reutiliza los estilos del login existente
 
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = "/api";
 
 function LoginRepartidor() {
   const [token, setToken] = useState("");
