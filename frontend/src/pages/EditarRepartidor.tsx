@@ -39,6 +39,8 @@ const MSG_DNI = "El DNI debe contener solamente números";
 const MSG_TELEFONO = "El celular debe contener solamente números";
 const MSG_MAIL = "Ingresá un email válido";
 const MSG_VEHICULO = "Seleccioná un tipo de vehículo";
+const MSG_NOMBRE = "El nombre solo puede contener letras";
+const MSG_APELLIDO = "El apellido solo puede contener letras";
 
 const TIPOS_VEHICULO = [
   { value: "moto", label: "Moto" },
@@ -56,8 +58,14 @@ const VALORES_INICIALES: Valores = {
   tipo_vehiculo: "",
 };
 
+// Función para validar que un valor contenga solo números
 function contieneSoloNumeros(valor: string): boolean {
   return /^[0-9]+$/.test(valor);
+}
+
+// Función para validar que un valor contenga solo letras y espacios
+function contieneSoloLetras(valor: string): boolean {
+  return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(valor);
 }
 
 function validar(valores: Valores): Errores {
@@ -76,6 +84,22 @@ function validar(valores: Valores): Errores {
 
   if (!errores.telefono && !contieneSoloNumeros(valores.telefono.trim())) {
     errores.telefono = MSG_TELEFONO;
+  }
+
+  // Validar que el nombre contenga solamente letras.
+  if (
+    !errores.nombre &&
+    !contieneSoloLetras(valores.nombre.trim())
+  ) {
+    errores.nombre = MSG_NOMBRE;
+  }
+
+  // Validar que el apellido contenga solamente letras.
+  if (
+    !errores.apellido &&
+    !contieneSoloLetras(valores.apellido.trim())
+  ) {
+    errores.apellido = MSG_APELLIDO;
   }
 
   if (
