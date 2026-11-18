@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/EditarRepartidor.css";
 
+import AltaRepartidor from "./AltaRepartidor";
+
 interface Repartidor {
   id: number;
   dni: number | string;
@@ -140,6 +142,10 @@ function EditarRepartidor() {
   const [valores, setValores] = useState<Valores>(VALORES_INICIALES);
   const [errores, setErrores] = useState<Errores>({});
   const [exito, setExito] = useState(false);
+
+  // Controla la ventana modal para dar de alta repartidores.
+  const [modalRepartidorAbierto, setModalRepartidorAbierto] =useState(false);
+
 
   // Carga la lista que se ofrece para seleccionar.
   async function cargarRepartidores() {
@@ -332,10 +338,23 @@ function EditarRepartidor() {
     <main className="editar-pagina">
       {!repartidor ? (
         <section className="editar-lista">
-          <h1>Gestionar Repartidores</h1>
-          <p className="editar-subtitulo">
-            Seleccioná el repartidor cuyos datos querés modificar.
-          </p>
+          <div className="editar-header">
+            <div>
+              <h1>Gestionar Repartidores</h1>
+
+              <p className="editar-subtitulo">
+                Seleccioná el repartidor cuyos datos querés modificar.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="editar-btn editar-btn-principal"
+              onClick={() => setModalRepartidorAbierto(true)}
+            >
+              🚚 Alta Repartidor
+            </button>
+          </div>
 
           {cargandoLista && <p>Cargando repartidores...</p>}
 
@@ -552,6 +571,14 @@ function EditarRepartidor() {
           )}
         </section>
       )}
+      {/* Modal para dar de alta repartidores */}
+      <AltaRepartidor
+        abierto={modalRepartidorAbierto}
+        onCerrar={() => setModalRepartidorAbierto(false)}
+        onCreado={() => {
+          void cargarRepartidores();
+        }}
+      />
     </main>
   );
 }

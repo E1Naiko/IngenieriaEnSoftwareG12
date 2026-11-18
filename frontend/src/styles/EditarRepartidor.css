@@ -20,6 +20,24 @@
   font-size: 1.5rem;
 }
 
+/* Encabezado de la lista y botón de alta */
+.editar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.editar-header .editar-subtitulo {
+  margin-bottom: 0;
+}
+
+.editar-header .editar-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* Texto introductorio */
 .editar-subtitulo {
   margin: 0 0 22px;
@@ -223,4 +241,13 @@
   .editar-acciones .editar-btn {
     width: 100%;
   }
+
+  .editar-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.editar-header .editar-btn {
+  width: 100%;
+}
 }
