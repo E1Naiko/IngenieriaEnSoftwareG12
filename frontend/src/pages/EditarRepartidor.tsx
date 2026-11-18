@@ -148,7 +148,7 @@ function EditarRepartidor() {
       setErrorLista("");
 
       const response = await fetch(
-        "/api/dashboard/repartidores-disponibles/"
+        "/api/repartidores/lista"
       );
 
       if (!response.ok) {
@@ -332,7 +332,7 @@ function EditarRepartidor() {
     <main className="editar-pagina">
       {!repartidor ? (
         <section className="editar-lista">
-          <h1>Editar repartidor</h1>
+          <h1>Gestionar Repartidores</h1>
           <p className="editar-subtitulo">
             Seleccioná el repartidor cuyos datos querés modificar.
           </p>

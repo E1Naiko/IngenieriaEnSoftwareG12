@@ -29,7 +29,7 @@ function App() {
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
         <Route path="/historialenvios" element={<HistorialEnvios />} />
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
-        <Route path="/editarrepartidor" element={<EditarRepartidor />} />
+        <Route path="/repartidores" element={<EditarRepartidor />} />
       </Routes>
     </BrowserRouter>
   );
