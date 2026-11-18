@@ -195,3 +195,44 @@ class EditarRepartidorTests(TestCase):
     def test_metodo_no_permitido(self):
         r = self.client.post(self.url)
         self.assertEqual(r.status_code, 405)
+
+class ListaRepartidoresTests(TestCase):
+    """Lista de repartidores para la pantalla de edición (HU #39)."""
+
+    def setUp(self):
+        self.url = reverse("crud-repartidor-lista")
+
+    def _crear(self, dni, apellido, estado):
+        return Repartidor.objects.create(
+            nombre="Nom", apellido=apellido, dni=dni,
+            telefono=f"tel{dni}", mail=f"{dni}@mail.com",
+            tipo_vehiculo="moto", estado=estado,
+        )
+
+    def test_incluye_activos_e_inactivos_y_no_los_de_baja(self):
+        activo = self._crear(111, "Alvarez", "ACTIVO")
+        inactivo = self._crear(222, "Benitez", "inactivo")
+        self._crear(333, "Campos", "baja")
+
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+        ids = [x["id"] for x in r.json()["repartidores"]]
+        # Salen ordenados por apellido y no aparece el de baja
+        self.assertEqual(ids, [activo.id, inactivo.id])
+
+    def test_devuelve_solo_los_datos_que_necesita_el_front(self):
+        self._crear(111, "Alvarez", "ACTIVO")
+        r = self.client.get(self.url)
+        self.assertEqual(
+            set(r.json()["repartidores"][0]),
+            {"id", "nombre", "apellido", "dni"},
+        )
+
+    def test_lista_vacia(self):
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"repartidores": []})
+
+    def test_metodo_no_permitido(self):
+        r = self.client.post(self.url)
+        self.assertEqual(r.status_code, 405)

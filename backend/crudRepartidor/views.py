@@ -1,7 +1,7 @@
 import json
 
 from django.db import IntegrityError
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -252,3 +252,32 @@ def repartidor_detalle(request, pk):
 
     # El front solo necesita el mensaje.
     return JsonResponse({"message": MSG_EDICION_EXITOSA})
+
+@require_GET  # Acepta únicamente GET; los demás métodos reciben 405.
+def repartidores_lista(request):
+    """GET /api/repartidores/lista/ — repartidores que el coordinador puede editar.
+
+    Incluye a los activos y a los inactivos. Los dados de baja quedan afuera
+    (pendiente de definir con el grupo). Devuelve solo lo que muestra la
+    pantalla de edición: id, nombre, apellido y DNI.
+    """
+    # Todos los repartidores menos los dados de baja, ordenados por apellido y nombre.
+    repartidores = (
+        Repartidor.objects
+        .exclude(estado__iexact="baja")
+        .order_by("apellido", "nombre")
+    )
+
+    return JsonResponse(
+        {
+            "repartidores": [
+                {
+                    "id": r.id,
+                    "nombre": r.nombre,
+                    "apellido": r.apellido,
+                    "dni": r.dni,
+                }
+                for r in repartidores
+            ]
+        }
+    )
