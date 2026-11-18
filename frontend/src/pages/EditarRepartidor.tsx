@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/EditarRepartidor.css";
-
+// Importación del componente para dar de alta repartidores.
 import AltaRepartidor from "./AltaRepartidor";
 
+// Definición de tipos y constantes para la validación de campos y mensajes de error.
 interface Repartidor {
   id: number;
   dni: number | string;
@@ -14,14 +15,14 @@ interface Repartidor {
   mail: string;
   tipo_vehiculo: string;
 }
-
+// Definición de la interfaz para la lista de repartidores.
 interface RepartidorLista {
   id: number;
   dni: number | string;
   nombre: string;
   apellido: string;
 }
-
+// Definición de tipos para los campos del formulario, valores y errores.
 type Campo =
   | "dni"
   | "nombre"
@@ -29,7 +30,7 @@ type Campo =
   | "telefono"
   | "mail"
   | "tipo_vehiculo";
-
+// Definición de tipos para los valores y errores del formulario.
 type Valores = Record<Campo, string>;
 type Errores = Partial<Record<Campo, string>>;
 
@@ -48,7 +49,7 @@ const TIPOS_VEHICULO = [
   { value: "camioneta", label: "Camioneta" },
   { value: "camion", label: "Camión" },
 ];
-
+// Valores iniciales para el formulario de edición de repartidores.
 const VALORES_INICIALES: Valores = {
   dni: "",
   nombre: "",
@@ -67,7 +68,7 @@ function contieneSoloNumeros(valor: string): boolean {
 function contieneSoloLetras(valor: string): boolean {
   return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(valor);
 }
-
+// Función para validar los valores del formulario y devolver los errores correspondientes
 function validar(valores: Valores): Errores {
   const errores: Errores = {};
 
@@ -81,7 +82,7 @@ function validar(valores: Valores): Errores {
   if (!errores.dni && !contieneSoloNumeros(valores.dni.trim())) {
     errores.dni = MSG_DNI;
   }
-
+  // Validar que el teléfono contenga solamente números.
   if (!errores.telefono && !contieneSoloNumeros(valores.telefono.trim())) {
     errores.telefono = MSG_TELEFONO;
   }
@@ -101,7 +102,7 @@ function validar(valores: Valores): Errores {
   ) {
     errores.apellido = MSG_APELLIDO;
   }
-
+  // Validar que el email tenga un formato válido.
   if (
     !errores.mail &&
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valores.mail.trim())
@@ -124,7 +125,7 @@ function textoDe(valor: unknown): string {
   if (typeof valor === "string") return valor;
   return "";
 }
-
+// Función para mapear los mensajes de error del backend a mensajes más amigables para el usuario
 function mensajeDeCampo(campo: Campo, texto: string): string {
   if (/exist|already|unique|duplic|repetid/i.test(texto)) {
     return MSG_REPETIDO;
@@ -270,7 +271,7 @@ function EditarRepartidor() {
   // Envía al backend todos los campos editables mediante PUT.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
+    // Si no hay repartidor seleccionado, no se puede enviar el formulario.
     if (!repartidor) return;
 
     const erroresLocales = validar(valores);
