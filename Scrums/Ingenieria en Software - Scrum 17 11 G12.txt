@@ -1,0 +1,37 @@
+Marcos:
+Objetivo: #41 Buscador de Paquetes en curso, #42 Buscador de Comercio y #29.
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Ninguna, las Hu asignadas son mayoritariamente de front.
+
+Valen:
+Objetivo: #41 Buscador de Paquetes en curso y #42 Buscador de Comercio y #29.
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Examenes en otras materias.
+
+Giula:
+Objetivo: #39 Edición de repartidores y #22 Cambiar estado de disponibilidad del repartidor
+Estado: HU#39 aprox a 60% completada, comenzando a desarrollar la HU22.
+Complicaciones: Se encontro que las vistas que usamos para traer el listado de repartidores unicamente trae los repartidores activos.
+
+Herlan:
+Objetivo: #39 Edición de repartidores y #22 Cambiar estado de disponibilidad del repartidor
+Estado:  HU#39 aprox a 60% completada, comenzando a desarrollar la HUs asignadas.
+Complicaciones: Examenes en otras materias.
+
+Jose:
+Objetivo: #38 Baja de repartidores
+Estado: comenzando a desarrollar la HU asignada.
+Complicaciones: Examenes en otras materias.
+
+Luciano:
+Objetivo: #35 Publicar pedido en la lista de pedidos "por reasignar" del coordinador y #36 Ver y tomar pedidos "Por Reasignar".
+Estado: HU36 terminada, Comenzando HU35
+Complicaciones:.
+
+Nicolás:
+Objetivo: #35 Publicar pedido en la lista de pedidos "por reasignar" del coordinador y #36 Ver y tomar pedidos "Por Reasignar".
+Estado: Hu#35 comenzada, aprox 20%
+Complicaciones: Rindio finales.
+
+Bloqueos Identificados:
+ -
