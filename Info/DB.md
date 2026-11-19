@@ -60,17 +60,40 @@ paquete.save(update_fields=["estado"])
 ```
 
 Los `choices` validan el valor en formularios, el admin y `full_clean()`, pero
-`save()` y `objects.create()` **no llaman a `full_clean()` automáticamente**.
-El esquema creado por Django tampoco agrega una restricción `CHECK` para las
-opciones: SQL directo o `update()` pueden escribir otros valores en la columna
-`varchar(255)`. Si la base tiene restricciones agregadas manualmente, hay que
-revisarlas por separado.
+`save()` y `objects.create()` **no llaman a `full_clean()` automáticamente**,
+así que los `choices` por sí solos no alcanzan: `update()` y el SQL directo los
+esquivaban y podían dejar la columna `varchar(255)` con cualquier texto.
 
-El modelo no cambia estados automáticamente ni impone transiciones u orden.
-El único endpoint de paquetes por ahora es
-`GET /api/dashboard/paquetes-en-curso/` (HU #40): excluye solo `entregado`,
-comparando el estado sin distinguir mayúsculas. `cancelado` es un estado
-intermediario y por eso también se lista. Devuelve `id`, `destinatario`,
+Por eso hay una restricción `CHECK` en la base (migración
+`0013_constraint_estado_paquete`):
+
+```sql
+CONSTRAINT "paquete_estado_valido"
+  CHECK (LOWER(TRIM("estado")) IN (
+    'retirado', 'pendiente', 'asignado', 'en_camino', 'entregado',
+    'cancelado', 'cancelado_por_cliente', 'pendiente_reasignacion',
+    'en_devolucion'))
+```
+
+Se valida sobre `LOWER(TRIM(...))` —el mismo criterio que usa el código en
+runtime— para que los históricos de DEV con mayúsculas o espacios
+(`"ENTREGADO"`, `" PENDIENTE"`) sigan siendo válidos. Un valor inventado
+(`"devuelto"`, `"canc"`) ahora falla con `IntegrityError` desde cualquier
+camino, incluido `update()`.
+
+Si alguna vez hay que agregar un estado nuevo: se agrega en
+`Paquete.Estado`, se actualiza la tupla `core.models.ESTADOS_PAQUETE` (hay un
+test que verifica que coincidan) y se genera la migración. La migración `0013`
+audita los datos antes de crear el CHECK y aborta con un mensaje claro si
+encuentra un estado que el modelo no conoce, en vez de fallar a mitad de camino.
+
+El modelo no cambia estados automáticamente ni impone transiciones u orden (las
+transiciones las valida el endpoint de cambio de estado).
+
+`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye los estados cerrados
+(`entregado` y `cancelado_por_cliente`), comparando el estado sin distinguir
+mayúsculas. `cancelado` y `en_devolucion` son intermedios y por eso también se
+listan. Devuelve `id`, `destinatario`,
 `direccion`, `repartidor` y `estado` ("Sin asignar" cuando la FK `repartidor`
 es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;

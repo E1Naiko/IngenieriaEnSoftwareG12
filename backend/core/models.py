@@ -23,7 +23,7 @@ import string
 
 from django.db import models
 from django.db.models.functions import Lower, Trim
-from django.db.models.lookups import Exact
+from django.db.models.lookups import Exact, In
 
 
 class Repartidor(models.Model):
@@ -172,6 +172,33 @@ class Comercio(models.Model):
         return self.nombre
 
 
+# Valores válidos de ``Paquete.estado`` escritos una sola vez acá, porque el
+# ``Meta`` de ``Paquete`` no puede referirse a la clase mientras se declara.
+# Tiene que coincidir con ``Paquete.Estado``: hay un test que lo verifica
+# (``core.tests.EstadoCheckConstraintTests``).
+ESTADOS_PAQUETE = (
+    "retirado",
+    "pendiente",
+    "asignado",
+    "en_camino",
+    "entregado",
+    "cancelado",
+    "cancelado_por_cliente",
+    "pendiente_reasignacion",
+    "en_devolucion",
+)
+
+def _estado_normalizado_in(valores):
+    """Condición SQL ``lower(trim(estado)) IN (...)``.
+
+    El runtime compara siempre así —``paquete.estado.strip().lower()`` y
+    ``Lower(Trim("estado"))`` en los querysets—, así que el CHECK tiene que
+    usar el mismo criterio: si la base tiene ``" PENDIENTE"`` o ``"En_Camino"``
+    el código lo acepta, entonces el constraint también.
+    """
+    return In(Lower(Trim("estado")), list(valores))
+
+
 class Paquete(models.Model):
     """
     La entrega. Es la tabla que une todo: un repartidor (opcional porque el
@@ -299,6 +326,17 @@ class Paquete(models.Model):
         db_table = "paquete"        # nombre de tabla del diagrama
         verbose_name = "paquete"
         ordering = ["-id"]          # los más nuevos primero
+        constraints = [
+            # La columna es varchar(255) libre: sin esto, un UPDATE por SQL o
+            # por queryset puede dejar el estado en cualquier texto y romper
+            # las transiciones del repartidor. Se valida sobre lower(trim()),
+            # igual que el runtime, así los históricos de DEV con mayúsculas o
+            # espacios (" PENDIENTE", "ENTREGADO") siguen siendo válidos.
+            models.CheckConstraint(
+                condition=_estado_normalizado_in(ESTADOS_PAQUETE),
+                name="paquete_estado_valido",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.cod_seguimiento} ({self.estado})"
