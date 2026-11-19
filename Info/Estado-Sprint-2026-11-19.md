@@ -6,12 +6,13 @@
 > adjuntarlo. Esa validación **se implementó en este mismo cambio** (backend +
 > frontend + 19 tests nuevos) y se probó contra el servidor levantado.
 >
-> Estado actual: **232 tests del backend en verde** y build del frontend
-> (`npm run build`) sin errores. Cuando digo "falta", lo probé con requests
+> Estado actual: **260 tests del backend en verde** y build del frontend
+> (`npm run build`) sin errores. Incluye el PR #79 (baja de repartidores)
+> mergeado el mismo día. Cuando digo "falta", lo probé con requests
 > reales contra el endpoint, no es una impresión.
 >
-> **Buenas noticias para mañana:** 8 de las 9 HUs se pueden demostrar hoy, y una
-> (la baja, #38) está en un PR abierto con CI verde. La sección "Chuleta para la
+> **Buenas noticias para mañana:** **las 9 HUs se pueden demostrar**, porque el
+> PR #79 (baja de repartidores) se mergeó mientras preparábamos la demo. La sección "Chuleta para la
 > demo" al final tiene el recorrido sugerido.
 
 ---
@@ -28,11 +29,12 @@
 | #29 | Recuperar token | ✅ Completa, con tests | Sí, pero no la muestres como "segura" (§7) |
 | #23 | Validar entrega con DNI | ✅ **Implementada en este cambio** | Sí, es la novedad (§8) |
 | #39 | Edición de repartidores | ✅ Completa, con tests | Sí |
-| #38 | Baja de repartidores | 🟡 **No está en `main`**: está en el PR #79 abierto | No todavía (§10) |
+| #38 | Baja de repartidores | ✅ **Mergeada** (PR #79) mientras se preparaba este cambio | Sí (§10) |
 
-La lista tiene 9 HUs y el repo tiene trabajo de sprint en **6 apps**. La única
-que no se puede mostrar desde `main` es la baja (#38), y su código está en el PR
-#79 con CI en verde.
+La lista tiene 9 HUs y el repo tiene trabajo de sprint en **7 apps**. Con el
+merge del PR #79 ya no queda ninguna HU de la lista fuera de `main`; las
+salvedades que quedan son de alcance (qué reglas se simplificaron) y están
+detalladas en cada sección.
 
 ---
 
@@ -325,37 +327,39 @@ editá un repartidor y poné el DNI de otro de la lista.
 
 ---
 
-## 10. #38 — Baja de repartidores 🟡 (PR #79 abierto)
+## 10. #38 — Baja de repartidores ✅ (mergeada el 19/11, PR #79)
 
-**No está en `main`.** Lo que hay en `main` es el **estado `baja` en el modelo** y
-el resto del sistema respetándolo: login lo rechaza (`403`), recuperación de token
-también, disponibilidad también, y la lista de edición lo excluye. Pero **el botón
-"Dar de baja" y los endpoints no están**: no existen `bajaRepartidor` ni
-`/api/repartidores/<id>/baja/` en `main`.
+**Ya está en `main`.** El PR #79 se mergeó mientras se preparaba este documento,
+así que la baja se puede demostrar completa.
 
-**Dónde está:** en la rama `#38_Baja_de_repartidor`, con **PR #79 abierto** y
-**CI en verde** (tests + build + Docker). Agrega:
-`GET /api/repartidores/<id>/detalle-baja/` (datos para el modal),
-`POST /api/repartidores/<id>/baja/` (baja lógica: `estado='baja'` sin borrar la
-fila ni tocar el token), el modal "¿Seguro que desea dar de baja al repartidor?"
-con "Sí, dar de baja" / cancelar, tests del flujo real y un
-`backend/core/estados.py` que centraliza la comparación de `baja` (para que
-`BAJA` en mayúsculas no se cuele, un bug real que esa rama corrige).
+**Qué hay:**
 
-**Por qué no se mergeó:** tiene `reviewDecision = CHANGES_REQUESTED` de E1Naiko
-(el dueño del repo), así que GitHub lo marca como `BLOCKED`. **No lo mergees ni
-lo presentes como "hecho"**: si mañana te preguntan, "está implementado y con CI
-en verde, esperando los cambios de la revisión". Si el dueño del repo (o el
-profesor, si da la venia) pide mergearlo antes de la presentación, el PR está
-`MERGEABLE` (sin conflictos).
+- Botón **"Dar de baja repartidor"** en *Administrar repartidores*, con modal que
+  muestra los datos y el texto *"¿Seguro que desea dar de baja al repartidor?"*,
+  y los botones **"Sí, dar de baja"** / cancelar.
+- `GET /api/repartidores/<id>/detalle-baja/` (datos del modal) y
+  `POST /api/repartidores/<id>/baja/`, ambos con **sesión de coordinador**
+  (`401` si no hay).
+- La baja es **lógica**: `estado='baja'`, no se borra la fila, no se toca el
+  token y no se pierden los paquetes ni el historial.
+- **El token no se puede volver a usar**: el login lo rechaza (*"El repartidor no
+  se encuentra habilitado…"*), la recuperación de token (#29) también, y no
+  aparece en la lista de edición ni en la flota disponible.
+- `backend/core/estados.py` centraliza la comparación de `baja`, así que
+  `BAJA` en mayúsculas también cuenta como baja (era un bug real: el login
+  comparaba contra el literal `"baja"`).
 
-**Cómo demostrar la baja sin mergear:** mostrá el **efecto** desde lo que sí está
-en `main`: un repartidor que ya está en `baja` en la base no puede loguearse (el
-login devuelve "El repartidor no se encuentra habilitado. Comuníquese con el
-coordinador") y no aparece en la lista de edición. Eso es la regla "el token no
-debe poder ser accedido nuevamente", ya funcionando. Lo que no hay es el botón.
+**Efecto colateral que hay que tener presente en la demo:** el PR #79 también
+endureció el endpoint de cambio de estado. Ahora `POST /api/cambiar-estado-pedido/`
+**exige el token del repartidor** (`400` sin token, `401` si no existe, `403` si
+está de baja) y **rechaza cambiar paquetes que no son suyos** (`403`). El
+frontend ya mandaba el token, así que las pantallas funcionan igual, pero si
+alguien prueba la API con `curl` sin token va a recibir `400`. Es una mejora, no
+una regresión.
 
----
+**Cómo demostrarla:** dar de baja a un repartidor, mostrar el modal, cancelar (el
+modal desaparece y no pasa nada), volver a abrirlo y confirmar. Después intentar
+iniciar sesión con el token de ese repartidor: el sistema lo rechaza.
 
 ## 11. Cosas que encontré de paso y conviene tener a mano
 
@@ -368,7 +372,7 @@ No son parte de las HUs, pero pueden aparecer si alguien navega:
   puede marcar `entregado` por API sin el DNI correcto del cliente (antes sí).
   Es un buen argumento para mostrar si alguien pregunta por validaciones.
 - **El coordinador no está autenticado en la mayoría de los endpoints**: solo
-  `historialEnvios` exige sesión. `loginCoordinador` crea la cookie, pero
+  `historialEnvios` y la baja (#38) exigen sesión. `loginCoordinador` crea la cookie, pero
   `crudRepartidor`, `crudComercios`, `asignarRepartidor`, `paquetesEnCurso`,
   `pedidosPorReasignar`, etc. son `@csrf_exempt` y abiertos. Es una decisión de
   alcance del TP; si preguntan, "la autenticación del coordinador está resuelta en
@@ -407,8 +411,8 @@ No son parte de las HUs, pero pueden aparecer si alguien navega:
 7. **#29**: cerrar sesión de repartidor → "Recuperar token" → DNI registrado →
    aparece el token nuevo → entrar con él. Probar un DNI inexistente → "Datos
    incorrectos". 2 minutos.
-8. **#38**: aclarar que está en PR #79 con CI verde, esperando revisión; mostrar
-   solo el efecto (un repartidor dado de baja no puede loguearse). 1 minuto.
+8. **#38**: dar de baja a un repartidor mostrando el modal, cancelar y volver a
+   confirmar; después intentar entrar con su token y ver el rechazo. 2 minutos.
 9. **#23**: si querés cerrar con la novedad del sprint, entregar un pedido
    **sin** el DNI (mensaje exacto de la HU), con un DNI equivocado (el sistema
    dice cuál es el correcto) y con el correcto. 2 minutos y es la mejor
@@ -421,8 +425,8 @@ Es el 80% del valor de la demo en 13 minutos y todo lo que se muestra funciona.
 
 ## 13. Preguntas probables y respuestas cortas
 
-- **"¿Cuántos tests tienen?"** 232 en el backend, 16 apps cubiertas, corren en
-  8 segundos con SQLite; el CI también construye la imagen Docker y consulta
+- **"¿Cuántos tests tienen?"** 260 en el backend, 16 apps cubiertas, corren en
+  ~13 segundos con SQLite; el CI también construye la imagen Docker y consulta
   `/api/ping/`.
 - **"¿Por qué la búsqueda no está en la base?"** Porque el listado completo ya se
   sirve al panel y el filtro en el cliente evita una request por tecla; para el
@@ -431,8 +435,8 @@ Es el 80% del valor de la demo en 13 minutos y todo lo que se muestra funciona.
   atómico: el segundo actualiza 0 filas y recibe `409`. Hay test y se puede
   mostrar en vivo.
 - **"¿La baja borra datos?"** Es lógica: `estado='baja'`, no se borra la fila, no
-  se toca el token, y el repartidor deja de poder entrar (eso ya está en `main`).
-  El botón está en el PR #79.
+  se toca el token ni se pierden sus paquetes o su historial, y el repartidor
+  deja de poder entrar. Ya está en `main`.
 - **"¿Y el DNI del receptor?"** Se valida contra el DNI del cliente del pedido:
   si falta, el sistema responde con el texto de la HU y el paquete no se marca
   entregado; si no coincide, indica el correcto. La foto es opcional y se guarda

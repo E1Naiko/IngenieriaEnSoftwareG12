@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import "../styles/EditarRepartidor.css";
 // Importación del componente para dar de alta repartidores.
 import AltaRepartidor from "./AltaRepartidor";
+// Headers para las peticiones que modifican datos (POST de la baja y PUT de
+// edición): incluye el token CSRF, que hoy no se exige pero queda listo por si
+// se habilita (ver el comentario del decorador en bajaRepartidor/views.py).
+import { headersConCsrf } from "../utils/csrf";
 
 // Definición de tipos y constantes para la validación de campos y mensajes de error.
 interface Repartidor {
@@ -170,7 +174,20 @@ function EditarRepartidor() {
 
   // Controla la ventana modal para dar de alta repartidores.
   const [modalRepartidorAbierto, setModalRepartidorAbierto] =useState(false);
-
+  
+  //Controla el estado de la baja de un repartidor.
+  const [bajaEnProceso, setBajaEnProceso] = useState<number | null>(null);
+  const [errorBaja, setErrorBaja] = useState("");
+  const [confirmacionBaja, setConfirmacionBaja] = useState<{
+    id: number;
+    nombre: string;
+    apellido: string;
+    dni: number | string;
+    telefono: string;
+    mail: string;
+    tipo_vehiculo: string;
+    cargando: boolean;
+  } | null>(null);
 
   // Carga la lista que se ofrece para seleccionar.
   async function cargarRepartidores() {
@@ -236,6 +253,98 @@ function EditarRepartidor() {
     }
   }
 
+  // Abre el modal de confirmación. Muestra enseguida el nombre que ya está en
+  // la lista y, en paralelo, pide el detalle al backend (contrato de la HU #38):
+  // ese GET valida que el repartidor siga existiendo y que no esté ya de baja.
+  async function pedirConfirmacionBaja(item: RepartidorLista) {
+    setErrorBaja("");
+    setConfirmacionBaja({
+      id: item.id,
+      nombre: item.nombre,
+      apellido: item.apellido,
+      dni: item.dni,
+      telefono: "",
+      mail: "",
+      tipo_vehiculo: "",
+      cargando: true,
+    });
+
+    try {
+      const response = await fetch(
+        `/api/repartidores/${item.id}/detalle-baja/`
+      );
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "No se pudieron obtener los datos del repartidor."
+        );
+      }
+
+      const detalle = data?.repartidor ?? {};
+
+      // El modal pudo cerrarse mientras llegaba la respuesta.
+      setConfirmacionBaja((actual) =>
+        actual && actual.id === item.id
+          ? {
+              ...actual,
+              nombre: detalle.nombre ?? actual.nombre,
+              apellido: detalle.apellido ?? actual.apellido,
+              dni: detalle.dni ?? actual.dni,
+              telefono: detalle.telefono ?? "",
+              mail: detalle.mail ?? "",
+              tipo_vehiculo: detalle.tipo_vehiculo ?? "",
+              cargando: false,
+            }
+          : actual
+      );
+    } catch (error) {
+      setConfirmacionBaja(null);
+      setErrorBaja(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron obtener los datos del repartidor."
+      );
+    }
+  }
+
+  async function darDeBaja(id: number) {
+    try {
+      setBajaEnProceso(id);
+      setErrorBaja("");
+
+      const response = await fetch(`/api/repartidores/${id}/baja/`, {
+        method: "POST",
+        headers: headersConCsrf(),
+      });
+
+      // Un 403 de CSRF responde HTML, no JSON: el catch de abajo lo cubre con
+      // el mensaje genérico en vez de romper al leer la respuesta.
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.mensaje ||
+            data?.message ||
+            data?.error ||
+            "No se pudo dar de baja al repartidor."
+        );
+      }
+
+      // Cerramos la confirmación y actualizamos la lista.
+      setConfirmacionBaja(null);
+      await cargarRepartidores();
+    } catch (error) {
+      setErrorBaja(
+        error instanceof Error
+          ? error.message
+          : "Error al dar de baja al repartidor."
+      );
+    } finally {
+      setBajaEnProceso(null);
+    }
+  }
+
   // Cuando se selecciona un repartidor, carga sus datos en el formulario.
   useEffect(() => {
     if (!repartidor) return;
@@ -288,9 +397,7 @@ function EditarRepartidor() {
     try {
       const response = await fetch(`/api/repartidores/${repartidor.id}/`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: headersConCsrf(),
         body: JSON.stringify({
           dni: Number(valores.dni.trim()),
           nombre: valores.nombre.trim(),
@@ -388,6 +495,13 @@ function EditarRepartidor() {
               {errorLista}
             </p>
           )}
+          {/* Si falla el pedido del detalle (por ejemplo, ya estaba de baja),
+              el modal no abre y el aviso queda acá, sobre la lista. */}
+          {errorBaja && !confirmacionBaja && (
+            <p className="editar-error-general" role="alert">
+              {errorBaja}
+            </p>
+          )}
 
           {!cargandoLista && !errorLista && repartidores.length === 0 && (
             <p>No hay repartidores para mostrar.</p>
@@ -402,14 +516,28 @@ function EditarRepartidor() {
                   </strong>
                   <p>DNI: {item.dni}</p>
                 </div>
+                  <div className="editar-item-acciones">
 
-                <button
-                  type="button"
-                  onClick={() => void seleccionarRepartidor(item.id)}
-                  disabled={cargandoDetalle}
-                >
-                  {cargandoDetalle ? "Cargando..." : "Seleccionar"}
-                </button>
+                      <button
+                          type="button"
+                          onClick={() => void seleccionarRepartidor(item.id)}
+                          disabled={cargandoDetalle || bajaEnProceso !== null}
+                      >
+                          Seleccionar
+                      </button>
+
+                      <button
+                          type="button"
+                          className="editar-btn-baja"
+                          onClick={() => void pedirConfirmacionBaja(item)}
+                          disabled={bajaEnProceso !== null || cargandoDetalle}
+                      >
+                          {bajaEnProceso === item.id
+                              ? "Dando de baja..."
+                              : "Dar de baja"}
+                      </button>
+
+                  </div>
               </div>
             ))}
             
@@ -595,6 +723,91 @@ function EditarRepartidor() {
             </>
           )}
         </section>
+      )}
+      {/* Modal de confirmación para dar de baja */}
+{confirmacionBaja && (
+  <div className="baja-overlay">
+    <section
+      className="baja-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="baja-titulo"
+    >
+      <div className="baja-icono">
+        !
+      </div>
+
+      <h2 id="baja-titulo">¿Estás seguro?</h2>
+
+      <p>
+        Estás por dar de baja a:
+      </p>
+
+      <strong>
+        {confirmacionBaja.nombre} {confirmacionBaja.apellido}
+      </strong>
+
+      {confirmacionBaja.cargando ? (
+        <p>Cargando los datos del repartidor...</p>
+      ) : (
+        <dl className="baja-datos">
+          <div>
+            <dt>DNI</dt>
+            <dd>{confirmacionBaja.dni}</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{confirmacionBaja.telefono || "—"}</dd>
+          </div>
+          <div>
+            <dt>Mail</dt>
+            <dd>{confirmacionBaja.mail || "—"}</dd>
+          </div>
+          <div>
+            <dt>Vehículo</dt>
+            <dd>{confirmacionBaja.tipo_vehiculo || "—"}</dd>
+          </div>
+        </dl>
+      )}
+
+      <p className="baja-advertencia">
+        Esta acción modificará el estado del repartidor.
+        ¿Deseás continuar?
+      </p>
+
+      {errorBaja && (
+        <p className="editar-error-general" role="alert">
+          {errorBaja}
+        </p>
+      )}
+
+      <div className="baja-acciones">
+        <button
+          type="button"
+          className="baja-btn-cancelar"
+          onClick={() => {
+            setConfirmacionBaja(null);
+            setErrorBaja("");
+          }}
+          disabled={bajaEnProceso !== null}
+        >
+          Cancelar
+        </button>
+          <button
+                type="button"
+                className="baja-btn-confirmar"
+                onClick={() => void darDeBaja(confirmacionBaja.id)}
+                disabled={
+                  bajaEnProceso !== null || confirmacionBaja.cargando
+                }
+              >
+                {bajaEnProceso === confirmacionBaja.id
+                  ? "Procesando..."
+                  : "Sí, dar de baja"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
       {/* Modal para dar de alta repartidores */}
       <AltaRepartidor

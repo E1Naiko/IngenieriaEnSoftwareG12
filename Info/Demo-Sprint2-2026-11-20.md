@@ -17,21 +17,28 @@ perfecto** antes que muchas a medias. Propuesta:
 
 | ✅ Entra a la demo | ⛔ No entra |
 |---|---|
-| #23 **validar entrega con el DNI** ← la novedad | El **botón** "Dar de baja" (#38): está en el PR #79 |
-| #41 buscador de paquetes (visual, 10 s) | Afirmar que #35 distingue fuerza mayor |
-| #42 buscador de comercios | Detalles de seguridad del coordinador |
-| #22 disponibilidad del repartidor | Recorridos por el admin de Django |
+| #23 **validar entrega con el DNI** ← la novedad | Afirmar que #35 distingue fuerza mayor |
+| #41 buscador de paquetes (visual, 10 s) | Detalles de seguridad del coordinador |
+| #42 buscador de comercios | Recorridos por el admin de Django |
+| #22 disponibilidad del repartidor | Probar la API con `curl` sin token |
 | #36 tomar pedidos por reasignar (+ el 409) | |
 | #39 edición de repartidor (token en gris) | |
 | #29 recuperar token | |
+| #38 **baja de repartidor** (ya mergeada, PR #79) | |
 
-> **Cambio respecto de la versión anterior:** la historia #23 se actualizó
-> (ahora pide *comprobar* el DNI, no solo adjuntarlo) y **se implementó**. Antes
-> figuraba como "no mostrar"; ahora es la escena de cierre, porque es lo más
-> nuevo del sprint y se defiende muy bien en vivo.
+> **Dos cambios respecto de la versión anterior:** (1) la historia #23 se
+> actualizó —ahora pide *comprobar* el DNI, no solo adjuntarlo— y **se
+> implementó**: pasó de "no mostrar" a ser la escena de cierre. (2) el **PR #79
+> (#38, baja de repartidores) se mergeó**, así que la baja ya se puede demostrar
+> en vivo: es una escena nueva.
 
-Si el cliente pide ver el botón de baja, la respuesta está en §6: reconocer el
-alcance y mostrarlo como próximo paso. Es mucho mejor que descubrirlo en vivo.
+> **Ojo con este detalle técnico:** desde el PR #79, `POST
+> /api/cambiar-estado-pedido/` exige el **token del repartidor** y rechaza
+> paquetes que no sean suyos. Las pantallas ya lo mandan, así que la demo no
+> cambia; solo eviten mostrar llamadas con `curl` sin token.
+
+Queda una sola cosa fuera: afirmar que #35 distingue fuerza mayor de cliente
+ausente, cuando esa lógica está en una rama sin integrar (§6).
 
 ---
 
@@ -77,7 +84,7 @@ El comando:
 - **Imprime los tokens** de los tres repartidores en pantalla. Copiarlos al
   papel/nota: son lo único que no se ve en una lista del sistema.
 
-Verificado: 220 tests del backend pasan, incluidos 6 del comando
+Verificado: 260 tests del backend pasan, incluidos 6 del comando
 (`core.tests.PrepararDemoTests`).
 
 ### 2.2 El usuario del coordinador
@@ -125,15 +132,16 @@ mismo proyecto (el README la contempla como alternativa offline).
 
 | Min | Escena | Quién opera | Qué se ve en pantalla | Frase de arranque |
 |---|---|---|---|---|
-| 0–2 | Apertura | Presentador/a | Login del sistema | "Somos el grupo 12; en estos 30 minutos mostramos el circuito completo: coordinador, repartidor y reasignación." |
+| 0–2 | Apertura | Presentador/a | Login del sistema | "Somos el grupo 12; en estos 30 minutos mostramos el circuito completo: coordinador, repartidor, reasignación y entrega." |
 | 2–6 | **1. Buscadores (#41 y #42)** | Coordinador | Dashboard | "El coordinador recibe pedidos por WhatsApp; buscarlos tiene que ser instantáneo." |
 | 6–9 | **2. Disponibilidad (#22)** | Repartidor A | Dashboard del repartidor | "El repartidor decide cuándo está disponible, y eso cambia lo que el coordinador puede asignarle." |
 | 9–15 | **3. Reasignación (#36)** | Repartidor A + B | Dos sesiones | "Si a un repartidor le pasa algo, el pedido no vuelve al coordinador: vuelve a la flota." |
 | 15–18 | **4. Edición (#39)** | Coordinador | Administrar repartidores | "Los datos del repartidor se editan sin tocar su token." |
 | 18–21 | **5. Recuperar token (#29)** | Repartidor A | Login del repartidor | "Si el repartidor olvida el token, lo recupera solo, sin llamar a nadie." |
-| 21–24 | **6. Entrega con DNI (#23)** | Repartidor B | Mis pedidos | "La entrega se cierra comprobando el DNI del cliente, no con un tilde." |
-| 24–25 | **Cierre** | Narrador/a | — | "Esto es lo entregado, esto lo que sigue." |
-| 25–30 | Preguntas | Todos | — | Colchón. |
+| 21–23 | **6. Entrega con DNI (#23)** | Repartidor B | Mis pedidos | "La entrega se cierra comprobando el DNI del cliente, no con un tilde." |
+| 23–25 | **7. Baja de repartidor (#38)** | Coordinador | Administrar repartidores | "Un repartidor que se va deja de existir para el sistema, sin perder su historial." |
+| 25–26 | **Cierre** | Narrador/a | — | "Esto es lo entregado, esto lo que sigue." |
+| 26–30 | Preguntas | Todos | — | Colchón. |
 
 ### Escena 1 — Buscadores (4 min)
 
@@ -220,10 +228,26 @@ primero "Marcar como En camino".
 5. (Opcional, 20 s) Adjuntar una foto antes de confirmar: se guarda como
    comprobante de la entrega.
 
-> **Por qué esta escena cierra la demo:** es la única HU que cambió de regla
-> respecto de la versión anterior de la historia ("insertar" → "comprobar"), y
-> demuestra que el sistema *valida*, no solo *registra*. Los tres casos
-> (falta / no coincide / coincide) se muestran en menos de dos minutos.
+> **Por qué esta escena importa:** es la única HU que cambió de regla respecto
+> de la versión anterior de la historia ("insertar" → "comprobar"), y demuestra
+> que el sistema *valida*, no solo *registra*. Los tres casos (falta / no
+> coincide / coincide) se muestran en menos de dos minutos.
+
+### Escena 7 — Baja de repartidor (2 min)
+
+Usar a **Bruno Sosa** (el que `preparar_demo` deja en `baja`) o a cualquier otro
+para no dejar la demo sin un repartidor disponible.
+
+1. Coordinador → *Administrar repartidores* → **Dar de baja repartidor**.
+   Aparece el modal con **los datos del repartidor** y el texto *"¿Seguro que
+   desea dar de baja al repartidor?"*.
+2. **Cancelar**: el modal desaparece y no pasa nada. → "Se puede volver atrás
+   sin consecuencias."
+3. Volver a abrir y **"Sí, dar de baja"**: el repartidor desaparece de la lista.
+4. Probar **iniciar sesión con su token**: *"El repartidor no se encuentra
+   habilitado. Comuníquese con el coordinador"*. → "El token no sirve más, pero
+   el repartidor no se borró: su historial de envíos sigue intacto."
+5. (Opcional, si preguntan) el Historial de envíos sigue mostrándolo.
 
 ---
 
@@ -237,7 +261,8 @@ No se cancela la demo: se reduce. Con un navegador y el coordinador ya logueado:
 4. Editar un repartidor, mostrar el token en gris y el dato repetido (#39) —
    2 min.
 5. Entregar un pedido sin DNI y con DNI incorrecto (#23) — 1 min.
-6. Cierre con el estado por HU de `Info/Estado-Sprint-2026-11-19.md` — 1 min.
+6. Dar de baja a un repartidor y mostrar que su token ya no sirve (#38) — 1 min.
+7. Cierre con el estado por HU de `Info/Estado-Sprint-2026-11-19.md` — 1 min.
 
 **Plan C** (sin red o sin servidores): capturas de pantalla en una carpeta del
 escritorio, numeradas en el orden del guion. Se consiguen en el ensayo del
@@ -248,15 +273,14 @@ jueves. Nunca se muestran archivos sueltos del repo ni la base en el admin.
 ## 5. Cierre (3 min): qué se dice
 
 - **Entregado en el sprint:** validación de la entrega con el **DNI del
-  receptor** (#23), buscadores (#41, #42), disponibilidad (#22), reasignación
-  (#36, con bloqueo concurrente), edición de repartidor (#39), recuperación de
-  token (#29), más el circuito de pedidos, asignación por vehículo y
-  disponibilidad, historial y estado del envío de sprints anteriores.
-- **En revisión:** baja de repartidor (#38) completa y con tests, esperando
-  aprobación del PR.
+  receptor** (#23), **baja de repartidor** (#38), buscadores (#41, #42),
+  disponibilidad (#22), reasignación (#36, con bloqueo concurrente), edición de
+  repartidor (#39), recuperación de token (#29), más el circuito de pedidos,
+  asignación por vehículo y disponibilidad, historial y estado del envío de
+  sprints anteriores. **Las nueve historias de la lista están en `main`.**
 - **Próximo paso:** integración de las causas de cancelación de #35 (fuerza
   mayor vs. cliente ausente) y la cola de reasignación manual.
-- **Calidad:** 232 tests automáticos en el backend, integración continua que
+- **Calidad:** 260 tests automáticos en el backend, integración continua que
   corre tests y build de la imagen en cada PR.
 
 Es mejor decir "esto falta" que dejar que el cliente lo descubra: el cliente
@@ -270,7 +294,7 @@ valora un roadmap honesto más que una demo perfecta de dos minutos.
 |---|---|
 | "¿Cómo se aseguran de que entregó a la persona correcta?" | "El repartidor carga el DNI del receptor y el sistema lo compara con el del cliente: si falta, no lo deja cerrar la entrega; si no coincide, le indica cuál es el correcto. La foto del DNI es opcional y queda como comprobante." |
 | "¿Y si nadie toma el pedido reasignado?" | "Hoy queda en la lista hasta que alguien lo toma. La cola para que el coordinador lo asigne a mano está desarrollada en una rama y entra en la próxima integración." |
-| "¿Cómo doy de baja a un repartidor?" | "La baja está implementada y probada en una rama, en revisión; hoy un repartidor dado de baja ya no puede ingresar al sistema." |
+| "¿Cómo doy de baja a un repartidor?" | "Desde Administrar repartidores, con confirmación y los datos a la vista. La baja es lógica: se conserva el historial, pero el token deja de servir para ingresar." |
 | "¿Y si el repartidor se equivoca de estado?" | "Puede cambiarlo cuando quiera, con confirmación; y el coordinador ve el cambio en la flota al instante." |
 | "¿Dos repartidores pueden tomar el mismo pedido?" | "No: el segundo recibe un aviso y la lista se refresca. Está cubierto con tests." |
 | "¿Se puede buscar por teléfono del comercio?" | "Sí, en el listado y al cargar un pedido: nombre, dirección o teléfono, sin importar tildes ni mayúsculas." |
@@ -293,22 +317,23 @@ inventarlos):
   consistente en todas las apps.
 
 **Mejorar**
-- **Integración a último momento:** la rama de #35 quedó completa sin PR abierto
-  y la de #38 sin mergear a horas de la demo. Propuesta: fecha límite de PR
-  abierto el miércoles.
-- **HUs de front y back partidas:** #23 quedó con foto en el front y sin
-  validación en el back; #42 tiene buscador en el front pero la API solo filtra
-  por nombre. Propuesta: cada HU define su contrato de API antes de empezar.
+- **Integración a último momento:** el PR #79 (#38) se mergeó el mismo día de la
+  demo y la rama de #35 sigue completa pero sin PR abierto. Propuesta: fecha
+  límite para abrir PR el miércoles.
+- **HUs de front y back partidas:** #23 estuvo un sprint entero con la foto en
+  el front y sin validación en el back (la historia se cumplió recién cuando
+  cambió la regla); #42 tiene buscador en el front pero la API solo filtra por
+  nombre. Propuesta: cada HU define su contrato de API antes de empezar.
 - **Datos de demo improvisados:** se resolvió con `preparar_demo`, pero debería
   existir desde el sprint anterior.
 - **Latencia de la base en USA-W:** medir y, si sigue, evaluar región.
 
 **Acciones (con dueño y para cuándo)**
-1. Mergear el PR #79 tras la revisión pendiente. — dueño del PR.
-2. Abrir PR de la rama de #35 y decidir alcance (causas + cola manual). —
+1. Abrir PR de la rama de #35 y decidir alcance (causas + cola manual). —
    Luciano / Nicolás.
-3. Implementar #23 completa (backend + tests). — siguiente sprint.
-4. Correr `preparar_demo` en el ensayo del próximo sprint y mantenerlo. — datos.
+2. Sumar la validación de DNI del front a la suite E2E si se agrega. — siguiente
+   sprint.
+3. Correr `preparar_demo` en el ensayo del próximo sprint y mantenerlo. — datos.
 
 ---
 

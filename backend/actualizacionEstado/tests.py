@@ -42,10 +42,20 @@ class ActualizarPedidoTests(TestCase):
     def _get(self, params=None):
         return self.client.get(self.url, params)
 
-    def _post(self, payload):
+    def _post(self, payload, token="__default__"):
+        """POST como lo hace Dashboardrepartidor.tsx: con el token del repartidor.
+
+        El token es obligatorio desde que el POST valida quién pide el cambio
+        (HU #38). Pasar ``token=None`` para simular una petición sin token.
+        """
+        cuerpo = dict(payload)
+        if token == "__default__":
+            cuerpo.setdefault("token", self.repartidor.token)
+        elif token is not None:
+            cuerpo["token"] = token
         return self.client.post(
             self.url,
-            data=json.dumps(payload),
+            data=json.dumps(cuerpo),
             content_type="application/json",
         )
 
@@ -92,6 +102,7 @@ class ActualizarPedidoTests(TestCase):
         self.assertEqual(r.json()["message"], "Estado del paquete actualizado correctamente.")
 
     def test_post_cambiar_estado_a_entregado_con_dni_correcto(self):
+        """HU #23: entregar exige el DNI del cliente; acá el DNI es 30111222."""
         r = self._post(
             {"id": self.paquete.id, "estado": "entregado", "dni_receptor": 30111222}
         )
@@ -147,11 +158,136 @@ class ActualizarPedidoTests(TestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn("JSON válido", r.json()["message"])
 
+class ActualizarPedidoValidacionTests(TestCase):
+    """Validaciones del POST (revisión del PR #79): token y baja del repartidor.
+
+    El backend no guarda sesión del repartidor: el único dato que dice quién
+    pide el cambio es el ``token`` del cuerpo. Sin estas validaciones, un
+    request directo podía cambiar el estado de cualquier paquete.
+    """
+
+    def setUp(self):
+        self.url = reverse("cambiar-estado-pedido")
+
+        self.comercio = Comercio.objects.create(
+            nombre="Kiosco Central", telefono="221-555-0100",
+            direccion="Calle 7 #123",
+        )
+        self.cliente = Cliente.objects.create(
+            nombre="Juan", apellido="Pérez", telefono="221-555-0200",
+            direccion="Calle 44 #999", dni=30111222,
+        )
+        self.repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Gómez", dni=20333444,
+            telefono="221-555-0300", mail="ana@example.com",
+        )
+        self.otro = Repartidor.objects.create(
+            nombre="Luis", apellido="Sosa", dni=20999888,
+            telefono="221-555-0400", mail="luis@example.com",
+        )
+        self.paquete = Paquete.objects.create(
+            comercio=self.comercio,
+            cliente=self.cliente,
+            repartidor=self.repartidor,
+            fecha_origen=date(2026, 10, 1),
+            fecha_destino=date(2026, 10, 2),
+            estado=Paquete.Estado.ASIGNADO,
+        )
+
+    def _post(self, payload):
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_sin_token_devuelve_400(self):
+        r = self._post({"id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["message"], "Falta el token")
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_token_inexistente_devuelve_401(self):
+        r = self._post({"token": "ZZZZZZ", "id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 401)
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_repartidor_dado_de_baja_no_puede_cambiar_estados(self):
+        """Escenario central de la HU #38 visto desde el otro endpoint."""
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(
+            estado=Repartidor.Estado.BAJA
+        )
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("no se encuentra habilitado", r.json()["message"])
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_la_baja_se_detecta_aunque_el_estado_este_en_mayusculas(self):
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(estado="BAJA")
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_otro_repartidor_no_puede_cambiar_un_paquete_ajeno(self):
+        r = self._post(
+            {"token": self.otro.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("no está asignado", r.json()["message"])
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_paquete_sin_repartidor_no_se_puede_cambiar(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(repartidor=None)
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_el_asignado_puede_avanzar_el_estado(self):
+        for estado, extra in (
+            ("en_camino", {}),
+            # HU #23: la entrega pide el DNI del cliente (30111222 en setUp).
+            ("entregado", {"dni_receptor": 30111222}),
+        ):
+            r = self._post(
+                {
+                    "token": self.repartidor.token,
+                    "id": self.paquete.id,
+                    "estado": estado,
+                    **extra,
+                }
+            )
+            self.assertEqual(r.status_code, 200, r.content)
+            self.paquete.refresh_from_db()
+            self.assertEqual(self.paquete.estado, estado)
+
+    def test_el_get_sigue_siendo_publico(self):
+        """La pantalla de seguimiento (HU #14) no manda token y debe seguir andando."""
+        r = self.client.get(self.url, {"cod_seguimiento": self.paquete.cod_seguimiento})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()["paquetes"]), 1)
+
 class ValidarEntregaConDNITests(TestCase):
     """HU #23 — Validar la entrega con el número del DNI del receptor.
 
     La regla de la historia es *comprobar* el DNI del cliente, no solo
-    adjuntarlo: si no coincide, el paquete no pasa a entregado.
+    adjuntarlo: si no coincide, el paquete no pasa a entregado. Todo el flujo
+    pasa por las validaciones de token y propiedad del paquete (HU #38), así
+    que cada request manda el token del repartidor asignado.
     """
 
     def setUp(self):
@@ -176,7 +312,14 @@ class ValidarEntregaConDNITests(TestCase):
     def _entregar(self, **extra):
         return self.client.post(
             self.url,
-            data=json.dumps({"id": self.paquete.id, "estado": "entregado", **extra}),
+            data=json.dumps(
+                {
+                    "token": self.repartidor.token,
+                    "id": self.paquete.id,
+                    "estado": "entregado",
+                    **extra,
+                }
+            ),
             content_type="application/json",
         )
 
@@ -243,10 +386,49 @@ class ValidarEntregaConDNITests(TestCase):
     def test_los_otros_estados_no_piden_dni(self):
         r = self.client.post(
             self.url,
-            data=json.dumps({"id": self.paquete.id, "estado": "en_camino"}),
+            data=json.dumps(
+                {
+                    "token": self.repartidor.token,
+                    "id": self.paquete.id,
+                    "estado": "en_camino",
+                }
+            ),
             content_type="application/json",
         )
         self.assertEqual(r.status_code, 200)
+        self.assertEqual(self._estado(), "en_camino")
+
+    # --- Interacción con las validaciones de la HU #38 --------------------
+    def test_sin_token_no_llega_a_la_validacion_de_dni(self):
+        """Primero se autentica; el DNI se pide recién después."""
+        r = self.client.post(
+            self.url,
+            data=json.dumps({"id": self.paquete.id, "estado": "entregado"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["message"], "Falta el token")
+        self.assertEqual(self._estado(), "en_camino")
+
+    def test_otro_repartidor_no_puede_entregar_un_paquete_ajeno_con_el_dni(self):
+        otro = Repartidor.objects.create(
+            nombre="Luis", apellido="Sosa", dni=20999888,
+            telefono="221-555-0400", mail="luis@example.com",
+        )
+        r = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "token": otro.token,
+                    "id": self.paquete.id,
+                    "estado": "entregado",
+                    "dni_receptor": 30111222,
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("no está asignado", r.json()["message"])
         self.assertEqual(self._estado(), "en_camino")
 
     # --- Comprobante (foto) opcional -------------------------------------
@@ -257,12 +439,15 @@ class ValidarEntregaConDNITests(TestCase):
         self.assertIsNone(self.paquete.comprobante)
 
     def test_guarda_el_comprobante_cuando_llega_la_foto(self):
-        from core.models import Comprobante
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
-        imagen = SimpleUploadedFile("dni.jpg", b"\xff\xd8\xff\xe0contenido", content_type="image/jpeg")
         import base64 as b64
 
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from core.models import Comprobante
+
+        imagen = SimpleUploadedFile(
+            "dni.jpg", b"\xff\xd8\xff\xe0contenido", content_type="image/jpeg"
+        )
         data_url = "data:image/jpeg;base64," + b64.b64encode(imagen.read()).decode()
         r = self._entregar(dni_receptor=30111222, foto_dni=data_url)
         self.assertEqual(r.status_code, 200)
@@ -272,11 +457,15 @@ class ValidarEntregaConDNITests(TestCase):
         self.assertTrue(self.paquete.comprobante.file.name.startswith("comprobantes/"))
 
     def test_foto_mal_formada_avisa_sin_descartarla_en_silencio(self):
-        r = self._entregar(dni_receptor=30111222, foto_dni="data:image/jpeg;base64,@@@no-es-base64@@@")
+        r = self._entregar(
+            dni_receptor=30111222, foto_dni="data:image/jpeg;base64,@@@no-es-base64@@@"
+        )
         self.assertEqual(r.status_code, 400)
         self.assertEqual(self._estado(), "en_camino")
 
     def test_formato_de_foto_no_admitido(self):
-        r = self._entregar(dni_receptor=30111222, foto_dni="data:application/pdf;base64,QUJD")
+        r = self._entregar(
+            dni_receptor=30111222, foto_dni="data:application/pdf;base64,QUJD"
+        )
         self.assertEqual(r.status_code, 400)
         self.assertEqual(self._estado(), "en_camino")

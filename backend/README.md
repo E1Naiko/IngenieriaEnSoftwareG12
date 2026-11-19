@@ -90,17 +90,23 @@ DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 
 ### Entrega validada con el DNI del receptor (HU #23)
 
-`POST /api/cambiar-estado-pedido/` con `{"id": 1, "estado": "entregado"}` **exige**
-el DNI del receptor y lo compara con el DNI del cliente del paquete:
+`POST /api/cambiar-estado-pedido/` con `estado: "entregado"` **exige** el DNI del
+receptor y lo compara con el DNI del cliente del paquete:
 
 ```json
 {
+  "token": "A7K2Q9",
   "id": 1,
   "estado": "entregado",
   "dni_receptor": "33.444.555",
   "foto_dni": "data:image/png;base64,..."
 }
 ```
+
+El `token` no es opcional desde la HU #38: el endpoint valida quién pide el
+cambio (`400` sin token, `401` si no existe, `403` si el repartidor está de baja
+o el paquete no es suyo). El `GET` sigue siendo público para la pantalla de
+seguimiento.
 
 | Caso | Código | Respuesta |
 |---|---|---|
@@ -123,7 +129,7 @@ Detalles que importan:
 - Solo aplica a `entregado`: los demás estados no piden DNI.
 - No requiere migración: usa el modelo `Comprobante` existente.
 
-Tests (25 en la app, 19 de la validación):
+Tests (35 en la app, 19 de la validación de DNI):
 
 ```bash
 cd backend
@@ -161,6 +167,26 @@ Contrato completo, decisiones y efectos sobre otras HUs:
 ```bash
 cd backend
 DATABASE_MODE=sqlite python manage.py test pedidosPorReasignar
+```
+
+### Baja de repartidores (HU #38)
+
+`GET /api/repartidores/<id>/detalle-baja/` devuelve los datos del modal de
+confirmación y `POST /api/repartidores/<id>/baja/` aplica la **baja lógica**
+(`estado='baja'`, sin borrar la fila ni regenerar el token). Ambas piden sesión
+de coordinador (`401` si falta).
+
+El `POST` es `@csrf_exempt` porque el pedido llega proxificado en el despliegue
+(rewrite de Vercel → Render) y la verificación CSRF de Django compara el
+`Origin` con el host del backend, devolviendo `403` aunque el token sea
+correcto. Es el mismo criterio que el resto de las acciones del coordinador
+(ver [crudComercios/README.md](crudComercios/README.md#9-seguridad-y-configuración));
+la defensa es `SESSION_COOKIE_SAMESITE="Lax"`. Detalle, contrato JSON y
+efectos en las otras HUs: [bajaRepartidor/README.md](bajaRepartidor/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test bajaRepartidor
 ```
 
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
