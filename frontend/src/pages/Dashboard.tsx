@@ -7,7 +7,6 @@ import PaquetesEnCurso from "./PaquetesEnCurso";
 import Comercios from "./Comercios";
 import GestionarComercios from "./GestionarComercios";
 import IngresarPedido from "./IngresarPedido";
-import AltaRepartidor from "./AltaRepartidor";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -28,8 +27,6 @@ function Dashboard() {
   const [modalComerciosAbierto, setModalComerciosAbierto] = useState(false);
   // Controla la ventana modal para ingresar pedidos.
   const [modalPedidoAbierto, setModalPedidoAbierto] = useState(false);
-  // Controla la ventana modal para dar de alta repartidores.
-  const [modalRepartidorAbierto, setModalRepartidorAbierto] =useState(false);
 
   // Permite actualizar el listado después de modificar comercios.
   const [refreshComercios, setRefreshComercios] = useState(0);
@@ -107,17 +104,16 @@ function Dashboard() {
             {sidebarAbierto && <span>Cargar comercio</span>}
           </button>
 
-          
-        {/* Botón para abrir el modal de alta de repartidores */}
-        <button
-          type="button"
-          className="sidebar-link"
-          title="Alta Repartidor"
-          onClick={() => setModalRepartidorAbierto(true)}
-        >
-          <span className="sidebar-icon">🚚</span>
-          {sidebarAbierto && <span>Alta Repartidor</span>}
-        </button>
+          {/* Botón para abrir pagina Gestionar Repartidores */}
+          <button
+            type="button"
+            className="sidebar-link"
+            title="Gestionar Repartidores"
+            onClick={() => navigate("/repartidores")}
+          >
+            <span className="sidebar-icon">✏️</span>
+            {sidebarAbierto && <span>Gestionar Repartidores</span>}
+          </button>
 
           {/* Abre el modal para ingresar un pedido. */}
           <button
@@ -369,14 +365,6 @@ function Dashboard() {
           </section>
         </div>
       )}
-      {/* Ventana modal para dar de alta repartidores */}
-      <AltaRepartidor
-        abierto={modalRepartidorAbierto}
-        onCerrar={() => setModalRepartidorAbierto(false)}
-        onCreado={() => {
-          // Acá podés actualizar la lista de repartidores.
-        }}
-      />
     </div>
   );
 }
