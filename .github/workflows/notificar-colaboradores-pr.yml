@@ -1,0 +1,70 @@
+name: Notificar colaboradores de PRs nuevos
+
+# Cuando cualquiera abre un PR (o lo saca de borrador), se le pide review a
+# TODOS los colaboradores del repo excepto al autor. Cada solicitud de review
+# genera la notificación nativa de GitHub ("X requested your review on #N")
+# para cada persona, así todos se enteran de que hay un PR nuevo sin que el
+# dueño tenga que asignar a nadie a mano.
+#
+# Notas:
+# - Los borradores (drafts) se avisan recién cuando pasan a "ready for review".
+# - Solo corre en PRs del mismo repo; los PRs traídos desde un fork no podrán
+#   pedir reviews con el token de Actions (quedarían sin notificar).
+# - Si alguien se suma o sale del equipo, actualizar FALLBACK (se usa solo si
+#   la API de colaboradores no está disponible con el token del workflow).
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  avisar:
+    name: Pedir review a todos los colaboradores
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: Solicitar review a todos (menos al autor)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FALLBACK="E1Naiko,Selgoku,HerlanGG,laumannmarcos,josealejandrogonzalezburga-create,coloareco9-byte,GiuliBailon"
+
+          # 1) Traer los colaboradores actuales del repo. Si la API no está
+          #    disponible con el token del workflow, usamos la lista fija.
+          if users=$(gh api "repos/$GITHUB_REPOSITORY/collaborators?affiliation=direct&per_page=100" \
+              --jq '[.[].login] | join(",")' 2>/dev/null) && [ -n "$users" ]; then
+            echo "::notice::Lista obtenida de la API de colaboradores del repo."
+          else
+            users="$FALLBACK"
+            echo "::notice::La API de colaboradores no respondió; se usa la lista fija del workflow."
+          fi
+
+          # 2) Sacar al autor del PR (no se puede pedir review a uno mismo).
+          reviewers=$(printf '%s' "$users" | tr ',' '\n' | tr -d ' \r' \
+            | awk -v a="$(printf '%s' "$AUTHOR" | tr '[:upper:]' '[:lower:]')" \
+                'NF && tolower($0) != a')
+
+          if [ -z "$reviewers" ]; then
+            echo "::notice::No hay colaboradores a quienes avisar sobre este PR."
+            exit 0
+          fi
+
+          # 3) Pedirles review: cada solicitud dispara la notificación del PR.
+          total=$(printf '%s\n' "$reviewers" | wc -l | tr -d ' ')
+          echo "Pidiendo review a $total persona(s):"
+          printf '%s\n' "$reviewers" | sed 's/^/  - /'
+
+          payload=$(printf '%s' "$reviewers" | jq -R . | jq -s '{reviewers: .}')
+          printf '%s\n' "$payload" \
+            | gh api --method POST "repos/$GITHUB_REPOSITORY/pulls/$PR/requested_reviewers" --input -
+
+          echo "::notice::Review solicitada a todos los colaboradores; ya deberían recibir la notificación del PR #$PR."

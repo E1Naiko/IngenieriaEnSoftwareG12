@@ -88,6 +88,39 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 ```
 
+### Pedidos "Por Reasignar" (HU #36)
+
+App `pedidosPorReasignar`, **sin cambios en el esquema**: no hay estado nuevo,
+ni campos nuevos, ni migración. La lista son los paquetes `cancelado`, que es
+lo que deja el botón "Confirmar cancelación" del dashboard; como ese flujo no
+limpia `paquete.repartidor`, el nombre y apellido del último repartidor se lee
+directamente de esa FK.
+
+```text
+POST /api/pedidos-por-reasignar/               body {"token": "ABC123"}
+POST /api/pedidos-por-reasignar/aceptar/<id>/ body {"token": "ABC123"}
+```
+
+El filtro por zona cercana quedó descartado: entran **todos** los `cancelado`.
+Cada ítem tiene `id`, `direccion_retiro`, `direccion_destino`, `tamanio` y
+`ultimo_repartidor: {nombre, apellido} | null`. Sin pedidos, `200` con
+`{"mensaje": "...", "pedidos": []}`.
+
+Aceptar es un `UPDATE` condicional atómico (`WHERE estado='cancelado'`), así
+que el primer repartidor se lo queda y el segundo recibe `409`; el pedido pasa
+a `asignado` (y la FK apunta al nuevo repartidor), con lo cual aparece
+automáticamente en `POST /api/paquetes-repartidor/`. No hay límite de pedidos
+ya asignados. "Operativo" se valida como `ACTIVO` normalizado, con el token en
+cada request.
+
+Contrato completo, decisiones y efectos sobre otras HUs:
+[pedidosPorReasignar/README.md](pedidosPorReasignar/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test pedidosPorReasignar
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable
@@ -309,6 +342,13 @@ CORS_ALLOWED_ORIGINS=https://mi-front.vercel.app,https://www.mi-front.com
 
 Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 
+Cada origen va **sin barra final y sin path**: `https://mi-front.vercel.app` sí,
+`https://mi-front.vercel.app/` no. Si se cuela una barra final o un path,
+django-cors-headers falla con `corsheaders.E014` y Django no arranca
+(**SystemCheckError**, deploy en Render con status 1). `settings.py` normaliza
+esos valores (quita espacios, barras finales y path) y también limpia
+`DJANGO_ALLOWED_HOSTS` si se pega con `https://`, pero conviene escribirlos bien.
+
 ## Variables del `.env`
 
 | Variable | Descripción |
@@ -323,8 +363,8 @@ Con `DEBUG=False` y la variable vacía no se permite ningún origen cross-site.
 | `DB_SQLITE_PATH` | Ruta del archivo SQLite cuando `DATABASE_MODE=sqlite`. Por defecto, `backend/db.sqlite3`. |
 | `DJANGO_SECRET_KEY` | Clave secreta de Django (definir una propia en producción). |
 | `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción. |
-| `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |
-| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, separados por coma. |
+| `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma, sin esquema ni path (`api.mi-back.com,localhost`). |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, separados por coma, sin barra final ni path (`https://mi-front.vercel.app`). |
 
 ### Representación numérica del tamaño de paquetes (migración 0008)
 

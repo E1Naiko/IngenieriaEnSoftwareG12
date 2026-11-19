@@ -49,3 +49,39 @@ def login_repartidor(request):
         }
     )
 
+
+
+MSG_DATOS_INCORRECTOS = "Datos incorrectos"
+
+
+@csrf_exempt  # el repartidor que olvidó el token no tiene sesión ni CSRF
+@require_POST
+def recuperar_token(request):
+    """HU #29: con el DNI, genera un token nuevo y lo devuelve para mostrarlo en pantalla."""
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        data = None
+    if not isinstance(data, dict):
+        return JsonResponse({"message": "El cuerpo debe ser JSON válido."}, status=400)
+
+    dni = str(data.get("dni") or "").strip()
+    if not dni:
+        return JsonResponse({"message": "Falta completar el DNI"}, status=400)
+    if not dni.isdigit():
+        return JsonResponse({"message": MSG_DATOS_INCORRECTOS}, status=400)
+
+    # Escenario 2: DNI no registrado
+    try:
+        repartidor = Repartidor.objects.get(dni=int(dni))
+    except Repartidor.DoesNotExist:
+        return JsonResponse({"message": MSG_DATOS_INCORRECTOS}, status=404)
+
+    # Igual que en el login: un repartidor dado de baja no recupera acceso
+    if repartidor.estado == "baja":
+        return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)
+
+    # Escenario 1: el token nuevo reemplaza al anterior, que deja de servir para el login
+    repartidor.token = Repartidor._generar_token()
+    repartidor.save(update_fields=["token"])
+    return JsonResponse({"token": repartidor.token})

@@ -4,12 +4,16 @@ import "../styles/AltaRepartidor.css";
 
 // Endpoint del backend.
 const ALTA_REPARTIDOR_URL =
-  "http://127.0.0.1:8000/api/repartidores/";
+  "/api/repartidores/";
 
 const MSG_OBLIGATORIO = "Campo obligatorio";
 const MSG_REPETIDO = "Este dato ya existe en el sistema";
 const MSG_EXITO = "Repartidor cargado con éxito";
-const MSG_DNI = "El DNI debe ser un número";
+const MSG_DNI = "El DNI debe contener solamente números";
+const MSG_NOMBRE = "El nombre solo puede contener letras";
+const MSG_APELLIDO = "El apellido solo puede contener letras";
+const MSG_TELEFONO = "El celular debe contener solamente números";
+const MSG_MAIL = "Ingresá un email válido";
 const MSG_VEHICULO = "Tipo de vehículo inválido";
 
 // Campos que se envían al backend.
@@ -68,12 +72,6 @@ interface RepartidorCreado {
   token: string;
 }
 
-// Estructura de la respuesta exitosa del backend.
-interface RespuestaAlta {
-  message: string;
-  repartidor: RepartidorCreado;
-}
-
 // Propiedades que recibe el modal desde el componente padre.
 interface Props {
   abierto: boolean;
@@ -81,27 +79,68 @@ interface Props {
   onCreado?: () => void;
 }
 
-// Valida los campos antes de enviar los datos al backend.
+// Comprueba que el texto contenga solamente letras y espacios.
+function contieneSoloLetras(valor: string): boolean {
+  return /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(valor);
+}
+
+// Comprueba que el texto contenga solamente números.
+function contieneSoloNumeros(valor: string): boolean {
+  return /^[0-9]+$/.test(valor);
+}
+
+
 function validar(valores: Valores): Errores {
   const errores: Errores = {};
 
-  // Comprueba que ningún campo esté vacío.
-  // También considera vacío un campo con solamente espacios.
+  // 1. Comprueba que ningún campo esté vacío.
   CAMPOS.forEach((campo) => {
     if (!valores[campo].trim()) {
       errores[campo] = MSG_OBLIGATORIO;
     }
   });
 
-  // Comprueba que el DNI contenga solamente números.
+  // 2. Valida el DNI.
   if (
     !errores.dni &&
-    !/^\d+$/.test(valores.dni.trim())
+    !contieneSoloNumeros(valores.dni.trim())
   ) {
     errores.dni = MSG_DNI;
   }
 
-  // Comprueba que el vehículo pertenezca a las opciones permitidas.
+  // 3. Valida el nombre.
+  if (
+    !errores.nombre &&
+    !contieneSoloLetras(valores.nombre.trim())
+  ) {
+    errores.nombre = MSG_NOMBRE;
+  }
+
+  // 4. Valida el apellido.
+  if (
+    !errores.apellido &&
+    !contieneSoloLetras(valores.apellido.trim())
+  ) {
+    errores.apellido = MSG_APELLIDO;
+  }
+
+  // 5. Valida el celular.
+  if (
+    !errores.telefono &&
+    !contieneSoloNumeros(valores.telefono.trim())
+  ) {
+    errores.telefono = MSG_TELEFONO;
+  }
+
+  // 6. Valida el formato del email.
+  if (
+    !errores.mail &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valores.mail.trim())
+  ) {
+    errores.mail = MSG_MAIL;
+  }
+
+  // 7. Valida el tipo de vehículo.
   if (
     !errores.tipo_vehiculo &&
     !TIPOS_VEHICULO.some(
@@ -127,7 +166,7 @@ function textoDe(valor: unknown): string {
   return "";
 }
 
-// Traduce los errores del backend a los mensajes de la HU.
+// Mapea los mensajes de error del backend a mensajes más amigables.
 function mensajeDeCampo(campo: Campo, texto: string): string {
   if (/exist|already|unique|duplic|repetid/i.test(texto)) {
     return MSG_REPETIDO;
@@ -136,11 +175,21 @@ function mensajeDeCampo(campo: Campo, texto: string): string {
   if (/obligatorio|blank|null|required|vac[ií]o/i.test(texto)) {
     return MSG_OBLIGATORIO;
   }
-
   if (campo === "dni" && /number|integer|n[uú]mero/i.test(texto)) {
     return MSG_DNI;
   }
-
+  if (campo === "nombre") {
+    return MSG_NOMBRE;
+  }
+  if (campo === "apellido") {
+    return MSG_APELLIDO;
+  }
+  if (campo === "telefono") {
+    return MSG_TELEFONO;
+  }
+  if (campo === "mail") {
+    return MSG_MAIL;
+  }
   if (campo === "tipo_vehiculo") {
     return MSG_VEHICULO;
   }
@@ -376,9 +425,7 @@ function AltaRepartidor({
         {exito && repartidorCreado ? (
           // ESCENARIO 1: pantalla de confirmación.
           <div className="modal-success">
-
             <div className="success-icon">✓</div>
-
             <h2 id="modal-titulo">{MSG_EXITO}</h2>
 
             <p className="success-description">
