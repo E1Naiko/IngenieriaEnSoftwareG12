@@ -10,9 +10,9 @@ import LoginRepartidor from "./components/loginRepartidor/LoginRepartidor";
 import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import HistorialEnvios from "./pages/HistorialEnvios";
-import "./App.css";
 import ConsultarPaquete from "./pages/ConsultarEnvio";
-
+import EditarRepartidor from "./pages/EditarRepartidor";
+import "./App.css";
 
 function App() {
   return (
@@ -29,6 +29,7 @@ function App() {
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
         <Route path="/historialenvios" element={<HistorialEnvios />} />
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
+        <Route path="/repartidores" element={<EditarRepartidor />} />
       </Routes>
     </BrowserRouter>
   );
