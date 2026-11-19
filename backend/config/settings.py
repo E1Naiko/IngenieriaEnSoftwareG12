@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     "actualizacionEstado",
     "pedidosAsignados",
     "historialEnvios",
+    "bajaRepartidor",
 ]
 
 MIDDLEWARE = [
