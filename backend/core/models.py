@@ -193,14 +193,32 @@ class Paquete(models.Model):
         ASIGNADO = "asignado", "Asignado"  # el coordinador ya le asignó repartidor
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
-        CANCELADO = "cancelado", "Cancelado"
+        # Dos cierres distintos, a propósito: ``cancelado`` es la devolución
+        # cerrada (el paquete volvió al comercio y el repartidor lo confirmó)
+        # y ``cancelado_por_cliente`` el cliente que rechazó el pedido. Ninguno
+        # se reasigna: los dos paquetes vuelven a su origen.
+        CANCELADO = "cancelado", "Cancelado (devuelto al comercio)"
+        CANCELADO_POR_CLIENTE = "cancelado_por_cliente", "Cancelado por el cliente"
         PENDIENTE_REASIGNACION = "pendiente_reasignacion", "Pendiente de reasignación"
         EN_DEVOLUCION = "en_devolucion", "Devolución al comercio"
 
     class CausaCancelacion(models.TextChoices):
+        """Por qué se canceló. Solo ``fuerza_mayor`` vuelve a la flota."""
+
         FUERZA_MAYOR = "fuerza_mayor", "Fuerza mayor"
         CLIENTE_AUSENTE = "cliente_ausente", "Cliente ausente"
         CLIENTE_RECHAZA = "cliente_rechaza", "Cliente rechazó el pedido"
+
+    # Estados terminales: el paquete ya no se mueve ni se reasigna.
+    ESTADOS_CERRADOS = frozenset({
+        "entregado", "cancelado", "cancelado_por_cliente",
+    })
+
+    # Estados en los que el paquete vuelve al comercio con el repartidor que
+    # lo tiene: no se reasigna, lo lleva de vuelta a su origen.
+    ESTADOS_DEVOLUCION = frozenset({
+        "en_devolucion", "cancelado", "cancelado_por_cliente",
+    })
 
     class Tamanio(models.TextChoices):
         """Tamaño estimado del paquete."""

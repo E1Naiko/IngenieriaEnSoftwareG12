@@ -139,25 +139,47 @@ class ReasignacionTests(TestCase):
         self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
 
     def test_ausencia_o_rechazo_se_devuelve_al_comercio_sin_oferta(self):
+        """Ni la ausencia ni el rechazo del cliente se reasignan: vuelven al origen.
+
+        Se distinguen por estado: ``en_devolucion`` (ausente, el repartidor
+        confirma la entrega en el comercio) y ``cancelado_por_cliente``
+        (rechazo, ya cerrado con el paquete en manos del repartidor).
+        """
         self.client.force_login(self.coordinador)
-        for causa in ("cliente_ausente", "cliente_rechaza"):
+        esperado = {
+            "cliente_ausente": Paquete.Estado.EN_DEVOLUCION,
+            "cliente_rechaza": Paquete.Estado.CANCELADO_POR_CLIENTE,
+        }
+        for causa, estado_esperado in esperado.items():
             with self.subTest(causa=causa):
                 Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.EN_CAMINO)
                 self.assertEqual(self._cancelar(causa=causa).status_code, 200)
                 self.paquete.refresh_from_db()
-                self.assertEqual(self.paquete.estado, Paquete.Estado.EN_DEVOLUCION)
+                self.assertEqual(self.paquete.estado, estado_esperado)
+                # El paquete sigue a cargo del repartidor, sin oferta ni cola manual.
                 self.assertEqual(self.paquete.repartidor_id, self.original.pk)
                 self.assertIsNone(self.paquete.reasignacion_hasta)
                 self.assertIsNone(self.paquete.retiro_latitud)
                 self.assertEqual(self._cola_manual().json(), {"paquetes": []})
                 self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
-                en_devolucion, = self._post("paquetes-repartidor", {"token": self.original.token}).json()["paquetes"]
-                self.assertEqual(en_devolucion["direccion_comercio"], "Calle 55")
-                self.assertEqual(self._post("cambiar-estado-pedido", {
+
+                # El repartidor lo sigue viendo en su lista y sabe adónde llevarlo.
+                paquetes = self._post("paquetes-repartidor", {"token": self.original.token}).json()["paquetes"]
+                self.assertEqual(len(paquetes), 1)
+                self.assertEqual(paquetes[0]["direccion_comercio"], "Calle 55")
+
+                confirmacion = self._post("cambiar-estado-pedido", {
                     "id": self.paquete.pk, "estado": "cancelado", "token": self.original.token,
-                }).status_code, 200)
+                })
                 self.paquete.refresh_from_db()
-                self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO)
+                if causa == "cliente_ausente":
+                    # Ausente: se confirma la devolución y recién ahí se cierra.
+                    self.assertEqual(confirmacion.status_code, 200)
+                    self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO)
+                else:
+                    # Rechazo: ya estaba cerrado, no admite cambios.
+                    self.assertEqual(confirmacion.status_code, 400)
+                    self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO_POR_CLIENTE)
 
     def test_valida_motivo_causa_ubicacion_y_titularidad(self):
         for cambios, status in (
@@ -177,3 +199,29 @@ class ReasignacionTests(TestCase):
         paquetes.update(estado="ENTREGADO")
         self.assertEqual(self._cancelar().status_code, 400)
         self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
+
+    def test_solo_fuerza_mayor_vuelve_a_la_flota(self):
+        """Los tres desenlaces: reasignar, devolver y cierre por rechazo."""
+        desenlaces = {
+            "fuerza_mayor": Paquete.Estado.PENDIENTE_REASIGNACION,
+            "cliente_ausente": Paquete.Estado.EN_DEVOLUCION,
+            "cliente_rechaza": Paquete.Estado.CANCELADO_POR_CLIENTE,
+        }
+        for causa, estado in desenlaces.items():
+            with self.subTest(causa=causa):
+                Paquete.objects.filter(pk=self.paquete.pk).update(
+                    estado=Paquete.Estado.EN_CAMINO,
+                    repartidor=self.original,
+                    repartidor_original=None,
+                )
+                self.assertEqual(self._cancelar(causa=causa).status_code, 200)
+                self.paquete.refresh_from_db()
+                self.assertEqual(self.paquete.estado, estado)
+                # Solo fuerza mayor libera el pedido y lo publica.
+                se_reasigna = causa == "fuerza_mayor"
+                self.assertEqual(self.paquete.repartidor_id is None, se_reasigna)
+                self.assertEqual(
+                    self.paquete.repartidor_original_id == self.original.pk, se_reasigna
+                )
+                ofertas = self._cercanos(self.vecino).json()["paquetes"]
+                self.assertEqual(len(ofertas), 1 if se_reasigna else 0)

@@ -237,7 +237,10 @@ class AsignacionTests(AsignarRepartidorTestBase):
         self.assertEqual(paquete.repartidor_id, self.moto.id)
 
     def test_no_asigna_paquetes_entregados_o_cancelados(self):
-        for estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
+        for estado in (
+            Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO,
+            Paquete.Estado.CANCELADO_POR_CLIENTE, Paquete.Estado.EN_DEVOLUCION,
+        ):
             with self.subTest(estado=estado):
                 paquete = self._paquete(Paquete.Tamanio.CHICO, estado=estado)
 

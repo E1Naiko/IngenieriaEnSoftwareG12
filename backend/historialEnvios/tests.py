@@ -35,6 +35,8 @@ class HistorialEnviosTests(TestCase):
         # Paquetes de Ana: uno entregado, uno cancelado (más reciente) y uno pendiente.
         self._paquete(self.ana, "entregado", date(2026, 10, 20))
         self._paquete(self.ana, "cancelado", date(2026, 10, 25))
+        # El rechazo del cliente también cierra el pedido: cuenta como historial.
+        self._paquete(self.ana, Paquete.Estado.CANCELADO_POR_CLIENTE, date(2026, 10, 26))
         self._paquete(self.ana, "pendiente", date(2026, 10, 28))
         # Paquete de Beto con el estado en MAYÚSCULAS: tiene que contar igual.
         self._paquete(self.beto, "ENTREGADO", date(2026, 10, 21))
@@ -57,8 +59,8 @@ class HistorialEnviosTests(TestCase):
         data = r.json()
         self.assertEqual(data["count"], 2)  # también aparece el dado de baja
         por_id = {x["id"]: x for x in data["results"]}
-        # Ana: entregado + cancelado (el pendiente no cuenta)
-        self.assertEqual(por_id[self.ana.id]["cantidad_envios"], 2)
+        # Ana: entregado + cancelado + cancelado_por_cliente (el pendiente no cuenta)
+        self.assertEqual(por_id[self.ana.id]["cantidad_envios"], 3)
         self.assertFalse(por_id[self.ana.id]["dado_de_baja"])
         # Beto: su 'ENTREGADO' en mayúsculas cuenta
         self.assertEqual(por_id[self.beto.id]["cantidad_envios"], 1)
@@ -71,10 +73,10 @@ class HistorialEnviosTests(TestCase):
 
         data = r.json()
         self.assertEqual(data["repartidor"]["id"], self.ana.id)
-        self.assertEqual(data["count"], 2)  # el pendiente no entra
+        self.assertEqual(data["count"], 3)  # el pendiente no entra
         # Del más reciente al más viejo (por fecha de destino)
         estados = [p["estado"] for p in data["results"]]
-        self.assertEqual(estados, ["cancelado", "entregado"])
+        self.assertEqual(estados, ["cancelado_por_cliente", "cancelado", "entregado"])
 
     def test_sin_sesion_responde_401(self):
         r1 = self.client.get(reverse("historial-lista"))

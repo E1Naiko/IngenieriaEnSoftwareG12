@@ -14,7 +14,7 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
 | `Cliente` | Datos personales y de contacto del destinatario (`nombre`, `apellido`, `telefono`, `direccion`, `dni`). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `asignado`, `en_camino`, `entregado`, `cancelado`, `cancelado_por_cliente`, `pendiente_reasignacion` y `en_devolucion`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ### Estados de un paquete
@@ -25,9 +25,27 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 |---|---|---|
 | `pendiente` | Pendiente | `Paquete.Estado.PENDIENTE` |
 | `retirado` | Retirado | `Paquete.Estado.RETIRADO` |
+| `asignado` | Asignado | `Paquete.Estado.ASIGNADO` |
 | `en_camino` | En camino | `Paquete.Estado.EN_CAMINO` |
 | `entregado` | Entregado | `Paquete.Estado.ENTREGADO` |
-| `cancelado` | Cancelado | `Paquete.Estado.CANCELADO` |
+| `cancelado` | Cancelado (devuelto al comercio) | `Paquete.Estado.CANCELADO` |
+| `cancelado_por_cliente` | Cancelado por el cliente | `Paquete.Estado.CANCELADO_POR_CLIENTE` |
+| `pendiente_reasignacion` | Pendiente de reasignación | `Paquete.Estado.PENDIENTE_REASIGNACION` |
+| `en_devolucion` | Devolución al comercio | `Paquete.Estado.EN_DEVOLUCION` |
+
+**Los dos cierres por cancelación son distintos a propósito.** `cancelado` es
+la devolución cerrada: el paquete volvió al comercio y el repartidor lo
+confirmó. `cancelado_por_cliente` es el pedido que el cliente rechazó. Ninguno
+se reasigna: en los dos casos el paquete vuelve a su origen. La diferencia es
+*saber qué pasó*, y el estado es la fuente de verdad (la `causa_cancelacion`
+dice el motivo, el estado dice el desenlace).
+
+Conjuntos derivados en `core.models.Paquete`:
+
+- `ESTADOS_CERRADOS`: `entregado`, `cancelado`, `cancelado_por_cliente`. El
+  paquete ya no se mueve ni se reasigna.
+- `ESTADOS_DEVOLUCION`: `en_devolucion`, `cancelado`, `cancelado_por_cliente`.
+  El paquete vuelve al comercio con el repartidor que lo tiene.
 
 El valor predeterminado sigue siendo `pendiente`. `retirado` debe asignarse
 explícitamente, por ejemplo desde el formulario de `/admin/` o desde el ORM:

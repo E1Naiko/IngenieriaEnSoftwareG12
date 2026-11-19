@@ -98,9 +98,12 @@ class PedidoAPITests(TestCase):
         self.assertEqual(Paquete.objects.count(), 2)
 
     def test_similar_cancelado_no_cuenta(self):
-        self._post()
-        Paquete.objects.update(estado=Paquete.Estado.CANCELADO)
-        self.assertEqual(self._post().status_code, 201)
+        """Los dos cierres por cancelación vuelven al origen: no son similares."""
+        for estado in (Paquete.Estado.CANCELADO, Paquete.Estado.CANCELADO_POR_CLIENTE):
+            with self.subTest(estado=estado):
+                self._post()
+                Paquete.objects.update(estado=estado)
+                self.assertEqual(self._post().status_code, 201)
 
     def test_duplicado_con_estados_de_la_base_dev(self):
         """Todo estado salvo cancelado avisa, aunque venga en mayúscula como en dev."""
@@ -108,8 +111,9 @@ class PedidoAPITests(TestCase):
         for estado in (" PENDIENTE", "ASIGNADO", "EN_CAMINO", "RETIRADO", "ENTREGADO", "entregado"):
             Paquete.objects.update(estado=estado)
             self.assertEqual(self._post().status_code, 409)
-        Paquete.objects.update(estado="CANCELADO")
-        self.assertEqual(self._post().status_code, 201)
+        for cerrado in ("CANCELADO", "CANCELADO_POR_CLIENTE"):
+            Paquete.objects.update(estado=cerrado)
+            self.assertEqual(self._post(forzar=True).status_code, 201)
 
 
 class ClienteAPITests(TestCase):

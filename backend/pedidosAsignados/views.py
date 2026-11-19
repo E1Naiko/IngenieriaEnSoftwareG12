@@ -24,11 +24,14 @@ MSG_SESION_INVALIDA = "Sesión inválida"
 MSG_REPARTIDOR_BAJA = "Repartidor dado de baja"
 
 # Pedidos bajo responsabilidad del repartidor, incluidos los que debe devolver.
+# ``cancelado_por_cliente`` también sigue a su cargo hasta que lo entregue en
+# el comercio: no se reasigna, lo lleva de vuelta a su origen.
 ESTADOS_ACTIVOS = [
     Paquete.Estado.ASIGNADO,
     Paquete.Estado.RETIRADO,
     Paquete.Estado.EN_CAMINO,
     Paquete.Estado.EN_DEVOLUCION,
+    Paquete.Estado.CANCELADO_POR_CLIENTE,
 ]
 
 

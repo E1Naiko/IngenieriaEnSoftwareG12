@@ -18,8 +18,9 @@ from core.models import Paquete, Repartidor  # Paquete se usa en comentarios; Re
 # Constantes
 # ---------------------------------------------------------------------------
 
-# Estados de paquete que cuentan como "historial".
-ESTADOS_HISTORIAL = ["entregado", "cancelado"]
+# Estados de paquete que cuentan como "historial". Los dos cierres por
+# cancelación cuentan: el entregado y el que el cliente rechazó.
+ESTADOS_HISTORIAL = ["entregado", "cancelado", "cancelado_por_cliente"]
 
 # Mensajes de error.
 MSG_NO_AUTORIZADO = "Solo el coordinador puede ver el historial."

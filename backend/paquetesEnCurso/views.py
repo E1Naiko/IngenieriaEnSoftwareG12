@@ -4,8 +4,9 @@ Endpoint del panel "Paquetes en curso" (HU #40).
     GET /api/dashboard/paquetes-en-curso/
 
 Responde ``{"paquetes": [...]}`` con los paquetes que todavía están en curso
-(todos salvo ``entregado``). ``cancelado`` es un estado intermediario, así que
-también se lista. Cada ítem sigue el contrato que consume
+(todos salvo ``entregado`` y ``cancelado_por_cliente``). ``en_devolucion``
+sigue listándose: el paquete todavía está en la calle, en manos del
+repartidor. Cada ítem sigue el contrato que consume
 ``frontend/src/pages/PaquetesEnCurso.tsx``::
 
     {
@@ -90,14 +91,16 @@ def paquetesEnCurso(request):
         )
 
     # Consulta la base de datos mediante el ORM de Django.
-    # El único estado final es "entregado"; "cancelado" es intermediario y
-    # debe seguir apareciendo en el panel. iexact tolera valores históricos en
-    # mayúsculas porque la columna es un varchar libre.
-    # select_related solo admite FKs directas de Paquete: repartidor, comercio,
-    # cliente y comprobante. Acá alcanza con repartidor y cliente, que son las
-    # que usa el serializador.
+    # Quedan fuera los estados terminales (entregado y los dos cierres por
+    # cancelación). En cambio "en_devolucion" sigue en curso: el repartidor
+    # todavía tiene el paquete y el coordinador necesita verlo.
+    # iexact tolera valores históricos en mayúsculas porque la columna es un
+    # varchar libre. select_related solo admite FKs directas de Paquete:
+    # repartidor, comercio, cliente y comprobante. Acá alcanza con repartidor
+    # y cliente, que son las que usa el serializador.
     paquetes = (
         Paquete.objects.exclude(estado__iexact=Paquete.Estado.ENTREGADO)
+        .exclude(estado__iexact=Paquete.Estado.CANCELADO_POR_CLIENTE)
         .select_related("repartidor", "cliente")
     )
 

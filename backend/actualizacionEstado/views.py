@@ -71,8 +71,10 @@ def cambiar_estado_pedido(request):
             return error("El pedido no está asignado a este repartidor.", 403)
 
         estado = paquete.estado.strip().lower()
-        if estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
+        if estado in Paquete.ESTADOS_CERRADOS:
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
+        # La devolución al comercio se confirma como "cancelado" (cerrado).
+        # El rechazo del cliente ya nace cerrado y no se toca.
         if nuevo_estado == Paquete.Estado.CANCELADO and estado != Paquete.Estado.EN_DEVOLUCION:
             try:
                 mensaje = registrar_cancelacion(
@@ -97,7 +99,8 @@ def cambiar_estado_pedido(request):
 
         paquete.estado = nuevo_estado
         campos = ["estado"]
-        if nuevo_estado == Paquete.Estado.ENTREGADO:
+        if nuevo_estado == Paquete.Estado.ENTREGADO or estado == Paquete.Estado.EN_DEVOLUCION:
+            # El paquete ya no está en la calle: el punto de retiro no sirve más.
             paquete.retiro_latitud = paquete.retiro_longitud = None
             campos += ["retiro_latitud", "retiro_longitud"]
         paquete.save(update_fields=campos)

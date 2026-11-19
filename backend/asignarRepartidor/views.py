@@ -59,10 +59,13 @@ MSG_NO_HAY_CON_VEHICULO = "No hay repartidores disponibles con el vehículo requ
 MSG_OBLIGATORIO = "Campo obligatorio *"
 
 # Estados en los que el paquete ya no puede recibir un repartidor.
-# "entregado" es final; "cancelado" tampoco se asigna.
+# "entregado" es final; los dos cierres por cancelación tampoco se asignan,
+# y el paquete en devolución sigue a cargo de quien lo tiene.
+# OJO: "pendiente_reasignacion" NO va acá: es justo el estado que se reasigna.
 ESTADOS_NO_ASIGNABLES = {
     Paquete.Estado.ENTREGADO.upper(),
     Paquete.Estado.CANCELADO.upper(),
+    Paquete.Estado.CANCELADO_POR_CLIENTE.upper(),
     Paquete.Estado.EN_DEVOLUCION.upper(),
 }
 
