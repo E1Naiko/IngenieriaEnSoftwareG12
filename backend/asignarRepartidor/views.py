@@ -47,8 +47,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from core.models import Paquete, Repartidor
-from core.reasignacion import ESTADOS_DISPONIBLES, en_oferta
 from crudComercios.views import _parse_body
+from verPedidosPorAsignar.services import ESTADOS_DISPONIBLES, en_oferta, es_reasignacion
 
 
 # Mensajes que pide la HU y del resto de validaciones.
@@ -146,7 +146,7 @@ def _listar_para_paquete(request, paquete_pk):
 
     candidatos = _repartidores_con_vehiculo_para(paquete)
     extras = {}
-    if _es_reasignacion(paquete):
+    if es_reasignacion(paquete):
         if not request.user.is_authenticated:
             return JsonResponse({"detail": "Iniciá sesión como coordinador."}, status=403)
         if en_oferta(paquete, timezone.now()):
@@ -158,10 +158,6 @@ def _listar_para_paquete(request, paquete_pk):
     if not repartidores:
         extras["mensaje"] = MSG_NO_HAY_CON_VEHICULO
     return JsonResponse({"repartidores": repartidores, **extras})
-
-
-def _es_reasignacion(paquete):
-    return paquete.estado.strip().lower() == Paquete.Estado.PENDIENTE_REASIGNACION
 
 
 @csrf_protect
@@ -233,7 +229,7 @@ def _asignar(request):
                 {"detail": "El paquete ya tiene un repartidor asignado."}, status=409
             )
 
-        if _es_reasignacion(paquete):
+        if es_reasignacion(paquete):
             autorizacion = _autorizar_reasignacion(request)
             if autorizacion.status_code != 200:
                 return autorizacion

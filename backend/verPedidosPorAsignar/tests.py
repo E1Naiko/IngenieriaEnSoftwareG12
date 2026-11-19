@@ -51,12 +51,15 @@ class ReasignacionTests(TestCase):
     def _en_cola_manual(self):
         return self.client.get(reverse("paquetesEnCurso")).json()["paquetes"][0]["por_reasignar"]
 
+    def _cola_manual(self):
+        return self.client.get(reverse("pedidos-por-reasignar"))
+
     def _asignar(self, repartidor, **kwargs):
         return self._post("asignarRepartidor", {"paquete": self.paquete.pk, "repartidor": repartidor.pk}, **kwargs)
 
     def test_publica_y_libera_para_otro_repartidor_cercano(self):
         ahora = timezone.now()
-        with patch("actualizacionEstado.views.timezone.now", return_value=ahora):
+        with patch("verPedidosPorAsignar.services.timezone.now", return_value=ahora):
             respuesta = self._cancelar()
         self.assertEqual(respuesta.status_code, 200)
         self.paquete.refresh_from_db()
@@ -66,6 +69,9 @@ class ReasignacionTests(TestCase):
         self.assertEqual(self.paquete.motivo_cancelacion, "Accidente")
         self.assertEqual(self.paquete.reasignacion_hasta, ahora + timedelta(minutes=15))
         self.assertFalse(self._en_cola_manual())
+        self.assertEqual(self._cola_manual().status_code, 403)
+        self.client.force_login(self.coordinador)
+        self.assertEqual(self._cola_manual().json(), {"paquetes": []})
         oferta, = self._cercanos(self.vecino).json()["paquetes"]
         self.assertEqual(oferta["id"], self.paquete.pk)
         self.assertNotIn("direccion", oferta)
@@ -100,8 +106,11 @@ class ReasignacionTests(TestCase):
         self.assertEqual(self._asignar(self.vecino).status_code, 403)
         self.client.force_login(self.coordinador)
         self.assertEqual(self._asignar(self.vecino).status_code, 409)
-        with patch("paquetesEnCurso.views.timezone.now", return_value=self.paquete.reasignacion_hasta):
+        with patch("django.utils.timezone.now", return_value=self.paquete.reasignacion_hasta):
             self.assertTrue(self._en_cola_manual())
+            publicado, = self._cola_manual().json()["paquetes"]
+            self.assertEqual(publicado["id"], self.paquete.pk)
+            self.assertEqual(publicado["motivo_cancelacion"], "Accidente")
             self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
             self.assertEqual(self._cercanos(self.vecino, tomar=True).status_code, 409)
             url = reverse("asignarRepartidor")
@@ -117,6 +126,7 @@ class ReasignacionTests(TestCase):
             self.assertEqual(self._asignar(self.original, cliente=con_csrf, **csrf).status_code, 400)
             self.assertEqual(self._asignar(self.vecino, cliente=con_csrf, **csrf).status_code, 200)
             self.assertEqual(self._asignar(self.otro, cliente=con_csrf, **csrf).status_code, 409)
+            self.assertEqual(self._cola_manual().json(), {"paquetes": []})
         self.paquete.refresh_from_db()
         self.assertEqual(self.paquete.repartidor_id, self.vecino.pk)
         self.assertIsNone(self.paquete.reasignacion_hasta)
@@ -124,9 +134,12 @@ class ReasignacionTests(TestCase):
     def test_sin_ubicacion_pasa_directo_al_coordinador(self):
         self.assertEqual(self._cancelar(ubicacion=None).status_code, 200)
         self.assertTrue(self._en_cola_manual())
+        self.client.force_login(self.coordinador)
+        self.assertEqual([p["id"] for p in self._cola_manual().json()["paquetes"]], [self.paquete.pk])
         self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
 
     def test_ausencia_o_rechazo_se_devuelve_al_comercio_sin_oferta(self):
+        self.client.force_login(self.coordinador)
         for causa in ("cliente_ausente", "cliente_rechaza"):
             with self.subTest(causa=causa):
                 Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.EN_CAMINO)
@@ -136,6 +149,7 @@ class ReasignacionTests(TestCase):
                 self.assertEqual(self.paquete.repartidor_id, self.original.pk)
                 self.assertIsNone(self.paquete.reasignacion_hasta)
                 self.assertIsNone(self.paquete.retiro_latitud)
+                self.assertEqual(self._cola_manual().json(), {"paquetes": []})
                 self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
                 en_devolucion, = self._post("paquetes-repartidor", {"token": self.original.token}).json()["paquetes"]
                 self.assertEqual(en_devolucion["direccion_comercio"], "Calle 55")
