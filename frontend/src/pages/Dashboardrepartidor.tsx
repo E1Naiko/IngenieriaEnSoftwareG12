@@ -261,7 +261,7 @@ function PedidoItem({ paquete: p, token, onActualizado }: PedidoItemProps) {
                   <option value="">Seleccioná una opción</option>
 
                   <option value="pendiente_reasignacion">
-                    Pendiente de reasignación
+                    Fuerza mayor (reasignación a otro repartidor)
                   </option>
 
                   <option value="en_devolucion">
@@ -283,7 +283,7 @@ function PedidoItem({ paquete: p, token, onActualizado }: PedidoItemProps) {
                     "El cliente estaba ausente o rechazó el pedido. El repartidor debe devolverlo."}
 
                   {estadoCancelacion === "cancelado" &&
-                    "En el flujo de devolución, la cancelación se completa cuando el repartidor confirma que devolvió el paquete."}
+                    "El pedido fue cancelado."}
                 </p>
               )}
 
