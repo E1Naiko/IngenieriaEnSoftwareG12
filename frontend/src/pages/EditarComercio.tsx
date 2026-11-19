@@ -19,6 +19,8 @@ type Errores = Partial<Record<Campo, string>>;
 const MSG_OBLIGATORIO = "Campo obligatorio";
 const MSG_REPETIDO = "Este dato ya existe en el sistema";
 const MSG_TELEFONO = "El teléfono debe contener solamente números";
+const MSG_TELEFONO_LARGO = "El teléfono no puede tener más de 14 dígitos";
+const MSG_TELEFONO_CERO = "El teléfono debe ser mayor a 0";
 
 const VALORES_INICIALES: Valores = {
   nombre: "",
@@ -37,8 +39,14 @@ function validar(valores: Valores): Errores {
   if (!valores.telefono.trim()) errores.telefono = MSG_OBLIGATORIO;
   if (!valores.direccion.trim()) errores.direccion = MSG_OBLIGATORIO;
 
-  if (!errores.telefono && !contieneSoloNumeros(valores.telefono.trim())) {
+  const telefono = valores.telefono.trim();
+
+  if (!errores.telefono && !contieneSoloNumeros(telefono)) {
     errores.telefono = MSG_TELEFONO;
+  } else if (!errores.telefono && telefono.length > 14) {
+    errores.telefono = MSG_TELEFONO_LARGO;
+  } else if (!errores.telefono && Number(telefono) <= 0) {
+    errores.telefono = MSG_TELEFONO_CERO;
   }
 
   return errores;
@@ -98,10 +106,10 @@ function EditarComercio() {
       }
 
       const data = await response.json();
-      // Acepta [] directo o { comercios: [] } según lo que devuelva el backend.
+      // Acepta lista directa, paginada ({ results }) o { comercios }.
       setComercios(
         Array.isArray(data) ? data : data.results ?? data.comercios ?? []
-    );
+      );
     } catch (error) {
       setErrorLista(
         error instanceof Error
@@ -361,8 +369,11 @@ function EditarComercio() {
                     id="editar-telefono"
                     type="tel"
                     inputMode="numeric"
+                    maxLength={14}
                     value={valores.telefono}
-                    onChange={(e) => cambiar("telefono", e.target.value)}
+                    onChange={(e) =>
+                      cambiar("telefono", e.target.value.replace(/\D/g, ""))
+                    }
                     className={errores.telefono ? "editar-input-error" : ""}
                   />
                   {errores.telefono && (
