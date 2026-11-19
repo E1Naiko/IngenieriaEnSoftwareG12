@@ -1,0 +1,253 @@
+/* Página principal */
+.editar-pagina {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  color: #1f2937;
+}
+
+.editar-lista,
+.editar-formulario {
+  padding: 30px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+.editar-lista h1,
+.editar-formulario h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+/* Encabezado de la lista y botón de alta */
+.editar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.editar-header .editar-subtitulo {
+  margin-bottom: 0;
+}
+
+.editar-header .editar-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Texto introductorio */
+.editar-subtitulo {
+  margin: 0 0 22px;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* Filas de la lista de repartidores */
+.editar-repartidor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.editar-repartidor-item p {
+  margin: 5px 0 0;
+  color: #64748b;
+}
+
+.editar-repartidor-item button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 7px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editar-repartidor-item button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.editar-repartidor-item button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Campos del formulario */
+.editar-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.editar-campo label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.editar-campo input,
+.editar-campo select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1f2937;
+  font: inherit;
+  outline: none;
+}
+
+.editar-campo input:focus,
+.editar-campo select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.editar-campo .editar-input-error {
+  border-color: #dc2626;
+}
+
+.editar-input-solo-lectura {
+  background-color: #f1f3f5 !important;
+  color: #555 !important;
+  cursor: default;
+}
+
+/* Mensajes de error */
+.editar-error {
+  color: #dc2626;
+  font-size: 0.82rem;
+}
+
+.editar-error-general {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+/* Botones */
+.editar-acciones {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.editar-btn {
+  padding: 11px 17px;
+  border: none;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.editar-btn-principal {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.editar-btn-principal:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.editar-btn-secundario {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.editar-btn-secundario:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+/* Confirmación de modificación exitosa */
+.editar-exito {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 25px 5px 10px;
+  text-align: center;
+}
+
+.editar-exito h2 {
+  margin: 0;
+  color: #166534;
+}
+
+.editar-exito p {
+  margin: 0 0 10px;
+  color: #64748b;
+}
+
+.editar-exito-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Adaptación para pantallas pequeñas */
+@media (max-width: 600px) {
+  .editar-pagina {
+    padding: 18px 12px;
+  }
+
+  .editar-lista,
+  .editar-formulario {
+    padding: 22px 16px;
+  }
+
+  .editar-repartidor-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .editar-repartidor-item button {
+    width: 100%;
+  }
+
+  .editar-acciones {
+    flex-direction: column-reverse;
+  }
+
+  .editar-acciones .editar-btn {
+    width: 100%;
+  }
+
+  .editar-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.editar-header .editar-btn {
+  width: 100%;
+}
+}
