@@ -99,7 +99,7 @@ INSTALLED_APPS = [
     "asignarRepartidor",
     
     "consultarEstadoEnvio",
-    
+    "disponibilidadRepartidor",
     "ingresarPedido",
     "paquetesEnCurso",
     "actualizacionEstado",
