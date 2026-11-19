@@ -65,9 +65,18 @@ def distancia_oferta(paquete, repartidor, ubicacion, ahora):
 
 
 class CancelacionInvalida(Exception):
-    def __init__(self, mensaje, *, estado_incompatible=False):
+    """Rechazo con un motivo que el frontend puede usar para guiar al usuario.
+
+    ``campo`` nombra el campo culpable (``"causa"``, ``"motivo"``,
+    ``"ubicacion"``) para que el cliente resalte justo ese dato en vez de
+    mostrar un error genérico; ``estado_incompatible`` marca los rechazos que
+    dependen del estado actual del paquete (409).
+    """
+
+    def __init__(self, mensaje, *, estado_incompatible=False, campo=None):
         super().__init__(mensaje)
         self.estado_incompatible = estado_incompatible
+        self.campo = campo
 
 
 def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
@@ -75,13 +84,15 @@ def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
     if paquete.estado.strip().lower() not in ESTADOS_CANCELABLES:
         raise CancelacionInvalida("El pedido no está en condiciones de ser cancelado.", estado_incompatible=True)
     if causa not in Paquete.CausaCancelacion.values:
-        raise CancelacionInvalida("Seleccioná una causa de cancelación válida.")
+        raise CancelacionInvalida("Seleccioná una causa de cancelación válida.", campo="causa")
     if not isinstance(motivo, str) or not 1 <= len(motivo.strip()) <= 500 or "\x00" in motivo:
-        raise CancelacionInvalida("Indicá el motivo de la cancelación (máximo 500 caracteres).")
+        raise CancelacionInvalida(
+            "Indicá el motivo de la cancelación (máximo 500 caracteres).", campo="motivo"
+        )
 
     ubicacion = ubicacion_valida(ubicacion_informada)
     if ubicacion_informada is not None and ubicacion is None:
-        raise CancelacionInvalida("La ubicación indicada no es válida.")
+        raise CancelacionInvalida("La ubicación indicada no es válida.", campo="ubicacion")
 
     paquete.causa_cancelacion = causa
     paquete.motivo_cancelacion = motivo.strip()

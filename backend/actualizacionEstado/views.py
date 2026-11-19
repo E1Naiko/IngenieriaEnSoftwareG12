@@ -9,9 +9,11 @@ from core.models import Paquete, Repartidor
 from crudComercios.views import _parse_body
 from verPedidosPorAsignar.services import CancelacionInvalida, registrar_cancelacion
 
+from .comprobantes import FotoInvalida, guardar_foto_dni
+
 
 def to_dict(paquete):
-    return {
+    data = {
         "id": paquete.id,
         "cod_seguimiento": paquete.cod_seguimiento,
         "estado": paquete.estado,
@@ -26,6 +28,11 @@ def to_dict(paquete):
         "id_comercio": paquete.comercio_id,
         "id_cliente": paquete.cliente_id,
     }
+    # Igual que el listado del repartidor (pedidosAsignados.serializers): cuando
+    # hay que devolver el paquete, el front necesita saber adónde llevarlo.
+    if str(paquete.estado).strip().lower() == Paquete.Estado.EN_DEVOLUCION:
+        data["direccion_comercio"] = paquete.comercio.direccion
+    return data
 
 
 def error(mensaje, status=400):
@@ -80,7 +87,10 @@ def cambiar_estado_pedido(request):
                     ubicacion_informada=data.get("ubicacion"),
                 )
             except CancelacionInvalida as exc:
-                return error(str(exc), 409 if exc.estado_incompatible else 400)
+                cuerpo = {"message": str(exc)}
+                if exc.campo:
+                    cuerpo["campo"] = exc.campo
+                return JsonResponse(cuerpo, status=409 if exc.estado_incompatible else 400)
             return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})
 
         siguiente = {
@@ -97,6 +107,14 @@ def cambiar_estado_pedido(request):
         if nuevo_estado == Paquete.Estado.ENTREGADO:
             paquete.retiro_latitud = paquete.retiro_longitud = None
             campos += ["retiro_latitud", "retiro_longitud"]
+            if data.get("foto_dni"):
+                # Si la foto no sirve, la entrega no se registra: mejor un 400
+                # claro que dejar el comprobante faltante en silencio.
+                try:
+                    guardar_foto_dni(paquete, data["foto_dni"])
+                except FotoInvalida as exc:
+                    return JsonResponse({"message": str(exc), "campo": "foto_dni"}, status=400)
+                campos.append("comprobante")
         paquete.save(update_fields=campos)
         return JsonResponse({
             "message": "Devolución al comercio confirmada." if estado == Paquete.Estado.EN_DEVOLUCION

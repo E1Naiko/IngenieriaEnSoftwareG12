@@ -144,3 +144,92 @@ class ActualizarPedidoTests(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("JSON válido", r.json()["message"])
+    # --- Cancelación desde el panel del repartidor ---
+    def test_cancelar_sin_causa_indica_el_campo_que_falta(self):
+        """El front pide causa; si falta, responde 400 señalando ``causa``."""
+        r = self._post({"id": self.paquete.id, "estado": "cancelado", "motivo": "Se rompió"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("causa de cancelación", r.json()["message"])
+        self.assertEqual(r.json()["campo"], "causa")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_cancelar_por_fuerza_mayor_libera_el_pedido(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "motivo": "  Se pinchó la rueda ",
+            "causa": "fuerza_mayor", "ubicacion": {"latitud": -34.92, "longitud": -57.95},
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["message"], "El pedido se publicó en Pedidos cercanos.")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.PENDIENTE_REASIGNACION)
+        self.assertIsNone(self.paquete.repartidor_id)
+        self.assertEqual(self.paquete.motivo_cancelacion, "Se pinchó la rueda")
+
+    def test_cancelar_por_ausencia_deja_el_paquete_en_devolucion(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "motivo": "No estaba",
+            "causa": "cliente_ausente",
+        })
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.EN_DEVOLUCION)
+
+        # Segundo paso: confirmar la devolución, sin causa ni motivo.
+        r = self._post({"id": self.paquete.id, "estado": "cancelado"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["message"], "Devolución al comercio confirmada.")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO)
+
+    def test_motivo_invalido_indica_el_campo(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "causa": "fuerza_mayor", "motivo": "   ",
+        })
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["campo"], "motivo")
+
+    def test_estado_retirado_avanza_a_en_camino(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.RETIRADO)
+        r = self._post({"id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.EN_CAMINO)
+
+    # --- Foto del DNI en la entrega ---
+    def _entregar_con_foto(self, foto):
+        Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.EN_CAMINO)
+        return self._post({"id": self.paquete.id, "estado": "entregado", "foto_dni": foto})
+
+    def test_entregar_guarda_la_foto_del_dni(self):
+        import base64
+        from tempfile import TemporaryDirectory
+
+        png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64).decode()
+        with TemporaryDirectory() as media:
+            with self.settings(MEDIA_ROOT=media):
+                r = self._entregar_con_foto(f"data:image/png;base64,{png}")
+                self.assertEqual(r.status_code, 200)
+                self.paquete.refresh_from_db()
+                self.assertEqual(self.paquete.estado, Paquete.Estado.ENTREGADO)
+                self.assertIsNotNone(self.paquete.comprobante_id)
+                self.paquete.comprobante.file.open("rb")
+                self.assertGreater(len(self.paquete.comprobante.file.read()), 0)
+
+    def test_foto_que_no_es_imagen_rechaza_la_entrega(self):
+        import base64
+
+        r = self._entregar_con_foto("data:image/png;base64," + base64.b64encode(b"no soy una foto").decode())
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["campo"], "foto_dni")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.EN_CAMINO)
+        self.assertIsNone(self.paquete.comprobante_id)
+
+    def test_entregar_sin_foto_sigue_permitido(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.EN_CAMINO)
+        r = self._post({"id": self.paquete.id, "estado": "entregado"})
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ENTREGADO)
+        self.assertIsNone(self.paquete.comprobante_id)
