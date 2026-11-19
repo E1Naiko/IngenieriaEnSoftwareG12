@@ -1,4 +1,8 @@
-/* Página principal */
+
+/* ========================================
+   Página principal
+======================================== */
+
 .editar-pagina {
   max-width: 900px;
   margin: 0 auto;
@@ -20,7 +24,10 @@
   font-size: 1.5rem;
 }
 
-/* Encabezado de la lista y botón de alta */
+/* ========================================
+   Encabezado de la lista
+======================================== */
+
 .editar-header {
   display: flex;
   justify-content: space-between;
@@ -38,14 +45,20 @@
   white-space: nowrap;
 }
 
-/* Texto introductorio */
+/* ========================================
+   Texto introductorio
+======================================== */
+
 .editar-subtitulo {
   margin: 0 0 22px;
   color: #64748b;
   font-size: 0.95rem;
 }
 
-/* Filas de la lista de repartidores */
+/* ========================================
+   Lista de repartidores
+======================================== */
+
 .editar-repartidor-item {
   display: flex;
   justify-content: space-between;
@@ -55,11 +68,27 @@
   margin-top: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.editar-repartidor-item:hover {
+  border-color: #cbd5e1;
 }
 
 .editar-repartidor-item p {
   margin: 5px 0 0;
   color: #64748b;
+}
+
+/* ========================================
+   Botones de cada repartidor
+======================================== */
+
+.editar-item-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .editar-repartidor-item button {
@@ -71,6 +100,7 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .editar-repartidor-item button:hover:not(:disabled) {
@@ -82,7 +112,41 @@
   cursor: not-allowed;
 }
 
-/* Campos del formulario */
+/* Botón Dar de baja */
+
+.editar-repartidor-item .editar-btn-baja {
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  padding: 9px 14px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editar-repartidor-item .editar-btn-baja:hover:not(:disabled) {
+  background-color: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
+.editar-repartidor-item .editar-btn-baja:active:not(:disabled) {
+  background-color: #fecdd3;
+  transform: scale(0.98);
+}
+
+.editar-repartidor-item .editar-btn-baja:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   Campos del formulario
+======================================== */
+
 .editar-campo {
   display: flex;
   flex-direction: column;
@@ -125,7 +189,10 @@
   cursor: default;
 }
 
-/* Mensajes de error */
+/* ========================================
+   Mensajes de error
+======================================== */
+
 .editar-error {
   color: #dc2626;
   font-size: 0.82rem;
@@ -140,7 +207,10 @@
   font-size: 0.9rem;
 }
 
-/* Botones */
+/* ========================================
+   Botones del formulario
+======================================== */
+
 .editar-acciones {
   display: flex;
   justify-content: flex-end;
@@ -181,7 +251,10 @@
   background: #d1d5db;
 }
 
-/* Confirmación de modificación exitosa */
+/* ========================================
+   Confirmación de modificación exitosa
+======================================== */
+
 .editar-exito {
   display: flex;
   flex-direction: column;
@@ -214,7 +287,10 @@
   font-weight: 700;
 }
 
-/* Adaptación para pantallas pequeñas */
+/* ========================================
+   Adaptación para pantallas pequeñas
+======================================== */
+
 @media (max-width: 600px) {
   .editar-pagina {
     padding: 18px 12px;
@@ -230,8 +306,12 @@
     flex-direction: column;
   }
 
-  .editar-repartidor-item button {
+  .editar-item-acciones {
     width: 100%;
+  }
+
+  .editar-item-acciones button {
+    flex: 1;
   }
 
   .editar-acciones {
@@ -243,11 +323,149 @@
   }
 
   .editar-header {
-  flex-direction: column;
-  align-items: stretch;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editar-header .editar-btn {
+    width: 100%;
+  }
+}
+/* ========================================
+   Modal de confirmación de baja
+======================================== */
+
+.baja-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(3px);
 }
 
-.editar-header .editar-btn {
+.baja-modal {
   width: 100%;
+  max-width: 420px;
+  padding: 30px;
+
+  background: #ffffff;
+  border-radius: 14px;
+
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+
+  text-align: center;
+  animation: bajaEntrada 0.2s ease-out;
 }
+
+.baja-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+
+  border-radius: 50%;
+  background: #fff1f2;
+  color: #be123c;
+
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.baja-modal h2 {
+  margin: 0 0 15px;
+  color: #1f2937;
+  font-size: 1.4rem;
+}
+
+.baja-modal p {
+  margin: 8px 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.baja-modal strong {
+  display: block;
+  margin: 12px 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.baja-modal .baja-advertencia {
+  margin-top: 15px;
+  font-size: 0.88rem;
+}
+
+.baja-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.baja-acciones button {
+  flex: 1;
+  padding: 11px 14px;
+
+  border: none;
+  border-radius: 7px;
+
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: background-color 0.2s ease;
+}
+
+.baja-btn-cancelar {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.baja-btn-cancelar:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.baja-btn-confirmar {
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.baja-btn-confirmar:hover:not(:disabled) {
+  background: #b02a37;
+}
+
+.baja-acciones button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes bajaEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .baja-modal {
+    padding: 24px 18px;
+  }
+
+  .baja-acciones {
+    flex-direction: column-reverse;
+  }
 }
