@@ -88,6 +88,39 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 ```
 
+### Pedidos "Por Reasignar" (HU #36)
+
+App `pedidosPorReasignar`, **sin cambios en el esquema**: no hay estado nuevo,
+ni campos nuevos, ni migración. La lista son los paquetes `cancelado`, que es
+lo que deja el botón "Confirmar cancelación" del dashboard; como ese flujo no
+limpia `paquete.repartidor`, el nombre y apellido del último repartidor se lee
+directamente de esa FK.
+
+```text
+POST /api/pedidos-por-reasignar/               body {"token": "ABC123"}
+POST /api/pedidos-por-reasignar/aceptar/<id>/ body {"token": "ABC123"}
+```
+
+El filtro por zona cercana quedó descartado: entran **todos** los `cancelado`.
+Cada ítem tiene `id`, `direccion_retiro`, `direccion_destino`, `tamanio` y
+`ultimo_repartidor: {nombre, apellido} | null`. Sin pedidos, `200` con
+`{"mensaje": "...", "pedidos": []}`.
+
+Aceptar es un `UPDATE` condicional atómico (`WHERE estado='cancelado'`), así
+que el primer repartidor se lo queda y el segundo recibe `409`; el pedido pasa
+a `asignado` (y la FK apunta al nuevo repartidor), con lo cual aparece
+automáticamente en `POST /api/paquetes-repartidor/`. No hay límite de pedidos
+ya asignados. "Operativo" se valida como `ACTIVO` normalizado, con el token en
+cada request.
+
+Contrato completo, decisiones y efectos sobre otras HUs:
+[pedidosPorReasignar/README.md](pedidosPorReasignar/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test pedidosPorReasignar
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable
