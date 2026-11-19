@@ -101,8 +101,6 @@
 .repartidor-estado-en_camino { background: #dff5e3; color: #1d6b32; }
 .repartidor-estado-entregado { background: #c8f0d2; color: #0f5224; }
 .repartidor-estado-cancelado { background: #fde2e0; color: #b42318; }
-.repartidor-estado-asignado  { background: #e8e6ff; color: #3b2fa0; }
-.repartidor-estado-en_devolucion { background: #ffe9d6; color: #8a4b00; }
 
 /* ===== Datos ===== */
 .repartidor-datos {
@@ -144,36 +142,6 @@
 }
 
 .repartidor-actualizar textarea { resize: vertical; }
-
-/* ===== Cancelación: causa y motivo ===== */
-.repartidor-causas {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid #e2e2e2;
-  border-radius: 8px;
-}
-
-.repartidor-causas legend {
-  padding: 0 4px;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.repartidor-causa {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 8px !important;
-  padding: 4px 0;
-  cursor: pointer;
-}
-
-.repartidor-causa input[type="radio"] { margin: 0; }
-
-.repartidor-ayuda {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #666;
-}
 
 .repartidor-actualizar textarea:focus,
 .repartidor-actualizar input[type="file"]:focus {

@@ -13,9 +13,6 @@ interface PaqueteAsignado {
   direccion: string;
   comercio: string;
   fecha_destino: string; // AAAA-MM-DD
-  // Siguientes dos: los devuelve /api/cambiar-estado-pedido/ al cambiar el estado.
-  direccion_comercio?: string; // solo cuando vuelve en devolución al comercio
-  id_repartidor_asignado?: number | null; // null = el pedido ya no es suyo
 }
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
@@ -24,38 +21,20 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
   en_camino: "En camino",
   entregado: "Entregado",
   cancelado: "Cancelado",
-  en_devolucion: "Devolución al comercio",
 };
 
-// Flujo que maneja el repartidor: asignado/retirado -> en_camino -> entregado.
+// Flujo que maneja el repartidor: asignado -> en_camino -> entregado.
 const SIGUIENTE_ESTADO: Record<string, string | null> = {
   asignado: "en_camino",
-  retirado: "en_camino",
   en_camino: "entregado",
   entregado: null,
   cancelado: null,
-  en_devolucion: "cancelado",
 };
 
 // Texto del botón según el estado actual
 const TEXTO_BOTON: Record<string, string> = {
   asignado: "Marcar como En camino",
-  retirado: "Marcar como En camino",
   en_camino: "Marcar como Entregado",
-  en_devolucion: "Confirmar devolución al comercio",
-};
-
-// Causas de cancelación que acepta el backend (Paquete.CausaCancelacion).
-const CAUSAS = [
-  { valor: "fuerza_mayor", texto: "Fuerza mayor" },
-  { valor: "cliente_ausente", texto: "Cliente ausente" },
-  { valor: "cliente_rechaza", texto: "El cliente rechazó el pedido" },
-] as const;
-
-const AYUDA_CAUSA: Record<string, string> = {
-  fuerza_mayor: "El paquete se publica como pedido cercano para otro repartidor.",
-  cliente_ausente: "El paquete se devuelve al comercio; vos lo confirmás al llegar.",
-  cliente_rechaza: "El paquete se devuelve al comercio; vos lo confirmás al llegar.",
 };
 
 // "2026-10-30" -> "30/10/2026" (sin pasar por Date para evitar desfases de zona horaria)
@@ -77,15 +56,13 @@ function archivoABase64(archivo: File): Promise<string> {
 interface PedidoItemProps {
   paquete: PaqueteAsignado;
   token: string;
-  onActualizado: (id: number, cambios: Partial<PaqueteAsignado>) => void;
-  onEliminado: (id: number) => void;
+  onActualizado: (id: number, nuevoEstado: string) => void;
 }
 
-function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoItemProps) {
+function PedidoItem({ paquete: p, token, onActualizado }: PedidoItemProps) {
   const [foto, setFoto] = useState<File | null>(null);
   const [pidiendoFoto, setPidiendoFoto] = useState(false);
   const [cancelando, setCancelando] = useState(false);
-  const [causa, setCausa] = useState("");
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -93,22 +70,8 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
 
   const siguiente = SIGUIENTE_ESTADO[p.estado] ?? null;
   const finalizado = siguiente === null;
-  const esDevolucion = p.estado === "en_devolucion";
-  // Antes de entregar hace falta la foto; antes de cancelar, causa y motivo.
-  const esEntrega = siguiente === "entregado";
 
-  function limpiarFormularios() {
-    setFoto(null);
-    setCausa("");
-    setMotivo("");
-    setPidiendoFoto(false);
-    setCancelando(false);
-  }
-
-  async function enviarCambio(
-    estado: string,
-    extra?: { foto?: File; causa?: string; motivo?: string },
-  ) {
+  async function enviarCambio(estado: string, extra?: { foto?: File; motivo?: string }) {
     setAviso("");
     setExito("");
     setEnviando(true);
@@ -120,7 +83,6 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
         estado,
       };
       if (extra?.motivo) cuerpo.motivo = extra.motivo;
-      if (extra?.causa) cuerpo.causa = extra.causa;
       if (extra?.foto) cuerpo.foto_dni = await archivoABase64(extra.foto);
 
       const res = await fetch(`${API_URL}/cambiar-estado-pedido/`, {
@@ -133,37 +95,21 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
 
       if (!res.ok) {
         console.error("Error al actualizar estado:", res.status, data);
-        if (data?.campo === "causa") setCausa("");
-        if (data?.campo === "motivo") setMotivo("");
-        if (data?.campo === "foto_dni") setFoto(null);
         setAviso(
           data?.message ??
             data?.error ??
             data?.detail ??
-            `No se pudo actualizar el estado (código ${res.status})`,
+            `No se pudo actualizar el estado (código ${res.status})`
         );
         return;
       }
 
-      // El backend decide el estado final: cancelar por fuerza mayor lo pasa a
-      // "pendiente_reasignacion" (sale de la lista) y por ausencia/rechazo a
-      // "en_devolucion" (sigue en la lista para confirmar la devolución).
-      const paqueteActualizado = data?.paquete as Partial<PaqueteAsignado> | undefined;
-      const estadoFinal = paqueteActualizado?.estado ?? estado;
-      const yaNoEsMio = !paqueteActualizado?.id_repartidor_asignado;
-      if (yaNoEsMio) {
-        onEliminado(p.id);
-      } else {
-        onActualizado(p.id, {
-          estado: estadoFinal,
-          direccion_comercio: paqueteActualizado?.direccion_comercio ?? p.direccion_comercio,
-        });
-      }
-      setExito(
-        data?.message ??
-          `Estado actualizado a "${ETIQUETAS_ESTADO[estadoFinal] ?? estadoFinal}".`,
-      );
-      limpiarFormularios();
+      onActualizado(p.id, estado);
+      setExito(`Estado actualizado a "${ETIQUETAS_ESTADO[estado]}".`);
+      setFoto(null);
+      setMotivo("");
+      setPidiendoFoto(false);
+      setCancelando(false);
     } catch {
       setAviso("No se pudo conectar con el servidor");
     } finally {
@@ -175,14 +121,13 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
     if (!siguiente) return;
 
     // Antes de pasar a Entregado se pide la foto del DNI
-    if (esEntrega) {
+    if (siguiente === "entregado") {
       setPidiendoFoto(true);
       setAviso("");
       setExito("");
       return;
     }
 
-    // Confirmar la devolución al comercio no lleva datos extra
     enviarCambio(siguiente);
   }
 
@@ -195,15 +140,11 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
   }
 
   function confirmarCancelacion() {
-    if (!causa) {
-      setAviso("Seleccioná el motivo de la cancelación.");
-      return;
-    }
     if (!motivo.trim()) {
-      setAviso("Contanos brevemente qué pasó (máximo 500 caracteres).");
+      setAviso("Tenés que indicar el motivo de la cancelación.");
       return;
     }
-    enviarCambio("cancelado", { causa, motivo: motivo.trim() });
+    enviarCambio("cancelado", { motivo: motivo.trim() });
   }
 
   return (
@@ -216,12 +157,6 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
       </div>
 
       <dl className="repartidor-datos">
-        {esDevolucion && p.direccion_comercio && (
-          <>
-            <dt>Devolver a</dt>
-            <dd>{p.direccion_comercio}</dd>
-          </>
-        )}
         <dt>Destinatario</dt>
         <dd>{p.destinatario}</dd>
         <dt>Dirección</dt>
@@ -238,24 +173,13 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
         <p className="repartidor-mensaje">Este pedido ya no admite cambios de estado.</p>
       ) : (
         <div className="repartidor-actualizar">
-          {esDevolucion ? (
-            <div className="repartidor-acciones">
-              <button
-                type="button"
-                className="repartidor-primario"
-                onClick={avanzar}
-                disabled={enviando}
-              >
-                {enviando ? "Guardando..." : TEXTO_BOTON.en_devolucion}
-              </button>
-            </div>
-          ) : pidiendoFoto ? (
+          {pidiendoFoto ? (
             <>
               <label>
                 Foto del DNI del receptor
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
                   capture="environment"
                   onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
                   disabled={enviando}
@@ -286,30 +210,12 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
             </>
           ) : cancelando ? (
             <>
-              <fieldset className="repartidor-causas" disabled={enviando}>
-                <legend>Motivo de la cancelación</legend>
-                {CAUSAS.map((opcion) => (
-                  <label key={opcion.valor} className="repartidor-causa">
-                    <input
-                      type="radio"
-                      name={`causa-${p.id}`}
-                      value={opcion.valor}
-                      checked={causa === opcion.valor}
-                      onChange={() => setCausa(opcion.valor)}
-                    />
-                    <span>{opcion.texto}</span>
-                  </label>
-                ))}
-              </fieldset>
-              {causa && <p className="repartidor-ayuda">{AYUDA_CAUSA[causa]}</p>}
               <label>
-                ¿Qué pasó?
+                Motivo de la cancelación
                 <textarea
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                   rows={2}
-                  maxLength={500}
-                  placeholder="Ej.: el cliente no estaba y no atendía el teléfono."
                   disabled={enviando}
                 />
               </label>
@@ -327,7 +233,6 @@ function PedidoItem({ paquete: p, token, onActualizado, onEliminado }: PedidoIte
                   className="repartidor-secundario"
                   onClick={() => {
                     setCancelando(false);
-                    setCausa("");
                     setMotivo("");
                     setAviso("");
                   }}
@@ -425,12 +330,8 @@ function DashboardRepartidor() {
     }
   }
 
-  function actualizarEstadoLocal(id: number, cambios: Partial<PaqueteAsignado>) {
-    setPaquetes((prev) => prev.map((p) => (p.id === id ? { ...p, ...cambios } : p)));
-  }
-
-  function quitarPedido(id: number) {
-    setPaquetes((prev) => prev.filter((p) => p.id !== id));
+  function actualizarEstadoLocal(id: number, nuevoEstado: string) {
+    setPaquetes((prev) => prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado } : p)));
   }
 
   useEffect(() => {
@@ -492,7 +393,6 @@ function DashboardRepartidor() {
                 paquete={p}
                 token={repartidor.token}
                 onActualizado={actualizarEstadoLocal}
-                onEliminado={quitarPedido}
               />
             ))}
           </ul>
