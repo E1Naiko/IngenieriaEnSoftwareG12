@@ -9,6 +9,11 @@ function LoginRepartidor() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Recuperar token
+  const [recuperando, setRecuperando] = useState(false);
+  const [dni, setDni] = useState("");
+  const [tokenNuevo, setTokenNuevo] = useState("");
+
   const navigate = useNavigate();
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -62,6 +67,108 @@ function LoginRepartidor() {
     }
   }
 
+  function abrirRecuperar() {
+    setRecuperando(true);
+    setMessage("");
+    setDni("");
+    setTokenNuevo("");
+  }
+
+  function volverAlLogin() {
+    setRecuperando(false);
+    setMessage("");
+    setTokenNuevo("");
+  }
+
+  async function handleRecuperar(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const dniLimpio = dni.trim();
+    if (!dniLimpio) {
+      setMessage("Ingresá tu DNI");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+    setTokenNuevo("");
+
+    try {
+      const response = await fetch(`${API_URL}/recuperar-token/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dni: dniLimpio }),
+      });
+
+      // Escenario 2: el DNI no está registrado
+      if (response.status === 404) {
+        setMessage("Datos incorrectos");
+        return;
+      }
+
+      if (response.status === 403) {
+        setMessage(
+          "El repartidor no se encuentra habilitado. Comuníquese con el coordinador"
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        setMessage("Error del servidor. Intentá de nuevo");
+        return;
+      }
+
+      // Escenario 1: muestra el nuevo token en pantalla
+      const data = await response.json();
+      setTokenNuevo(data.token);
+    } catch {
+      setMessage("No se pudo conectar con el servidor");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (recuperando) {
+    return (
+      <main className="login-container">
+        <form className="login-card" onSubmit={handleRecuperar}>
+          <h1>Recuperar token</h1>
+
+          <label htmlFor="dni">DNI</label>
+          <input
+            id="dni"
+            type="text"
+            inputMode="numeric"
+            value={dni}
+            onChange={(event) => setDni(event.target.value)}
+            placeholder="Ingresá tu DNI"
+            autoComplete="off"
+          />
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Consultando..." : "Recuperar token"}
+          </button>
+
+          {tokenNuevo && (
+            <p role="status">
+              Tu nuevo token es: <strong>{tokenNuevo}</strong>
+            </p>
+          )}
+
+          {message && (
+            <p className="error-message" role="alert">
+              {message}
+            </p>
+          )}
+
+          <button type="button" onClick={volverAlLogin}>
+            Volver al inicio de sesión
+          </button>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <main className="login-container">
       <form className="login-card" onSubmit={handleLogin}>
@@ -79,6 +186,10 @@ function LoginRepartidor() {
 
         <button type="submit" disabled={loading}>
           {loading ? "Conectando..." : "Iniciar sesión"}
+        </button>
+
+        <button type="button" onClick={abrirRecuperar}>
+          Recuperar token
         </button>
 
         {message && (
