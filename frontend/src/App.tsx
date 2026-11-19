@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./components/login/login";
@@ -14,6 +13,7 @@ import ConsultarPaquete from "./pages/ConsultarEnvio";
 import PedidosPorReasignar from "./pages/PedidosPorReasignar";
 
 import EditarRepartidor from "./pages/EditarRepartidor";
+import EditarComercio from "./pages/EditarComercio";
 import "./App.css";
 
 function App() {
@@ -22,10 +22,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/comercios" element={<Comercios />} />
         <Route path="/ingresar-pedido" element={<IngresarPedido />} />
         <Route path="/flota" element={<Flota />} />
-        <Route path="/comercios" element={<Comercios />} /> 
+        <Route path="/listado-comercios" element={<Comercios />} />
         <Route path="/loginrepartidor" element={<LoginRepartidor />} />
         <Route path="/dashboardrepartidor" element={<DashboardRepartidor />} />
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
@@ -33,6 +32,7 @@ function App() {
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
         <Route path="/dashboardrepartidor/reasignar" element={<PedidosPorReasignar />} />
         <Route path="/repartidores" element={<EditarRepartidor />} />
+        <Route path="/comercios" element={<EditarComercio />} />
       </Routes>
     </BrowserRouter>
   );

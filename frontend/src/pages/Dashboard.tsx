@@ -5,7 +5,6 @@ import "../styles/Dashboard.css";
 import Flota from "./Flota";
 import PaquetesEnCurso from "./PaquetesEnCurso";
 import Comercios from "./Comercios";
-import GestionarComercios from "./GestionarComercios";
 import IngresarPedido from "./IngresarPedido";
 
 function Dashboard() {
@@ -22,13 +21,11 @@ function Dashboard() {
   const [paquetesAbiertos, setPaquetesAbiertos] = useState(true);
   const [comerciosAbiertos, setComerciosAbiertos] = useState(true);
 
-  // Controla la ventana modal de gestión de comercios.
-  const [modalComerciosAbierto, setModalComerciosAbierto] = useState(false);
   // Controla la ventana modal para ingresar pedidos.
   const [modalPedidoAbierto, setModalPedidoAbierto] = useState(false);
 
-  // Permite actualizar el listado después de modificar comercios.
-  const [refreshComercios, setRefreshComercios] = useState(0);
+  // Clave para refrescar el listado de comercios (se recarga al volver de /comercios).
+  const [refreshComercios] = useState(0);
 
   // Texto del buscador de comercios.
   const [busquedaComercios, setBusquedaComercios] = useState("");
@@ -72,11 +69,6 @@ function Dashboard() {
     setSidebarAbierto((abierto) => !abierto);
   }
 
-  // Actualiza el listado después de una operación exitosa.
-  function actualizarComercios() {
-    setRefreshComercios((actual) => actual + 1);
-  }
-
   return (
     <div
       className={`dashboard-layout ${
@@ -98,15 +90,15 @@ function Dashboard() {
         </h2>
 
         <nav className="sidebar-navigation">
-          {/* Abre el modal para cargar un comercio. */}
+          {/* Botón para abrir pagina Gestionar Comercios */}
           <button
             type="button"
             className="sidebar-link"
-            title="Cargar comercio"
-            onClick={() => setModalComerciosAbierto(true)}
+            title="Gestionar Comercios"
+            onClick={() => navigate("/comercios")}
           >
             <span className="sidebar-icon">🏪</span>
-            {sidebarAbierto && <span>Cargar comercio</span>}
+            {sidebarAbierto && <span>Gestionar Comercios</span>}
           </button>
 
           {/* Botón para abrir pagina Gestionar Repartidores */}
@@ -173,7 +165,7 @@ function Dashboard() {
           <h1>Bienvenido, {coordinador.username}</h1>
         </header>
 
-                {/* Sección desplegable: Paquetes en curso */}
+        {/* Sección desplegable: Paquetes en curso */}
         <section
           className={`dashboard-section ${
             paquetesAbiertos ? "section-open" : ""
@@ -269,7 +261,6 @@ function Dashboard() {
           )}
         </section>
 
-
         {/* Sección desplegable: Comercios */}
         <section
           className={`dashboard-section ${
@@ -326,43 +317,6 @@ function Dashboard() {
         </section>
       </main>
 
-      {/* Ventana modal para cargar comercios */}
-      {modalComerciosAbierto && (
-        <div
-          className="modal-overlay"
-          onClick={() => setModalComerciosAbierto(false)}
-        >
-          <section
-            className="modal-comercios"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-comercios-titulo"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="modal-comercios-header">
-              <h2 id="modal-comercios-titulo">
-                Cargar comercio
-              </h2>
-
-              <button
-                type="button"
-                className="modal-comercios-cerrar"
-                aria-label="Cerrar ventana"
-                onClick={() => setModalComerciosAbierto(false)}
-              >
-                ✕
-              </button>
-            </header>
-
-            <div className="modal-comercios-body">
-              <GestionarComercios
-                onChange={actualizarComercios}
-              />
-            </div>
-          </section>
-        </div>
-      )}
-
       {/* Ventana modal para ingresar pedidos */}
       {modalPedidoAbierto && (
         <div
@@ -393,7 +347,7 @@ function Dashboard() {
 
             <div className="modal-pedido-body">
               <IngresarPedido />
-            </div>
+            </div>ss
           </section>
         </div>
       )}
