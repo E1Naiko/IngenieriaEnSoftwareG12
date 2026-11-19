@@ -38,6 +38,23 @@ export default function GestionarComercios({
 
     setError("");
     setMensaje("");
+
+    // Validación del teléfono: solo números, máximo 14 dígitos y mayor a 0.
+    const telefono = form.telefono.trim();
+
+    if (!/^[0-9]+$/.test(telefono)) {
+      setError("El teléfono debe contener solamente números.");
+      return;
+    }
+    if (telefono.length > 14) {
+      setError("El teléfono no puede tener más de 14 dígitos.");
+      return;
+    }
+    if (Number(telefono) <= 0) {
+      setError("El teléfono debe ser mayor a 0.");
+      return;
+    }
+
     setGuardando(true);
 
     try {
@@ -65,7 +82,7 @@ export default function GestionarComercios({
       setForm(emptyForm);
       setMensaje("El comercio se registró correctamente.");
 
-      // Solicita al Dashboard actualizar el listado.
+      // Solicita al componente padre actualizar el listado.
       onChange();
     } catch (e) {
       setError(
@@ -108,10 +125,12 @@ export default function GestionarComercios({
           <input
             id="telefono-comercio"
             type="tel"
+            inputMode="numeric"
+            maxLength={14}
             placeholder="Ej.: 2211234567"
             value={form.telefono}
             onChange={(e) =>
-              handleChange("telefono", e.target.value)
+              handleChange("telefono", e.target.value.replace(/\D/g, ""))
             }
             required
           />

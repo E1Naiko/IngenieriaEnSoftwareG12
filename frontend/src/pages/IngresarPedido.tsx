@@ -11,6 +11,8 @@ export type Tamano = "chico" | "mediano" | "grande";
 export interface Comercio {
   id: number;
   nombre: string;
+  telefono?: string;
+  direccion?: string;
 }
 
 export interface Cliente {
@@ -51,6 +53,16 @@ const URL_COMERCIOS = "/api/comercios/";
 const URL_CLIENTES = "/api/clientes/";
 const URL_PEDIDOS = "/api/pedidos/";
 
+/* ---------- Utilidades ---------- */
+
+// Quita tildes y pasa a minúsculas para comparar textos.
+function normalizar(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 /* ---------- Popup genérico ---------- */
 
 interface PopupProps {
@@ -90,19 +102,24 @@ interface SelectorProps<T extends { id: number }> {
   singular: string;          // "comercio", "cliente"
   url: string;
   texto: (item: T) => string;
+  // Si se pasa, el popup muestra un buscador que filtra con este texto.
+  textoBusqueda?: (item: T) => string;
+  placeholderBusqueda?: string;
   valor: T | null;
   onChange: (item: T) => void;
   FormularioAlta?: ComponentType<FormularioAltaProps>;
 }
 
 function SelectorConPopup<T extends { id: number }>({
-  etiqueta, singular, url, texto, valor, onChange, FormularioAlta,
+  etiqueta, singular, url, texto, textoBusqueda, placeholderBusqueda,
+  valor, onChange, FormularioAlta,
 }: SelectorProps<T>) {
   const [abierto, setAbierto] = useState(false);
   const [agregando, setAgregando] = useState(false);
   const [items, setItems] = useState<T[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
   async function cargar() {
     setCargando(true);
@@ -124,7 +141,20 @@ function SelectorConPopup<T extends { id: number }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto, agregando]);
 
-  const cerrar = () => { setAbierto(false); setAgregando(false); };
+  const cerrar = () => { setAbierto(false); setAgregando(false); setBusqueda(""); };
+
+  // Abre el formulario de alta y limpia la búsqueda para que el
+  // elemento nuevo no quede oculto al volver a la lista.
+  const empezarAlta = () => { setBusqueda(""); setAgregando(true); };
+
+  // Aplica el buscador (si el selector lo tiene habilitado).
+  const textoLimpio = busqueda.trim();
+  const itemsFiltrados =
+    textoBusqueda && textoLimpio
+      ? items.filter((it) =>
+          normalizar(textoBusqueda(it)).includes(normalizar(textoLimpio))
+        )
+      : items;
 
   return (
     <div className="pedido-campo">
@@ -139,7 +169,7 @@ function SelectorConPopup<T extends { id: number }>({
           onCerrar={cerrar}
           pie={
             agregando ? null : (
-              <button type="button" className="pedido-primario" onClick={() => setAgregando(true)} disabled={!FormularioAlta}>
+              <button type="button" className="pedido-primario" onClick={empezarAlta} disabled={!FormularioAlta}>
                 Agregar {singular}
               </button>
             )
@@ -150,20 +180,41 @@ function SelectorConPopup<T extends { id: number }>({
               <FormularioAlta onGuardado={() => setAgregando(false)} onCancelar={() => setAgregando(false)} />
             </div>
           ) : (
-            <ul className="pedido-lista">
-              {cargando && <li className="pedido-vacio">Cargando…</li>}
-              {error && <li className="pedido-vacio">{error}</li>}
-              {!cargando && !error && items.length === 0 && (
-                <li className="pedido-vacio">Todavía no hay {singular}s cargados.</li>
+            <>
+              {textoBusqueda && (
+                <div className="pedido-buscador">
+                  <input
+                    type="search"
+                    className="pedido-buscador-input"
+                    placeholder={placeholderBusqueda ?? `Buscar ${singular}...`}
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    aria-label={`Buscar ${singular}`}
+                    autoFocus
+                  />
+                </div>
               )}
-              {items.map((it) => (
-                <li key={it.id}>
-                  <button type="button" className="pedido-item" onClick={() => { onChange(it); cerrar(); }}>
-                    {texto(it)}
-                  </button>
-                </li>
-              ))}
-            </ul>
+
+              <ul className="pedido-lista">
+                {cargando && <li className="pedido-vacio">Cargando…</li>}
+                {error && <li className="pedido-vacio">{error}</li>}
+                {!cargando && !error && items.length === 0 && (
+                  <li className="pedido-vacio">Todavía no hay {singular}s cargados.</li>
+                )}
+                {!cargando && !error && items.length > 0 && itemsFiltrados.length === 0 && (
+                  <li className="pedido-vacio">
+                    No se encontraron {singular}s para “{textoLimpio}”.
+                  </li>
+                )}
+                {itemsFiltrados.map((it) => (
+                  <li key={it.id}>
+                    <button type="button" className="pedido-item" onClick={() => { onChange(it); cerrar(); }}>
+                      {texto(it)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </Popup>
       )}
@@ -267,6 +318,8 @@ export default function IngresarPedido() {
         singular="comercio"
         url={URL_COMERCIOS}
         texto={(c) => c.nombre}
+        textoBusqueda={(c) => `${c.nombre} ${c.direccion ?? ""} ${c.telefono ?? ""}`}
+        placeholderBusqueda="Buscar comercio por nombre, dirección o teléfono..."
         valor={comercio}
         onChange={setComercio}
         FormularioAlta={FormularioComercio}

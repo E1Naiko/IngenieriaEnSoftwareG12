@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     "paquetesEnCurso",
     "actualizacionEstado",
     "pedidosAsignados",
+    "pedidosPorReasignar",
     "historialEnvios",
     "bajaRepartidor",
 ]
