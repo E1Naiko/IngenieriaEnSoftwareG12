@@ -11,6 +11,8 @@ import DashboardRepartidor from "./pages/Dashboardrepartidor";
 import PaquetesEnCurso from "./pages/PaquetesEnCurso";
 import HistorialEnvios from "./pages/HistorialEnvios";
 import ConsultarPaquete from "./pages/ConsultarEnvio";
+import PedidosPorReasignar from "./pages/PedidosPorReasignar";
+
 import EditarRepartidor from "./pages/EditarRepartidor";
 import "./App.css";
 
@@ -29,6 +31,7 @@ function App() {
         <Route path="/paquetesencurso" element={<PaquetesEnCurso />} />
         <Route path="/historialenvios" element={<HistorialEnvios />} />
         <Route path="/seguimiento" element={<ConsultarPaquete />} />
+        <Route path="/dashboardrepartidor/reasignar" element={<PedidosPorReasignar />} />
         <Route path="/repartidores" element={<EditarRepartidor />} />
       </Routes>
     </BrowserRouter>

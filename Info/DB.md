@@ -14,7 +14,7 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
 | `Cliente` | Datos personales y de contacto del destinatario (`nombre`, `apellido`, `telefono`, `direccion`, `dni`). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `asignado`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ### Estados de un paquete
@@ -25,9 +25,17 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 |---|---|---|
 | `pendiente` | Pendiente | `Paquete.Estado.PENDIENTE` |
 | `retirado` | Retirado | `Paquete.Estado.RETIRADO` |
+| `asignado` | Asignado | `Paquete.Estado.ASIGNADO` |
 | `en_camino` | En camino | `Paquete.Estado.EN_CAMINO` |
 | `entregado` | Entregado | `Paquete.Estado.ENTREGADO` |
 | `cancelado` | Cancelado | `Paquete.Estado.CANCELADO` |
+
+`cancelado` es, además, el estado que **publica un pedido para reasignación**
+(HU #36): lo deja el botón "Confirmar cancelación" del dashboard del
+repartidor. Ese flujo no limpia `paquete.repartidor`, así que la FK sigue
+apuntando al último repartidor que tuvo el paquete y de ahí se lee su nombre
+y apellido en la lista. No se agregó un estado `por_reasignar` ni campos de
+historial: **la HU #36 no cambia el esquema**.
 
 El valor predeterminado sigue siendo `pendiente`. `retirado` debe asignarse
 explícitamente, por ejemplo desde el formulario de `/admin/` o desde el ORM:
@@ -49,14 +57,21 @@ opciones: SQL directo o `update()` pueden escribir otros valores en la columna
 revisarlas por separado.
 
 El modelo no cambia estados automáticamente ni impone transiciones u orden.
-El único endpoint de paquetes por ahora es
-`GET /api/dashboard/paquetes-en-curso/` (HU #40): excluye solo `entregado`,
-comparando el estado sin distinguir mayúsculas. `cancelado` es un estado
-intermediario y por eso también se lista. Devuelve `id`, `destinatario`,
-`direccion`, `repartidor` y `estado` ("Sin asignar" cuando la FK `repartidor`
-es `NULL`). La property
+`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye solo `entregado`,
+comparando el estado sin distinguir mayúsculas: `cancelado` sigue apareciendo
+porque no es un estado final. Devuelve
+`id`, `destinatario`, `direccion`, `repartidor` y `estado` ("Sin asignar"
+cuando la FK `repartidor` es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
 `retirado` no se considera entregado.
+
+Los endpoints de la HU #36 (`POST /api/pedidos-por-reasignar/` y
+`.../aceptar/<id>/`) filtran por `estado__iexact="cancelado"` y están
+documentados en
+[backend/pedidosPorReasignar/README.md](../backend/pedidosPorReasignar/README.md).
+Al aceptar un pedido, un `UPDATE` condicional lo pasa a `asignado` y cambia
+la FK `repartidor` al nuevo repartidor; eso hace que desaparezca de la lista
+y aparezca en sus pedidos asignados.
 
 ## Puesta en marcha
 
