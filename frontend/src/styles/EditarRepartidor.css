@@ -469,3 +469,41 @@
     flex-direction: column-reverse;
   }
 }
+/* Datos del repartidor que se muestran en el modal de baja */
+
+.baja-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+
+  margin: 16px 0 0;
+  text-align: left;
+}
+
+.baja-datos div {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.baja-datos dt {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.baja-datos dd {
+  margin: 2px 0 0;
+  color: #1f2937;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .baja-datos {
+    grid-template-columns: 1fr;
+  }
+}

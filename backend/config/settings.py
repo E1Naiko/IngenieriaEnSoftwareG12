@@ -285,3 +285,15 @@ if not CORS_ALLOWED_ORIGINS:
 # cookies; con CORS_ALLOW_ALL_ORIGINS no se puede combinar (el navegador
 # rechaza `Access-Control-Allow-Credentials` junto con `*`).
 # CORS_ALLOW_CREDENTIALS = True
+
+
+# CSRF: las acciones del coordinador que modifican datos (por ejemplo, la baja
+# del repartidor de la HU #38) viajan con la cookie de sesión, así que Django
+# exige el token CSRF. El front lo lee de la cookie `csrftoken` y lo manda en
+# el header `X-CSRFToken`; para eso la cookie NO puede ser HttpOnly.
+#   CSRF_COOKIE_HTTPONLY = False  (valor por defecto de Django)
+#   CSRF_COOKIE_SAMESITE = "Lax"  (valor por defecto; alcanza porque el front
+#                                  llama por rutas relativas, mismo origen)
+# Si el front dejara de usar el proxy de Vite y llamara a otro dominio,
+# agregar ese dominio a CSRF_TRUSTED_ORIGINS (con esquema, sin barra final):
+CSRF_TRUSTED_ORIGINS = _origenes(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
