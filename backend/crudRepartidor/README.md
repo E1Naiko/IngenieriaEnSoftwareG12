@@ -1,18 +1,24 @@
-# crudRepartidor — Alta de repartidor (HU #25)
+# crudRepartidor — Alta y edición de repartidor (HU #25 y HU #39)
 
-Endpoint para que el **coordinador** dé de alta un repartidor. El sistema le genera
-automáticamente su **token de acceso** (el que después usa para iniciar sesión, HU #9).
+Endpoints para que el **coordinador** dé de alta y edite repartidores. Al dar de alta, el sistema genera
+automáticamente su **token de acceso** (el que después usa para iniciar sesión, HU #9). Al editar, el
+token **se mantiene**.
 
 > **Ubicación:** `backend/crudRepartidor/`
 > **Modelo de datos:** `core.models.Repartidor` (no tiene modelos ni migraciones propias).
-> **Ruta:** `POST /api/repartidores/` (montada en `config/urls.py → api/`)
+> **Rutas** (montadas en `config/urls.py → api/`):
+> - `POST /api/repartidores/` → alta (HU #25)
+> - `GET /api/repartidores/lista/` → lista de repartidores para elegir a quién editar (HU #39)
+> - `GET` y `PUT /api/repartidores/<id>/` → ver y editar (HU #39)
 
-Por ahora la app implementa **solo el alta (Create)**. Listar, editar y borrar repartidores
-no forman parte de esta historia.
+Por ahora la app implementa **alta y edición**, con una lista mínima para elegir a quién editar. Dar de
+baja repartidores no forma parte de estas historias.
 
 ---
 
-## 1. Contrato de la API
+## 1. Alta de repartidor (HU #25)
+
+### Contrato de la API
 
 ```
 POST /api/repartidores/
@@ -32,12 +38,12 @@ Los seis campos son **obligatorios**. El `token` y el `estado` no se mandan: los
 
 `tipo_vehiculo` tiene que ser uno de los valores de `Repartidor.TipoVehiculo`:
 
-| Valor | ¿Esta en el modelo? |
+| Valor | ¿Está en el modelo? |
 |---|---|
-| `moto` | si |
-| `auto` | si |
-| `camioneta` | si |
-| `camion` | si|
+| `moto` | sí |
+| `auto` | sí |
+| `camioneta` | sí |
+| `camion` | sí |
 
 | Caso (escenario de la HU) | Código | Respuesta |
 |---|---|---|
@@ -66,7 +72,7 @@ Ejemplo de respuesta exitosa:
     "telefono": "1155550000",
     "mail": "ana@mail.com",
     "tipo_vehiculo": "moto",
-    "estado": "activo",
+    "estado": "ACTIVO",
     "token": "A7K2Q9"
   }
 }
@@ -74,86 +80,6 @@ Ejemplo de respuesta exitosa:
 
 ---
 
-## 2. Cómo funciona
+## 2. Edición de repartidor (HU #39)
 
-1. Lee el JSON del cuerpo (`_parse_body`). Si no es válido, responde `400`.
-2. Valida los datos (`_validar_alta`) y junta **todos** los errores en un diccionario:
-   - Ningún campo puede estar vacío.
-   - El DNI tiene que ser numérico y no existir ya.
-   - El mail y el teléfono no pueden existir ya.
-   - El tipo de vehículo tiene que ser uno de los permitidos por el modelo.
-3. Si hay errores, responde `400` con ese diccionario.
-4. Si no, crea el repartidor con `Repartidor.objects.create(...)`. El **token se genera solo**: lo crea
-   el modelo (`core/models.py`) al guardar por primera vez (6 caracteres, letras mayúsculas y números,
-   único).
-5. Responde `201` con el mensaje de la HU y los datos del repartidor.
-
-### Decisiones
-
-- **El token lo genera el modelo, no la vista.** Está en `Repartidor.save()` / `_generar_token()`.
-- **El token se devuelve en la respuesta** y **no se envía por mail**. La HU lo menciona, pero por ahora
-  el envío por mail no está implementado.
-- **Mail y teléfono se validan por código.** En la base solo `dni` y `token` son únicos; la unicidad de
-  mail y teléfono la controla `_validar_alta`.
-- **Tipos de vehículo:** la validación compara contra `Repartidor.TipoVehiculo.values`, así que no hay
-  que tocar la vista cuando se agrega un tipo nuevo al modelo.
-- **`IntegrityError`:** si dos altas con el mismo DNI llegan al mismo tiempo, la base lo frena y se
-  responde como dato repetido.
-- **Sin DRF:** igual que `crudComercios`, usa `JsonResponse` y `json.loads`, sin Django REST Framework.
-- **`@csrf_exempt`** y **`@require_POST`**, como el resto de la API.
-- **Estado inicial:** el repartidor queda con el estado por defecto del modelo (`activo`).
-
----
-
-## 3. Estructura
-
-```
-crudRepartidor/
-├── __init__.py
-├── apps.py        # AppConfig
-├── views.py       # repartidores_alta + helpers (_parse_body, _repartidor_to_dict, _validar_alta)
-├── urls.py        # ruta repartidores/
-├── tests.py       # 3 tests (un escenario de la HU cada uno)
-└── README.md      # este archivo
-```
-
-Dependencias:
-
-```
-crudRepartidor.views  →  core.models.Repartidor
-config/urls.py        →  crudRepartidor.urls  (include "/api/")
-config/settings.py    →  "crudRepartidor" en INSTALLED_APPS
-```
-
----
-
-## 4. Tests
-
-```bash
-cd backend
-python manage.py test crudRepartidor
-```
-
-| Test | Escenario |
-|---|---|
-| `test_escenario_1_alta_exitosa` | 201, mensaje de la HU, el repartidor queda en la base con su token |
-| `test_escenario_2_campo_en_blanco` | 400 con "Campo obligatorio" y no se crea nada |
-| `test_escenario_3_dato_repetido` | 400 con "Este dato ya existe en el sistema" |
-
-> Para probar sin tocar la base de Supabase, dejá `DB_HOST=` vacío en tu `.env`: Django usa una
-> SQLite temporal.
-
-### Probarlo a mano (PowerShell)
-
-Con `python manage.py runserver` corriendo:
-
-```powershell
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/repartidores/ -Method Post -ContentType "application/json" -Body '{"dni":"30111222","nombre":"Ana","apellido":"Paz","telefono":"1155550000","mail":"ana@mail.com","tipo_vehiculo":"moto"}' | ConvertTo-Json -Depth 5
-```
-
----
-
-## 5. Pendiente / a confirmar con el equipo
-
-- Si el repartidor tiene que arrancar `activo` o `inactivo` hasta que se ponga "Disponible" él mismo.
-- Si mail y teléfono tienen que ser únicos también en el modelo.
+El front arma el formulario con un
