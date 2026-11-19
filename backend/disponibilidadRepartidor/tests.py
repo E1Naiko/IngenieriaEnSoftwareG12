@@ -46,7 +46,8 @@ class CambiarDisponibilidadTests(TestCase):
         resp = self._post({"token": r.token, "estado": "disponible"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["message"], MSG_DISPONIBLE)
-        self.assertEqual(resp.json()["estado"], "ACTIVO")
+        self.assertEqual(resp.json()["estado"], "activo")
+        self.assertTrue(resp.json()["disponible"])
         r.refresh_from_db()
         self.assertEqual(r.estado, "ACTIVO")
 
@@ -106,5 +107,38 @@ class CambiarDisponibilidadTests(TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_metodo_no_permitido(self):
-        resp = self.client.get(self.url)
+        resp = self.client.put(self.url)
         self.assertEqual(resp.status_code, 405)
+
+    def test_get_devuelve_estado_disponible(self):
+        r = self._crear("ACTIVO")
+        resp = self.client.get(self.url, {"token": r.token})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"estado": "activo", "disponible": True})
+
+    def test_get_devuelve_estado_no_disponible(self):
+        r = self._crear("inactivo")
+        resp = self.client.get(self.url, {"token": r.token})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"estado": "inactivo", "disponible": False})
+
+    def test_get_trata_disponible_en_mayusculas_como_disponible(self):
+        # En la base de desarrollo hay repartidores con "DISPONIBLE".
+        r = self._crear("DISPONIBLE")
+        resp = self.client.get(self.url, {"token": r.token})
+        self.assertEqual(resp.json(), {"estado": "activo", "disponible": True})
+
+    def test_get_sin_token(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["message"], MSG_FALTA_TOKEN)
+
+    def test_get_token_inexistente(self):
+        resp = self.client.get(self.url, {"token": "ZZZZZZ"})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_get_repartidor_dado_de_baja(self):
+        r = self._crear("baja")
+        resp = self.client.get(self.url, {"token": r.token})
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()["message"], MSG_REPARTIDOR_BAJA)
