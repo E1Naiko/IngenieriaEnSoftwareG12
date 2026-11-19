@@ -14,6 +14,10 @@ token **se mantiene**.
 Por ahora la app implementa **alta y edición**, con una lista mínima para elegir a quién editar. Dar de
 baja repartidores no forma parte de estas historias.
 
+Para que el token del repartidor no sea público, el alta y el detalle requieren una sesión de
+coordinador (`sessionid`, obtenida en `POST /api/login-coordinador/`). En `POST` y `PUT` se debe
+enviar además la cookie `csrftoken` y su valor en la cabecera `X-CSRFToken`.
+
 ---
 
 ## 1. Alta de repartidor (HU #25)

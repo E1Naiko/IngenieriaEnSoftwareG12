@@ -36,7 +36,7 @@ class ActualizarPedidoTests(TestCase):
             repartidor=self.repartidor,
             fecha_origen=date(2026, 10, 1),
             fecha_destino=date(2026, 10, 2),
-            estado=Paquete.Estado.PENDIENTE,
+            estado=Paquete.Estado.ASIGNADO,
         )
 
     def _get(self, params=None):
@@ -45,7 +45,7 @@ class ActualizarPedidoTests(TestCase):
     def _post(self, payload):
         return self.client.post(
             self.url,
-            data=json.dumps(payload),
+            data=json.dumps({"token": self.repartidor.token, **payload}),
             content_type="application/json",
         )
 
@@ -92,6 +92,7 @@ class ActualizarPedidoTests(TestCase):
         self.assertEqual(r.json()["message"], "Estado del paquete actualizado correctamente.")
 
     def test_post_cambiar_estado_a_entregado(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.EN_CAMINO)
         r = self._post({"id": self.paquete.id, "estado": "entregado"})
         self.assertEqual(r.status_code, 200)
         self.paquete.refresh_from_db()

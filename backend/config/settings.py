@@ -283,3 +283,8 @@ if not CORS_ALLOWED_ORIGINS:
 # cookies; con CORS_ALLOW_ALL_ORIGINS no se puede combinar (el navegador
 # rechaza `Access-Control-Allow-Credentials` junto con `*`).
 # CORS_ALLOW_CREDENTIALS = True
+
+# Plazo de oferta automática y radio (distancia en línea recta al retiro).
+REASIGNACION_MINUTOS = int(os.getenv("REASIGNACION_MINUTOS", "15"))
+REASIGNACION_RADIO_KM = float(os.getenv("REASIGNACION_RADIO_KM", "5"))
+CSRF_TRUSTED_ORIGINS = _origenes(os.getenv("CSRF_TRUSTED_ORIGINS", ""))

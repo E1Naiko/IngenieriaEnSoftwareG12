@@ -25,10 +25,13 @@ que se serializan, en el mismo query (un JOIN por FK, sin N+1). La relación
 """
 
 from django.http import JsonResponse
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
 # Importa el modelo Paquete definido en la aplicación core.
 from core.models import Paquete
+from core.reasignacion import en_oferta
 
 
 # Mensaje que se devuelve cuando no existen paquetes en curso.
@@ -44,9 +47,9 @@ def _nombre_completo(persona):
     return f"{persona.nombre} {persona.apellido}".strip()
 
 
-def _paquete_to_dict(paquete):
-    """Serializa un ``Paquete`` a las seis claves que espera el frontend."""
-    return {
+def _paquete_to_dict(paquete, ahora):
+    """Serializa el paquete y, si aplica, su elegibilidad para reasignación manual."""
+    data = {
         "id": paquete.id,
         "destinatario": _nombre_completo(paquete.cliente),
         "direccion": paquete.cliente.direccion,
@@ -59,7 +62,12 @@ def _paquete_to_dict(paquete):
         "tamanio": paquete.tamanio,
     }
 
+    if paquete.estado.strip().lower() == Paquete.Estado.PENDIENTE_REASIGNACION:
+        data["por_reasignar"] = paquete.repartidor_id is None and not en_oferta(paquete, ahora)
+    return data
 
+
+@never_cache
 @csrf_exempt  # solo lectura: así un POST llega al 405 y no lo frena el CSRF (403)
 def paquetesEnCurso(request):
     """
@@ -95,7 +103,8 @@ def paquetesEnCurso(request):
 
     # Se evalúa el queryset una sola vez (evita el exists() + iteración, que
     # ejecutaba dos consultas) y se convierte cada paquete en un diccionario.
-    data = [_paquete_to_dict(paquete) for paquete in paquetes]
+    ahora = timezone.now()
+    data = [_paquete_to_dict(paquete, ahora) for paquete in paquetes]
 
     # Si no hay paquetes en curso, devuelve una lista vacía
     # y un mensaje informativo para el frontend.
