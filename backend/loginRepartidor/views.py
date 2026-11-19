@@ -5,6 +5,7 @@ import json
 from django.http import JsonResponse 
 from django.views.decorators.csrf import csrf_exempt 
 from django.views.decorators.http import require_POST
+from core.estados import esta_habilitado
 from core.models import Repartidor 
 
 #Mensaje que pide la HU para el escenario 2
@@ -33,8 +34,10 @@ def login_repartidor(request):
         return JsonResponse({"message": MSG_TOKEN_INVALIDO}, status=404)
 
 
-    # Escenario 3: el repartidor fue dado de baja por el coordinador
-    if repartidor.estado == "baja":
+    # Escenario 3: el repartidor fue dado de baja por el coordinador.
+    # core.estados.esta_habilitado normaliza el estado: también bloquea
+    # 'BAJA' y variantes con espacios (HU #38).
+    if not esta_habilitado(repartidor):
         return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)
 
     #Si el token existe devuelve todos los datos el repartidor
@@ -78,7 +81,7 @@ def recuperar_token(request):
         return JsonResponse({"message": MSG_DATOS_INCORRECTOS}, status=404)
 
     # Igual que en el login: un repartidor dado de baja no recupera acceso
-    if repartidor.estado == "baja":
+    if not esta_habilitado(repartidor):
         return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)
 
     # Escenario 1: el token nuevo reemplaza al anterior, que deja de servir para el login

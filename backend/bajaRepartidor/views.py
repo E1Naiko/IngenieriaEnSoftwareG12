@@ -25,21 +25,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
+from core.estados import es_baja
 from core.models import Repartidor
 
 MSG_NO_ENCONTRADO = "Repartidor no encontrado"
 MSG_YA_DE_BAJA = "El repartidor ya fue dado de baja"
 MSG_NO_AUTENTICADO = "No autenticado"
 MSG_BAJA_EXITOSA = "Repartidor dado de baja con éxito"
-
-
-def _es_baja(estado: str) -> bool:
-    """True si el estado guardado es 'baja'.
-
-    Se compara sin mayúsculas ni espacios porque en la base hay valores de
-    distintas épocas ('baja', 'BAJA') y la baja tiene que ser idempotente.
-    """
-    return (estado or "").strip().lower() == Repartidor.Estado.BAJA.lower()
 
 
 def _repartidor_to_dict(repartidor):
@@ -74,7 +66,7 @@ def repartidor_detalle(request, repartidor_id):
     except Repartidor.DoesNotExist:
         return JsonResponse({"error": MSG_NO_ENCONTRADO}, status=404)
 
-    if _es_baja(repartidor.estado):
+    if es_baja(repartidor.estado):
         return JsonResponse({"error": MSG_YA_DE_BAJA}, status=400)
 
     return JsonResponse({"repartidor": _repartidor_to_dict(repartidor)}, status=200)
@@ -99,7 +91,7 @@ def repartidor_baja(request, repartidor_id):
     except Repartidor.DoesNotExist:
         return JsonResponse({"error": MSG_NO_ENCONTRADO}, status=404)
 
-    if _es_baja(repartidor.estado):
+    if es_baja(repartidor.estado):
         return JsonResponse({"error": MSG_YA_DE_BAJA}, status=400)
 
     # .update() cambia solo el estado: no dispara Repartidor.save() (que

@@ -142,3 +142,31 @@ la única puerta de entrada.
    error se muestra sobre la lista.
 2. **Sí, dar de baja** llama a `darDeBaja(id)` (`POST`), cierra el modal y
    recarga la lista.
+
+---
+
+## 7. Después de la baja: qué endpoints rechazan al repartidor
+
+La baja no sirve de nada si otra app lo deja seguir operando. La regla vive en
+un solo lugar, `core/estados.py` (`es_baja` / `esta_habilitado`), y las apps
+que atienden al repartidor la usan en vez de comparar el string a mano. Antes
+cada una comparaba distinto y un repartidor con `estado='BAJA'` podía seguir
+entrando con su token (`loginRepartidor`) o cambiar estados de paquetes
+(`actualizacionEstado`).
+
+| Endpoint | Con repartidor dado de baja |
+|---|---|
+| `POST /api/login-repartidor/` | `403` |
+| `POST /api/recuperar-token/` (HU #29) | `403`, el token no se regenera |
+| `POST /api/paquetes-repartidor/` (HU #17) | `403` |
+| `GET/POST /api/disponibilidad-repartidor/` (HU #22) | `403` |
+| `POST /api/cambiar-estado-pedido/` (HU #34) | `403` |
+| `POST /api/repartidores/<id>/baja/` | `400` (ya estaba de baja) |
+| `GET /api/repartidores/<id>/detalle-baja/` | `400` (ya estaba de baja) |
+| `GET /api/repartidores/lista/` | no aparece |
+
+`POST /api/cambiar-estado-pedido/` además valida que el paquete esté asignado
+a quien manda el `token` (`403` si es de otro repartidor o si no tiene
+asignado): el backend no guarda sesión del repartidor y ese token es lo único
+que dice quién pide el cambio. El `GET` del mismo endpoint sigue siendo
+público porque lo usa la pantalla de seguimiento (HU #14).

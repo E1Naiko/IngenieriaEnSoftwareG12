@@ -16,6 +16,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from core.estados import es_baja
 from core.models import Paquete, Repartidor
 
 # Con 404/403 + "message" el front cierra la sesión del repartidor.
@@ -63,8 +64,8 @@ def paquetes_repartidor(request):
     except Repartidor.DoesNotExist:
         return JsonResponse({"message": MSG_SESION_INVALIDA}, status=404)
 
-    # Puede haber sido dado de baja después de loguearse
-    if repartidor.estado == Repartidor.Estado.BAJA:
+    # Puede haber sido dado de baja después de loguearse (HU #38)
+    if es_baja(repartidor.estado):
         return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)
 
     # En la base hay estados en mayúsculas (datos DEV), por eso se compara en minúscula

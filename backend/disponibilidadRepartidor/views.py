@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from core.estados import es_baja
 from core.models import Repartidor
 
 # Mensajes. Ajustar el de éxito al texto exacto de la historia de usuario.
@@ -85,7 +86,7 @@ def cambiar_disponibilidad(request):
         return JsonResponse({"message": MSG_TOKEN_INVALIDO}, status=404)
 
     # Un repartidor dado de baja no puede consultar ni cambiar su estado.
-    if repartidor.estado.strip().lower() == "baja":
+    if es_baja(repartidor.estado):
         return JsonResponse({"message": MSG_REPARTIDOR_BAJA}, status=403)
 
     if request.method == "GET":

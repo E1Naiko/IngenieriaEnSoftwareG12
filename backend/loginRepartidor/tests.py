@@ -43,6 +43,24 @@ class LoginRepartidorTests(TestCase):
         self.assertEqual(r.status_code, 403)
         self.assertEqual(r.json()["message"], MSG_REPARTIDOR_BAJA)
 
+    def test_escenario_3_la_baja_en_mayusculas_tambien_bloquea(self):
+        """En la base conviven 'baja' y 'BAJA': la comparación no distingue.
+
+        Antes se comparaba contra el literal "baja": un repartidor con 'BAJA'
+        (por ejemplo, una fila migrada) seguía entrando con su token.
+        """
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(estado="BAJA")
+
+        r = self._post({"token": self.repartidor.token})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()["message"], MSG_REPARTIDOR_BAJA)
+
+    def test_escenario_3_con_espacios_alrededor_de_la_baja(self):
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(estado=" Baja ")
+
+        r = self._post({"token": self.repartidor.token})
+        self.assertEqual(r.status_code, 403)
+
 class RecuperarTokenTests(TestCase):
     """Tests de la HU #29: recuperar el token con el DNI."""
 
@@ -82,6 +100,16 @@ class RecuperarTokenTests(TestCase):
         viejo = self.repartidor.token
         r = self._post({"dni": 11111111})
         self.assertEqual(r.status_code, 403)
+        self.repartidor.refresh_from_db()
+        self.assertEqual(self.repartidor.token, viejo)
+
+    def test_repartidor_dado_de_baja_con_mayusculas_no_recupera(self):
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(estado="BAJA")
+        viejo = self.repartidor.token
+
+        r = self._post({"dni": 11111111})
+        self.assertEqual(r.status_code, 403)
+
         self.repartidor.refresh_from_db()
         self.assertEqual(self.repartidor.token, viejo)
 
