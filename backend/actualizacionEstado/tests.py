@@ -42,10 +42,20 @@ class ActualizarPedidoTests(TestCase):
     def _get(self, params=None):
         return self.client.get(self.url, params)
 
-    def _post(self, payload):
+    def _post(self, payload, token="__default__"):
+        """POST como lo hace Dashboardrepartidor.tsx: con el token del repartidor.
+
+        El token es obligatorio desde que el POST valida quién pide el cambio
+        (HU #38). Pasar ``token=None`` para simular una petición sin token.
+        """
+        cuerpo = dict(payload)
+        if token == "__default__":
+            cuerpo.setdefault("token", self.repartidor.token)
+        elif token is not None:
+            cuerpo["token"] = token
         return self.client.post(
             self.url,
-            data=json.dumps(payload),
+            data=json.dumps(cuerpo),
             content_type="application/json",
         )
 
@@ -143,3 +153,117 @@ class ActualizarPedidoTests(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("JSON válido", r.json()["message"])
+
+class ActualizarPedidoValidacionTests(TestCase):
+    """Validaciones del POST (revisión del PR #79): token y baja del repartidor.
+
+    El backend no guarda sesión del repartidor: el único dato que dice quién
+    pide el cambio es el ``token`` del cuerpo. Sin estas validaciones, un
+    request directo podía cambiar el estado de cualquier paquete.
+    """
+
+    def setUp(self):
+        self.url = reverse("cambiar-estado-pedido")
+
+        self.comercio = Comercio.objects.create(
+            nombre="Kiosco Central", telefono="221-555-0100",
+            direccion="Calle 7 #123",
+        )
+        self.cliente = Cliente.objects.create(
+            nombre="Juan", apellido="Pérez", telefono="221-555-0200",
+            direccion="Calle 44 #999", dni=30111222,
+        )
+        self.repartidor = Repartidor.objects.create(
+            nombre="Ana", apellido="Gómez", dni=20333444,
+            telefono="221-555-0300", mail="ana@example.com",
+        )
+        self.otro = Repartidor.objects.create(
+            nombre="Luis", apellido="Sosa", dni=20999888,
+            telefono="221-555-0400", mail="luis@example.com",
+        )
+        self.paquete = Paquete.objects.create(
+            comercio=self.comercio,
+            cliente=self.cliente,
+            repartidor=self.repartidor,
+            fecha_origen=date(2026, 10, 1),
+            fecha_destino=date(2026, 10, 2),
+            estado=Paquete.Estado.ASIGNADO,
+        )
+
+    def _post(self, payload):
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+    def test_sin_token_devuelve_400(self):
+        r = self._post({"id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["message"], "Falta el token")
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_token_inexistente_devuelve_401(self):
+        r = self._post({"token": "ZZZZZZ", "id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 401)
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_repartidor_dado_de_baja_no_puede_cambiar_estados(self):
+        """Escenario central de la HU #38 visto desde el otro endpoint."""
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(
+            estado=Repartidor.Estado.BAJA
+        )
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("no se encuentra habilitado", r.json()["message"])
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_la_baja_se_detecta_aunque_el_estado_este_en_mayusculas(self):
+        Repartidor.objects.filter(pk=self.repartidor.pk).update(estado="BAJA")
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_otro_repartidor_no_puede_cambiar_un_paquete_ajeno(self):
+        r = self._post(
+            {"token": self.otro.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("no está asignado", r.json()["message"])
+
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)
+
+    def test_paquete_sin_repartidor_no_se_puede_cambiar(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(repartidor=None)
+
+        r = self._post(
+            {"token": self.repartidor.token, "id": self.paquete.id, "estado": "en_camino"}
+        )
+        self.assertEqual(r.status_code, 403)
+
+    def test_el_asignado_puede_avanzar_el_estado(self):
+        for estado in ("en_camino", "entregado"):
+            r = self._post(
+                {"token": self.repartidor.token, "id": self.paquete.id, "estado": estado}
+            )
+            self.assertEqual(r.status_code, 200, r.content)
+            self.paquete.refresh_from_db()
+            self.assertEqual(self.paquete.estado, estado)
+
+    def test_el_get_sigue_siendo_publico(self):
+        """La pantalla de seguimiento (HU #14) no manda token y debe seguir andando."""
+        r = self.client.get(self.url, {"cod_seguimiento": self.paquete.cod_seguimiento})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.json()["paquetes"]), 1)

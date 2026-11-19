@@ -121,6 +121,26 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test pedidosPorReasignar
 ```
 
+### Baja de repartidores (HU #38)
+
+`GET /api/repartidores/<id>/detalle-baja/` devuelve los datos del modal de
+confirmación y `POST /api/repartidores/<id>/baja/` aplica la **baja lógica**
+(`estado='baja'`, sin borrar la fila ni regenerar el token). Ambas piden sesión
+de coordinador (`401` si falta).
+
+El `POST` es `@csrf_exempt` porque el pedido llega proxificado en el despliegue
+(rewrite de Vercel → Render) y la verificación CSRF de Django compara el
+`Origin` con el host del backend, devolviendo `403` aunque el token sea
+correcto. Es el mismo criterio que el resto de las acciones del coordinador
+(ver [crudComercios/README.md](crudComercios/README.md#9-seguridad-y-configuración));
+la defensa es `SESSION_COOKIE_SAMESITE="Lax"`. Detalle, contrato JSON y
+efectos en las otras HUs: [bajaRepartidor/README.md](bajaRepartidor/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test bajaRepartidor
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable

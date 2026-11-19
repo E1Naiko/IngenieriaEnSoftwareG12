@@ -12,6 +12,7 @@ from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
+from core.estados import es_baja
 from core.models import Paquete, Repartidor  # Paquete se usa en comentarios; Repartidor en las consultas
 
 # ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ def historial_lista(request):
             "id": r.id,
             "nombre": r.nombre,
             "apellido": r.apellido,
-            "dado_de_baja": r.estado.lower() == "baja",  # el estado activo/inactivo no se muestra
+            "dado_de_baja": es_baja(r.estado),  # el estado activo/inactivo no se muestra
             "cantidad_envios": r.cantidad_envios,
         }
         for r in repartidores
@@ -159,7 +160,7 @@ def historial_repartidor(request, pk):
                 "id": repartidor.id,
                 "nombre": repartidor.nombre,
                 "apellido": repartidor.apellido,
-                "dado_de_baja": repartidor.estado.lower() == "baja",
+                "dado_de_baja": es_baja(repartidor.estado),
             },
             "results": results,
             "count": len(results),
