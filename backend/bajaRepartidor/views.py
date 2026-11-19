@@ -1,12 +1,14 @@
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 
 from core.models import Repartidor
 
 
+def _es_baja(estado: str) -> bool:
+    return (estado or "").strip().lower() == Repartidor.Estado.BAJA.lower()
+
+
 def _repartidor_to_dict(repartidor):
-    """Serializa los datos del repartidor a diccionario para responder en JSON."""
     return {
         "id": repartidor.id,
         "nombre": repartidor.nombre,
@@ -21,31 +23,33 @@ def _repartidor_to_dict(repartidor):
 
 @require_GET
 def repartidor_detalle(request, repartidor_id):
-    """Devuelve los datos del repartidor para el modal de confirmación."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "No autenticado"}, status=401)
+
     try:
         repartidor = Repartidor.objects.get(pk=repartidor_id)
     except Repartidor.DoesNotExist:
         return JsonResponse({"error": "Repartidor no encontrado"}, status=404)
 
-    if repartidor.estado == Repartidor.Estado.BAJA:
+    if _es_baja(repartidor.estado):
         return JsonResponse({"error": "El repartidor ya fue dado de baja"}, status=400)
 
     return JsonResponse({"repartidor": _repartidor_to_dict(repartidor)}, status=200)
 
 
-@csrf_exempt
 @require_http_methods(["POST", "PATCH", "DELETE"])
 def repartidor_baja(request, repartidor_id):
-    """Da de baja lógica al repartidor (estado='baja') cuando el coordinador confirma."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "No autenticado"}, status=401)
+
     try:
         repartidor = Repartidor.objects.get(pk=repartidor_id)
     except Repartidor.DoesNotExist:
         return JsonResponse({"error": "Repartidor no encontrado"}, status=404)
 
-    if repartidor.estado == Repartidor.Estado.BAJA:
+    if _es_baja(repartidor.estado):
         return JsonResponse({"error": "El repartidor ya fue dado de baja"}, status=400)
 
-    # .update() cambia el estado sin disparar Repartidor.save() (que regeneraría el token)
     Repartidor.objects.filter(pk=repartidor_id).update(estado=Repartidor.Estado.BAJA)
     repartidor.refresh_from_db()
 
