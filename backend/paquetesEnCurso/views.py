@@ -31,7 +31,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Importa el modelo Paquete definido en la aplicación core.
 from core.models import Paquete
-from core.reasignacion import en_oferta
+from verPedidosPorAsignar.services import en_oferta, es_reasignacion
 
 
 # Mensaje que se devuelve cuando no existen paquetes en curso.
@@ -62,7 +62,7 @@ def _paquete_to_dict(paquete, ahora):
         "tamanio": paquete.tamanio,
     }
 
-    if paquete.estado.strip().lower() == Paquete.Estado.PENDIENTE_REASIGNACION:
+    if es_reasignacion(paquete):
         data["por_reasignar"] = paquete.repartidor_id is None and not en_oferta(paquete, ahora)
     return data
 

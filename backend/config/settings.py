@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     "paquetesEnCurso",
     "actualizacionEstado",
     "pedidosAsignados",
+    "verPedidosPorAsignar.apps.VerPedidosPorAsignarConfig",
     "historialEnvios",
 ]
 

@@ -1,17 +1,13 @@
 """Consulta pública de estado y transiciones del repartidor asignado."""
 
-from datetime import timedelta
-
-from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from core.models import Paquete, Repartidor
-from core.reasignacion import ESTADOS_CANCELABLES, ubicacion_valida
 from crudComercios.views import _parse_body
+from verPedidosPorAsignar.services import CancelacionInvalida, registrar_cancelacion
 
 
 def to_dict(paquete):
@@ -34,49 +30,6 @@ def to_dict(paquete):
 
 def error(mensaje, status=400):
     return JsonResponse({"message": mensaje}, status=status)
-
-
-def _cancelar(paquete, estado, data):
-    causa = data.get("causa")
-    motivo = data.get("motivo")
-    if estado not in ESTADOS_CANCELABLES:
-        return error("El pedido no está en condiciones de ser cancelado.", 409)
-    if causa not in Paquete.CausaCancelacion.values:
-        return error("Seleccioná una causa de cancelación válida.")
-    if not isinstance(motivo, str) or not 1 <= len(motivo.strip()) <= 500 or "\x00" in motivo:
-        return error("Indicá el motivo de la cancelación (máximo 500 caracteres).")
-
-    ubicacion = ubicacion_valida(data.get("ubicacion"))
-    if data.get("ubicacion") is not None and ubicacion is None:
-        return error("La ubicación indicada no es válida.")
-
-    paquete.causa_cancelacion = causa
-    paquete.motivo_cancelacion = motivo.strip()
-    paquete.retiro_latitud = paquete.retiro_longitud = None
-    paquete.reasignacion_hasta = None
-    if causa == Paquete.CausaCancelacion.FUERZA_MAYOR:
-        paquete.estado = Paquete.Estado.PENDIENTE_REASIGNACION
-        paquete.repartidor_original_id = paquete.repartidor_id
-        paquete.repartidor_id = None
-        ahora = timezone.now()
-        # Sin un punto de retiro no podemos saber quién está cerca: pasa directo a la cola manual.
-        paquete.reasignacion_hasta = ahora
-        if ubicacion is not None:
-            paquete.retiro_latitud, paquete.retiro_longitud = ubicacion
-            paquete.reasignacion_hasta += timedelta(minutes=settings.REASIGNACION_MINUTOS)
-        mensaje = (
-            "El pedido se publicó en Pedidos cercanos."
-            if ubicacion else "Sin ubicación de retiro: el pedido quedó disponible para el coordinador."
-        )
-    else:
-        paquete.estado = Paquete.Estado.EN_DEVOLUCION
-        mensaje = "Devolvé el paquete al comercio y confirmá la devolución."
-
-    paquete.save(update_fields=[
-        "estado", "causa_cancelacion", "motivo_cancelacion", "repartidor",
-        "repartidor_original", "reasignacion_hasta", "retiro_latitud", "retiro_longitud",
-    ])
-    return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})
 
 
 @csrf_exempt  # Las escrituras se autentican con el token del repartidor, no con cookies.
@@ -121,7 +74,14 @@ def cambiar_estado_pedido(request):
         if estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
         if nuevo_estado == Paquete.Estado.CANCELADO and estado != Paquete.Estado.EN_DEVOLUCION:
-            return _cancelar(paquete, estado, data)
+            try:
+                mensaje = registrar_cancelacion(
+                    paquete, causa=data.get("causa"), motivo=data.get("motivo"),
+                    ubicacion_informada=data.get("ubicacion"),
+                )
+            except CancelacionInvalida as exc:
+                return error(str(exc), 409 if exc.estado_incompatible else 400)
+            return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})
 
         siguiente = {
             Paquete.Estado.ASIGNADO: Paquete.Estado.EN_CAMINO,

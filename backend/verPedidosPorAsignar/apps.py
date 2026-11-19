@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 
 
-class VerpedidosporasignarConfig(AppConfig):
-    name = 'verPedidosPorAsignar'
+class VerPedidosPorAsignarConfig(AppConfig):
+    name = "verPedidosPorAsignar"
+    verbose_name = "Pedidos por reasignar"
