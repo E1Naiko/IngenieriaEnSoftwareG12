@@ -14,7 +14,7 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 | `Repartidor` | Quien entrega. Datos personales + `mail`, `tipo_vehiculo`, `estado` (`activo`/`inactivo`/`baja`) y un `token` de 6 caracteres autogenerado. Sus paquetes: `repartidor.paquetes.all()`. |
 | `Comercio` | Comercio que despacha: `nombre`, `telefono` y `direccion`. Tres datos de contacto y nada más. |
 | `Cliente` | Datos personales y de contacto del destinatario (`nombre`, `apellido`, `telefono`, `direccion`, `dni`). Ya no pertenece a un comercio: el vínculo pasa por `Paquete`. |
-| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `asignado`, `en_camino`, `entregado` y `cancelado`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
+| `Paquete` | La entrega: repartidor (opcional), comercio, cliente y comprobante (opcional, uno a uno); incluye las fechas obligatorias `fecha_origen` y `fecha_destino` y los estados `retirado`, `pendiente`, `asignado`, `en_camino`, `entregado`, `cancelado`, `cancelado_por_cliente`, `pendiente_reasignacion` y `en_devolucion`. `cod_seguimiento` único y autogenerado (`SRFR-XXXXXXXX`). |
 | `Comprobante` | Archivo (foto o PDF) de la entrega. La columna `file` es `varchar(255)` y opcional (`null=True`). Se sube a `media/comprobantes/AAAA/MM/`. |
 
 ### Estados de un paquete
@@ -28,7 +28,24 @@ con cada entorno, ver la [guía de bases por entorno](Ambientes.md).
 | `asignado` | Asignado | `Paquete.Estado.ASIGNADO` |
 | `en_camino` | En camino | `Paquete.Estado.EN_CAMINO` |
 | `entregado` | Entregado | `Paquete.Estado.ENTREGADO` |
-| `cancelado` | Cancelado | `Paquete.Estado.CANCELADO` |
+| `cancelado` | Cancelado (devuelto al comercio) | `Paquete.Estado.CANCELADO` |
+| `cancelado_por_cliente` | Cancelado por el cliente | `Paquete.Estado.CANCELADO_POR_CLIENTE` |
+| `pendiente_reasignacion` | Pendiente de reasignación | `Paquete.Estado.PENDIENTE_REASIGNACION` |
+| `en_devolucion` | Devolución al comercio | `Paquete.Estado.EN_DEVOLUCION` |
+
+**Los dos cierres por cancelación son distintos a propósito.** `cancelado` es
+la devolución cerrada: el paquete volvió al comercio y el repartidor lo
+confirmó. `cancelado_por_cliente` es el pedido que el cliente rechazó. Ninguno
+se reasigna: en los dos casos el paquete vuelve a su origen. La diferencia es
+*saber qué pasó*, y el estado es la fuente de verdad (la `causa_cancelacion`
+dice el motivo, el estado dice el desenlace).
+
+Conjuntos derivados en `core.models.Paquete`:
+
+- `ESTADOS_CERRADOS`: `entregado`, `cancelado`, `cancelado_por_cliente`. El
+  paquete ya no se mueve ni se reasigna.
+- `ESTADOS_DEVOLUCION`: `en_devolucion`, `cancelado`, `cancelado_por_cliente`.
+  El paquete vuelve al comercio con el repartidor que lo tiene.
 
 `cancelado` es, además, el estado que **publica un pedido para reasignación**
 (HU #36): lo deja el botón "Confirmar cancelación" del dashboard del
@@ -50,18 +67,41 @@ paquete.save(update_fields=["estado"])
 ```
 
 Los `choices` validan el valor en formularios, el admin y `full_clean()`, pero
-`save()` y `objects.create()` **no llaman a `full_clean()` automáticamente**.
-El esquema creado por Django tampoco agrega una restricción `CHECK` para las
-opciones: SQL directo o `update()` pueden escribir otros valores en la columna
-`varchar(255)`. Si la base tiene restricciones agregadas manualmente, hay que
-revisarlas por separado.
+`save()` y `objects.create()` **no llaman a `full_clean()` automáticamente**,
+así que los `choices` por sí solos no alcanzan: `update()` y el SQL directo los
+esquivaban y podían dejar la columna `varchar(255)` con cualquier texto.
 
-El modelo no cambia estados automáticamente ni impone transiciones u orden.
-`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye solo `entregado`,
-comparando el estado sin distinguir mayúsculas: `cancelado` sigue apareciendo
-porque no es un estado final. Devuelve
-`id`, `destinatario`, `direccion`, `repartidor` y `estado` ("Sin asignar"
-cuando la FK `repartidor` es `NULL`). La property
+Por eso hay una restricción `CHECK` en la base (migración
+`0013_constraint_estado_paquete`):
+
+```sql
+CONSTRAINT "paquete_estado_valido"
+  CHECK (LOWER(TRIM("estado")) IN (
+    'retirado', 'pendiente', 'asignado', 'en_camino', 'entregado',
+    'cancelado', 'cancelado_por_cliente', 'pendiente_reasignacion',
+    'en_devolucion'))
+```
+
+Se valida sobre `LOWER(TRIM(...))` —el mismo criterio que usa el código en
+runtime— para que los históricos de DEV con mayúsculas o espacios
+(`"ENTREGADO"`, `" PENDIENTE"`) sigan siendo válidos. Un valor inventado
+(`"devuelto"`, `"canc"`) ahora falla con `IntegrityError` desde cualquier
+camino, incluido `update()`.
+
+Si alguna vez hay que agregar un estado nuevo: se agrega en
+`Paquete.Estado`, se actualiza la tupla `core.models.ESTADOS_PAQUETE` (hay un
+test que verifica que coincidan) y se genera la migración. La migración `0013`
+audita los datos antes de crear el CHECK y aborta con un mensaje claro si
+encuentra un estado que el modelo no conoce, en vez de fallar a mitad de camino.
+
+El modelo no cambia estados automáticamente ni impone transiciones u orden (las
+transiciones las valida el endpoint de cambio de estado).
+
+`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye los estados cerrados
+(`entregado` y `cancelado_por_cliente`), comparando el estado sin distinguir
+mayúsculas. `cancelado` y `en_devolucion` son intermedios y por eso también se
+listan. Devuelve `id`, `destinatario`, `direccion`, `repartidor` y `estado`
+("Sin asignar" cuando la FK `repartidor` es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
 `retirado` no se considera entregado.
 

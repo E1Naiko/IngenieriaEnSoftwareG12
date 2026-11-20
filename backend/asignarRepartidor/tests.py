@@ -10,7 +10,8 @@ Ejecutar::
 import json
 from datetime import date
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client as HttpClient, TestCase
 from django.urls import reverse
 
 from core.models import Cliente, Comercio, Paquete, Repartidor
@@ -237,7 +238,10 @@ class AsignacionTests(AsignarRepartidorTestBase):
         self.assertEqual(paquete.repartidor_id, self.moto.id)
 
     def test_no_asigna_paquetes_entregados_o_cancelados(self):
-        for estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
+        for estado in (
+            Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO,
+            Paquete.Estado.CANCELADO_POR_CLIENTE, Paquete.Estado.EN_DEVOLUCION,
+        ):
             with self.subTest(estado=estado):
                 paquete = self._paquete(Paquete.Tamanio.CHICO, estado=estado)
 
@@ -267,3 +271,53 @@ class AsignacionTests(AsignarRepartidorTestBase):
         response = self.client.post(self.url, data="no es json", content_type="application/json")
 
         self.assertEqual(response.status_code, 400)
+
+
+class ReasignacionTrasProxyViteTests(AsignarRepartidorTestBase):
+    """El proxy de Vite no reescribe ``Origin`` y la reasignación usa CSRF."""
+
+    origen = "http://localhost:5173"
+    host = "127.0.0.1:8000"
+
+    def setUp(self):
+        super().setUp()
+        get_user_model().objects.create_user("coordinador", password="prueba-local")
+        self.proxy_client = HttpClient(enforce_csrf_checks=True)
+        login = self.proxy_client.post(
+            reverse("login-coordinador"),
+            data=json.dumps({"username": "coordinador", "password": "prueba-local"}),
+            content_type="application/json",
+            HTTP_HOST=self.host,
+            HTTP_ORIGIN=self.origen,
+        )
+        self.assertEqual(login.status_code, 200)
+
+        self.paquete = self._paquete(
+            Paquete.Tamanio.MEDIANO, estado=Paquete.Estado.PENDIENTE_REASIGNACION
+        )
+        self.paquete.repartidor_original = self.moto
+        self.paquete.save(update_fields=["repartidor_original"])
+
+    def test_get_entrega_token_y_el_post_lo_acepta_con_el_origen_del_proxy(self):
+        lista = self.proxy_client.get(
+            self.url,
+            {"paquete": self.paquete.pk},
+            HTTP_HOST=self.host,
+            HTTP_ORIGIN=self.origen,
+        )
+        self.assertEqual(lista.status_code, 200)
+        token = lista.json()["csrf_token"]
+
+        respuesta = self.proxy_client.post(
+            self.url,
+            data=json.dumps({"paquete": self.paquete.pk, "repartidor": self.auto.id}),
+            content_type="application/json",
+            HTTP_HOST=self.host,
+            HTTP_ORIGIN=self.origen,
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.repartidor_id, self.auto.id)
+        self.assertEqual(self.paquete.estado, Paquete.Estado.ASIGNADO)

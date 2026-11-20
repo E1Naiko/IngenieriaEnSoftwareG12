@@ -130,6 +130,14 @@ class OrigenesCorsYHostsTests(SimpleTestCase):
             ["api.onrender.com", "api2.com:8000"],
         )
 
+    def test_sin_configuracion_explicita_el_csrf_confia_en_los_origenes_del_frontend(self):
+        # El proxy de Vite deja Origin=http://localhost:5173 en el POST de
+        # reasignación; sin este origen Django responde 403 antes del token.
+        self.assertEqual(settings.CSRF_TRUSTED_ORIGINS, settings.CORS_ALLOWED_ORIGINS)
+        self.assertIn("http://localhost:5173", settings.CSRF_TRUSTED_ORIGINS)
+        for origen in settings.CSRF_TRUSTED_ORIGINS:
+            with self.subTest(origen=origen):
+                self.assertRegex(origen, r"^https?://[^/]+$")
 
 
 class CableadoDeAppsTests(SimpleTestCase):

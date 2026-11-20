@@ -2,7 +2,7 @@
 
 import json
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -39,3 +39,9 @@ def login_coordinador(request):
 
     login(request, user)  # crea la sesión; el navegador recibe la cookie
     return JsonResponse({"message": "Bienvenido"})
+
+
+@require_POST
+def logout_coordinador(request):
+    logout(request)
+    return JsonResponse({"message": "Sesión cerrada."})

@@ -9,8 +9,9 @@ test aislada que crea ``TestCase``. Ejecutar::
 
 El contrato JSON es el que consume ``frontend/src/pages/PaquetesEnCurso.tsx``:
 cada ítem tiene ``id``, ``destinatario``, ``direccion``, ``repartidor`` y
-``estado`` (valores primitivos, nunca instancias de modelos). El único estado
-excluido es ``entregado``: ``cancelado`` es intermediario y debe aparecer.
+``estado`` (valores primitivos, nunca instancias de modelos). Quedan fuera
+los estados cerrados: ``entregado`` y ``cancelado_por_cliente``. ``cancelado``
+es intermediario (el repartidor todavía debe devolver el paquete) y aparece.
 """
 
 from datetime import date
@@ -62,6 +63,8 @@ class PaquetesEnCursoAPITests(TestCase):
         cls.pendiente = crear_paquete(Paquete.Estado.PENDIENTE)
         cls.retirado = crear_paquete(Paquete.Estado.RETIRADO, cls.repartidor)
         cls.cancelado = crear_paquete(Paquete.Estado.CANCELADO, cls.repartidor)
+        # El rechazo del cliente cierra el pedido: no es un paquete en curso.
+        cls.rechazado = crear_paquete(Paquete.Estado.CANCELADO_POR_CLIENTE, cls.repartidor)
         crear_paquete(Paquete.Estado.ENTREGADO, cls.repartidor)
 
     def url(self):
@@ -98,15 +101,16 @@ class PaquetesEnCursoAPITests(TestCase):
         self.assertEqual(item["tamanio"], self.en_camino.tamanio)
 
     def test_cancelado_se_lista_porque_es_un_estado_intermediario(self):
-        """Solo 'entregado' es estado final: 'cancelado' sigue en el panel."""
+        """El cierre por devolución sigue en el panel; el rechazo del cliente no."""
         resp = self.client.get(self.url())
 
         self.assertEqual(resp.status_code, 200)
         estados = {item["id"]: item["estado"] for item in resp.json()["paquetes"]}
         self.assertEqual(estados[self.cancelado.id], Paquete.Estado.CANCELADO)
+        self.assertNotIn(self.rechazado.id, estados)
 
     def test_entregado_en_mayusculas_se_excluye_y_cancelado_permanece(self):
-        """La BD es varchar: 'ENTREGADO' se excluye; 'CANCELADO' se sigue listando."""
+        """La BD es varchar: los estados en mayúscula se siguen comparando bien."""
         Paquete.objects.filter(pk=self.en_camino.pk).update(estado="ENTREGADO")
         Paquete.objects.filter(pk=self.cancelado.pk).update(estado="CANCELADO")
 

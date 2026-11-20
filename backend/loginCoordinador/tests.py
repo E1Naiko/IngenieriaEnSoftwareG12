@@ -1,7 +1,7 @@
 """Tests de la HU #4: un caso por escenario, más los bordes de la API."""
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from .views import MSG_CREDENCIALES, MSG_FALTAN_CAMPOS
@@ -46,3 +46,15 @@ class LoginCoordinadorTests(TestCase):
 
     def test_solo_post(self):
         self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_logout_invalida_la_sesion_y_requiere_csrf(self):
+        client = Client(enforce_csrf_checks=True)
+        respuesta = client.post(self.url, {
+            "username": "coordinador", "password": "clave-segura-123",
+        }, content_type="application/json")
+        self.assertEqual(respuesta.status_code, 200)
+        url = reverse("logout-coordinador")
+        self.assertEqual(client.post(url).status_code, 403)
+        self.assertIn("_auth_user_id", client.session)
+        self.assertEqual(client.post(url, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value).status_code, 200)
+        self.assertNotIn("_auth_user_id", client.session)

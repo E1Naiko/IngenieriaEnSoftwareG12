@@ -18,31 +18,22 @@ from django.views.decorators.http import require_POST
 
 from core.estados import es_baja
 from core.models import Paquete, Repartidor
+from .serializers import paquete_to_dict
 
 # Con 404/403 + "message" el front cierra la sesión del repartidor.
 MSG_SESION_INVALIDA = "Sesión inválida"
 MSG_REPARTIDOR_BAJA = "Repartidor dado de baja"
 
-# Pendiente = todavía sin asignar; entregado y cancelado ya no son suyos
-# (el cancelado pasa a pedidos cercanos).
+# Pedidos bajo responsabilidad del repartidor, incluidos los que debe devolver.
+# ``cancelado_por_cliente`` también sigue a su cargo hasta que lo entregue en
+# el comercio: no se reasigna, lo lleva de vuelta a su origen.
 ESTADOS_ACTIVOS = [
     Paquete.Estado.ASIGNADO,
     Paquete.Estado.RETIRADO,
     Paquete.Estado.EN_CAMINO,
+    Paquete.Estado.EN_DEVOLUCION,
+    Paquete.Estado.CANCELADO_POR_CLIENTE,
 ]
-
-
-def _paquete_to_dict(paquete):
-    return {
-        "id": paquete.id,
-        "cod_seguimiento": paquete.cod_seguimiento,
-        "estado": paquete.estado.lower(),  # el front arma la clase CSS con este valor
-        "tamanio": paquete.tamanio,
-        "destinatario": f"{paquete.cliente.nombre} {paquete.cliente.apellido}".strip(),
-        "direccion": paquete.cliente.direccion,
-        "comercio": paquete.comercio.nombre,
-        "fecha_destino": paquete.fecha_destino.isoformat(),
-    }
 
 
 @csrf_exempt  # el front del repartidor no maneja token CSRF
@@ -74,4 +65,4 @@ def paquetes_repartidor(request):
         .filter(estado_min__in=ESTADOS_ACTIVOS)
         .select_related("cliente", "comercio")
     )
-    return JsonResponse({"paquetes": [_paquete_to_dict(p) for p in paquetes]})
+    return JsonResponse({"paquetes": [paquete_to_dict(p) for p in paquetes]})

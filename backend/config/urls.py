@@ -41,6 +41,7 @@ urlpatterns = [
     # HU #36: lista y toma de pedidos "Por Reasignar"
     path("api/", include("pedidosPorReasignar.urls")),
     path("api/", include("bajaRepartidor.urls")),
+    path("api/", include("verPedidosPorAsignar.urls")),
 ]
 
 # En desarrollo Django sirve los archivos subidos (comprobantes) desde

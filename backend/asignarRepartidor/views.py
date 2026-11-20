@@ -41,10 +41,14 @@ from django.db import transaction
 from django.db.models import CharField, F
 from django.db.models.functions import Trim, Upper
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.middleware.csrf import get_token
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from core.models import Paquete, Repartidor
 from crudComercios.views import _parse_body
+from verPedidosPorAsignar.services import ESTADOS_DISPONIBLES, en_oferta, es_reasignacion
 
 
 # Mensajes que pide la HU y del resto de validaciones.
@@ -55,17 +59,14 @@ MSG_NO_HAY_CON_VEHICULO = "No hay repartidores disponibles con el vehículo requ
 MSG_OBLIGATORIO = "Campo obligatorio *"
 
 # Estados en los que el paquete ya no puede recibir un repartidor.
-# "entregado" es final; "cancelado" tampoco se asigna.
+# "entregado" es final; los dos cierres por cancelación tampoco se asignan,
+# y el paquete en devolución sigue a cargo de quien lo tiene.
+# OJO: "pendiente_reasignacion" NO va acá: es justo el estado que se reasigna.
 ESTADOS_NO_ASIGNABLES = {
     Paquete.Estado.ENTREGADO.upper(),
     Paquete.Estado.CANCELADO.upper(),
-}
-
-# Valores de ``Repartidor.estado`` que cuentan como disponibles. "DISPONIBLE"
-# es el de la base actual; "ACTIVO" es el legado.
-ESTADOS_DISPONIBLES = {
-    Repartidor.Estado.ACTIVO.upper(),
-    "DISPONIBLE",
+    Paquete.Estado.CANCELADO_POR_CLIENTE.upper(),
+    Paquete.Estado.EN_DEVOLUCION.upper(),
 }
 
 
@@ -146,23 +147,27 @@ def _listar_para_paquete(request, paquete_pk):
     if paquete.tamanio_nivel is None:
         return JsonResponse({"paquete": "Tamaño inválido."}, status=400)
 
-    repartidores = list(_repartidores_con_vehiculo_para(paquete))
+    candidatos = _repartidores_con_vehiculo_para(paquete)
+    extras = {}
+    if es_reasignacion(paquete):
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Iniciá sesión como coordinador."}, status=403)
+        if en_oferta(paquete, timezone.now()):
+            return JsonResponse({"detail": "El pedido todavía está publicado en Pedidos cercanos."}, status=409)
+        candidatos = candidatos.exclude(pk=paquete.repartidor_original_id)
+        extras = {"csrf_token": get_token(request), "motivo_cancelacion": paquete.motivo_cancelacion}
 
-    # Escenario 2: no hay repartidores con el vehículo necesario ahora mismo.
-    # El paquete queda sin asignar (pendiente) y el frontend muestra el mensaje.
+    repartidores = [_repartidor_to_dict(r) for r in candidatos]
     if not repartidores:
-        return JsonResponse(
-            {
-                "mensaje": MSG_NO_HAY_CON_VEHICULO,
-                "repartidores": [],
-            },
-            status=200,
-        )
+        extras["mensaje"] = MSG_NO_HAY_CON_VEHICULO
+    return JsonResponse({"repartidores": repartidores, **extras})
 
-    return JsonResponse(
-        {"repartidores": [_repartidor_to_dict(r) for r in repartidores]},
-        status=200,
-    )
+
+@csrf_protect
+def _autorizar_reasignacion(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Iniciá sesión como coordinador."}, status=403)
+    return JsonResponse({})
 
 
 def _listar_todos_disponibles():
@@ -201,7 +206,7 @@ def _asignar(request):
         return JsonResponse(faltantes, status=400)
 
     with transaction.atomic():
-        # select_for_update: evita que dos coordinadores asignen el mismo paquete a la vez.
+        # Mismo bloqueo que usan la cancelación y la toma de una oferta cercana.
         paquete = (
             Paquete.objects.select_for_update()
             .filter(pk=data["paquete"])
@@ -227,6 +232,15 @@ def _asignar(request):
                 {"detail": "El paquete ya tiene un repartidor asignado."}, status=409
             )
 
+        if es_reasignacion(paquete):
+            autorizacion = _autorizar_reasignacion(request)
+            if autorizacion.status_code != 200:
+                return autorizacion
+            if en_oferta(paquete, timezone.now()):
+                return JsonResponse({"detail": "El pedido todavía está publicado en Pedidos cercanos."}, status=409)
+            if paquete.repartidor_original_id == repartidor.pk:
+                return JsonResponse({"repartidor": "Elegí otro repartidor."}, status=400)
+
         # Solo disponibles: se verifica contra el mismo filtro que el listado.
         if not _repartidores_disponibles().filter(pk=repartidor.pk).exists():
             return JsonResponse(
@@ -242,7 +256,8 @@ def _asignar(request):
         # avanza el repartidor (asignado -> en_camino -> entregado).
         paquete.repartidor = repartidor
         paquete.estado = Paquete.Estado.ASIGNADO
-        paquete.save(update_fields=["repartidor", "estado"])
+        paquete.reasignacion_hasta = None
+        paquete.save(update_fields=["repartidor", "estado", "reasignacion_hasta"])
 
     return JsonResponse(_paquete_to_dict(paquete), status=200)
 
@@ -256,6 +271,7 @@ def _es_entero(valor):
     return True
 
 
+@never_cache
 @csrf_exempt
 def asignar_repartidor(request):
     """

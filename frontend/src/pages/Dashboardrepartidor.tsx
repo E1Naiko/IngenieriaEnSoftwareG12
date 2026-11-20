@@ -21,14 +21,18 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
   retirado: "Retirado",
   en_camino: "En camino",
   entregado: "Entregado",
+  pendiente_reasignacion: "Pendiente de reasignación",
+  en_devolucion: "En devolución",
   cancelado: "Cancelado",
 };
 
-// Flujo que maneja el repartidor: asignado -> en_camino -> entregado.
+// Flujo de estados que maneja el repartidor.
 const SIGUIENTE_ESTADO: Record<string, string | null> = {
   asignado: "en_camino",
   en_camino: "entregado",
+  en_devolucion: "cancelado",
   entregado: null,
+  pendiente_reasignacion: null,
   cancelado: null,
 };
 
@@ -36,6 +40,7 @@ const SIGUIENTE_ESTADO: Record<string, string | null> = {
 const TEXTO_BOTON: Record<string, string> = {
   asignado: "Marcar como En camino",
   en_camino: "Marcar como Entregado",
+  en_devolucion: "Confirmar devolución al comercio",
 };
 
 // "2026-10-30" -> "30/10/2026".
@@ -71,6 +76,7 @@ function PedidoItem({
   const [foto, setFoto] = useState<File | null>(null);
   const [pidiendoEntrega, setPidiendoEntrega] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [estadoCancelacion, setEstadoCancelacion] = useState("");
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -130,12 +136,17 @@ function PedidoItem({
 
       onActualizado(p.id, estado);
 
-      setExito(`Estado actualizado a "${ETIQUETAS_ESTADO[estado]}".`);
+      setExito(
+        `Estado actualizado a "${ETIQUETAS_ESTADO[estado] ?? estado}".`
+      );
       setDni("");
+
       setFoto(null);
       setMotivo("");
+      setEstadoCancelacion("");
       setPidiendoEntrega(false);
       setCancelando(false);
+
     } catch {
       setAviso("No se pudo conectar con el servidor");
     } finally {
@@ -171,12 +182,14 @@ function PedidoItem({
   }
 
   function confirmarCancelacion() {
-    if (!motivo.trim()) {
-      setAviso("Tenés que indicar el motivo de la cancelación.");
+    if (!estadoCancelacion) {
+      setAviso("Tenés que seleccionar un tipo de cancelación.");
       return;
     }
 
-    enviarCambio("cancelado", { motivo: motivo.trim() });
+    enviarCambio(estadoCancelacion, {
+      motivo: motivo.trim(),
+    });
   }
 
   return (
@@ -212,6 +225,7 @@ function PedidoItem({
         </p>
       ) : (
         <div className="repartidor-actualizar">
+
           {pidiendoEntrega ? (
             <>
               <label>
@@ -266,11 +280,49 @@ function PedidoItem({
           ) : cancelando ? (
             <>
               <label>
-                Motivo de la cancelación
+                Tipo de cancelación
+
+                <select
+                  value={estadoCancelacion}
+                  onChange={(e) => {
+                    setEstadoCancelacion(e.target.value);
+                    setAviso("");
+                  }}
+                  disabled={enviando}
+                >
+                  <option value="">Seleccioná una opción</option>
+
+                  <option value="pendiente_reasignacion">
+                    Fuerza mayor (reasignación a otro repartidor)
+                  </option>
+
+                  <option value="en_devolucion">
+                    Devolución al comercio
+                  </option>
+                </select>
+              </label>
+
+              {estadoCancelacion && (
+                <p className="repartidor-descripcion-estado">
+                  {estadoCancelacion === "pendiente_reasignacion" &&
+                    "Se liberó por fuerza mayor y espera a otro repartidor."}
+
+                  {estadoCancelacion === "en_devolucion" &&
+                    "El cliente estaba ausente o rechazó el pedido. El repartidor debe devolverlo."}
+
+                  {estadoCancelacion === "cancelado" &&
+                    "El pedido fue cancelado."}
+                </p>
+              )}
+
+              <label>
+                Motivo o mensaje adicional (opcional)
+
                 <textarea
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
-                  rows={2}
+                  rows={3}
+                  placeholder="Podés agregar información adicional..."
                   disabled={enviando}
                 />
               </label>
@@ -280,9 +332,9 @@ function PedidoItem({
                   type="button"
                   className="repartidor-primario"
                   onClick={confirmarCancelacion}
-                  disabled={enviando}
+                  disabled={enviando || !estadoCancelacion}
                 >
-                  {enviando ? "Guardando..." : "Confirmar cancelación"}
+                  {enviando ? "Guardando..." : "Confirmar"}
                 </button>
 
                 <button
@@ -291,6 +343,7 @@ function PedidoItem({
                   onClick={() => {
                     setCancelando(false);
                     setMotivo("");
+                    setEstadoCancelacion("");
                     setAviso("");
                   }}
                   disabled={enviando}
@@ -307,7 +360,9 @@ function PedidoItem({
                 onClick={avanzar}
                 disabled={enviando}
               >
-                {enviando ? "Guardando..." : TEXTO_BOTON[p.estado]}
+                {enviando
+                  ? "Guardando..."
+                  : TEXTO_BOTON[p.estado]}
               </button>
 
               <button
@@ -315,6 +370,8 @@ function PedidoItem({
                 className="repartidor-secundario"
                 onClick={() => {
                   setCancelando(true);
+                  setEstadoCancelacion("");
+                  setMotivo("");
                   setAviso("");
                   setExito("");
                 }}
@@ -454,6 +511,7 @@ function DashboardRepartidor() {
 
       const data = await res.json();
       setPaquetes(data.paquetes ?? []);
+
     } catch (e) {
       setError(
         e instanceof Error
@@ -643,14 +701,12 @@ function DashboardRepartidor() {
           </p>
         )}
 
-        {/* Lista vacía */}
         {!loading && !error && paquetes.length === 0 && (
           <p className="repartidor-mensaje repartidor-vacio">
             No tenés pedidos en espera.
           </p>
         )}
 
-        {/* Lista de pedidos asignados */}
         {!loading && !error && paquetes.length > 0 && (
           <ul className="repartidor-lista">
             {paquetes.map((p) => (

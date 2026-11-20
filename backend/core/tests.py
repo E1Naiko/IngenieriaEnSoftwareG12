@@ -581,6 +581,59 @@ class CargarRepartidoresDemoTests(TestCase):
         self.assertEqual(Repartidor.objects.count(), 12)
 
 
+class EstadoCheckConstraintTests(TestCase):
+    """El CHECK de ``paquete.estado``: la base no acepta valores inventados."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.comercio = _comercio()
+        cls.cliente = _cliente()
+
+    def _crear(self, estado):
+        return _paquete(self.comercio, self.cliente, estado=estado)
+
+    def test_constante_coincide_con_los_choices_del_modelo(self):
+        """Si alguien agrega un estado al modelo, tiene que actualizar la tupla."""
+        from .models import ESTADOS_PAQUETE
+
+        self.assertEqual(list(ESTADOS_PAQUETE), list(Paquete.Estado.values))
+
+    def test_existe_el_constraint_en_el_esquema(self):
+        nombres = {c.name for c in Paquete._meta.constraints}
+        self.assertIn("paquete_estado_valido", nombres)
+
+    def test_acepta_los_estados_del_modelo(self):
+        for estado in Paquete.Estado.values:
+            with self.subTest(estado=estado):
+                paquete = self._crear(estado)
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.estado, estado)
+
+    def test_acepta_los_historicos_de_dev_con_mayusculas_y_espacios(self):
+        """La base DEV tiene "ENTREGADO", " PENDIENTE": el runtime los acepta."""
+        for estado in ("PENDIENTE", " PENDIENTE ", "Entregado", "EN_CAMINO"):
+            with self.subTest(estado=estado):
+                paquete = self._crear(estado)
+                paquete.refresh_from_db()
+                self.assertEqual(paquete.estado, estado)
+
+    def test_rechaza_un_estado_inventado(self):
+        for estado in ("devuelto", "cancelado_otra_cosa", "canc", ""):
+            with self.subTest(estado=estado):
+                with self.assertRaises(IntegrityError):
+                    with transaction.atomic():
+                        self._crear(estado)
+
+    def test_rechaza_un_update_por_queryset_con_estado_invalido(self):
+        """El CHECK frena también a ``update()``, que no pasa por los choices."""
+        paquete = self._crear("pendiente")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Paquete.objects.filter(pk=paquete.pk).update(estado="volando")
+        paquete.refresh_from_db()
+        self.assertEqual(paquete.estado, "pendiente")
+
+
 class PrepararDemoTests(TestCase):
     """El comando de preparación de la demo del Sprint 2.
 

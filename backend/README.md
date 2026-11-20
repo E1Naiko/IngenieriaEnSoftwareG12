@@ -59,9 +59,11 @@ python manage.py runserver
 ### Panel "Paquetes en curso" (HU #40)
 
 `GET /api/dashboard/paquetes-en-curso/` devuelve `{"paquetes": [...]}` con los
-paquetes que no están `entregado` (la comparación ignora mayúsculas).
-`cancelado` es un estado intermediario, así que también se lista. Cada ítem
-tiene exactamente seis claves, que son las que usa
+paquetes que no están cerrados: quedan fuera `entregado` y
+`cancelado_por_cliente` (la comparación ignora mayúsculas). `cancelado` y
+`en_devolucion` son estados intermedios: el repartidor todavía tiene el
+paquete y el coordinador necesita verlo. Cada ítem tiene exactamente seis
+claves, que son las que usa
 `frontend/src/pages/PaquetesEnCurso.tsx`:
 
 ```json
@@ -263,6 +265,17 @@ comandos de administración y el uso de la imagen de Docker Hub, ver
 [Info/Docker.md](../Info/Docker.md).
 
 ## Errores comunes
+
+### `Forbidden (Origin checking failed - http://localhost:5173 ...)`
+
+Aparece al reasignar un pedido desde el frontend con Vite: el proxy conserva
+`Origin: http://localhost:5173` pero Django ve otro host, así que el middleware
+de CSRF rechaza el `POST /api/dashboard/asignar-repartidor/` antes de mirar el
+token. No hace falta desactivar CSRF: agregar el origen del frontend a
+`CSRF_TRUSTED_ORIGINS` (o dejar la variable vacía para usar los orígenes de
+`CORS_ALLOWED_ORIGINS`) y enviar la cabecera `X-CSRFToken` con el valor de
+`csrf_token` que devuelve el `GET` del modal. Recordar reiniciar Django después
+de cambiar el `.env`.
 
 ### `could not translate host name "aws-0-<region>.pooler.supabase.com"`
 
@@ -526,6 +539,18 @@ Usa DNIs ficticios 99001000–99001011, correos `@example.invalid` y teléfonos
 `0000000000`. Puede repetirse sin duplicar registros ni sobrescribir los
 existentes. Si un DNI ya pertenece a otro registro, lo omite con una advertencia.
 No reinicia datos demo que se hayan editado. No ejecutar en producción.
+
+### Pedidos por reasignar (HU #35)
+
+La app `verPedidosPorAsignar` concentra la publicación, el vencimiento, las ofertas cercanas y la cola manual. Los modelos y la migración continúan en `core`. Esta app solo expone la API; no modifica el frontend.
+
+- `POST /api/cambiar-estado-pedido/`: el repartidor asignado solicita la cancelación con `id`, `estado: "cancelado"`, `token`, `causa` y `motivo`. Para `fuerza_mayor` puede enviar `ubicacion: {"latitud": ..., "longitud": ...}` con el punto de retiro. El paquete queda **Pendiente de reasignación** y se libera del repartidor original. `cliente_ausente` y `cliente_rechaza` dejan el paquete en **Devolución al comercio**; el repartidor lo conserva hasta confirmar la devolución, enviando `estado: "cancelado"` sin causa ni motivo adicionales.
+- `POST /api/pedidos-cercanos/`: con `token` y `ubicacion`, lista las ofertas para un repartidor disponible cuyo vehículo pueda transportar el paquete. Al enviar también el `id` de una oferta, intenta tomarla. El punto exacto de retiro solo se muestra al repartidor una vez asignado.
+- `GET /api/dashboard/pedidos-por-reasignar/`: lista los pedidos que un coordinador autenticado puede reasignar manualmente porque venció el plazo o no se pudo obtener el punto de retiro. `GET /api/dashboard/paquetes-en-curso/` sigue informando `por_reasignar` en los pedidos pendientes de reasignación. La reasignación manual usa `POST /api/dashboard/asignar-repartidor/` con sesión y CSRF.
+
+`REASIGNACION_MINUTOS` (por defecto `15`) y `REASIGNACION_RADIO_KM` (por defecto `5`, en línea recta) se configuran en el backend. El vencimiento se calcula desde el plazo persistido; no exige un cron ni un worker. Aplicar `python manage.py migrate` en la base del ambiente correspondiente.
+
+La reasignación manual usa CSRF: el `GET /api/dashboard/asignar-repartidor/?paquete=<id>` devuelve `csrf_token` y el frontend lo envía como cabecera `X-CSRFToken` en el `POST`. Si el frontend se sirve a través de un proxy con un origen distinto al que ve Django (Vite en `http://localhost:5173`, Vercel), el origen debe estar en `CSRF_TRUSTED_ORIGINS`. Si la variable está vacía se reutilizan los orígenes de `CORS_ALLOWED_ORIGINS`, que ya incluyen los del frontend de desarrollo; en producción conviene declararla explícitamente.
 
 ### Datos para la demo del sprint
 

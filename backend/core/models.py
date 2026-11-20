@@ -23,7 +23,7 @@ import string
 
 from django.db import models
 from django.db.models.functions import Lower, Trim
-from django.db.models.lookups import Exact
+from django.db.models.lookups import Exact, In
 
 
 class Repartidor(models.Model):
@@ -172,6 +172,12 @@ class Comercio(models.Model):
         return self.nombre
 
 
+ESTADOS_PAQUETE = (
+    "retirado", "pendiente", "asignado", "en_camino", "entregado",
+    "cancelado", "cancelado_por_cliente", "pendiente_reasignacion", "en_devolucion",
+)
+
+
 class Paquete(models.Model):
     """
     La entrega. Es la tabla que une todo: un repartidor (opcional porque el
@@ -197,7 +203,18 @@ class Paquete(models.Model):
         ASIGNADO = "asignado", "Asignado"  # el coordinador ya le asignó repartidor
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
-        CANCELADO = "cancelado", "Cancelado"  # HU #36: publicado para reasignación
+        CANCELADO = "cancelado", "Cancelado"
+        CANCELADO_POR_CLIENTE = "cancelado_por_cliente", "Cancelado por el cliente"
+        PENDIENTE_REASIGNACION = "pendiente_reasignacion", "Pendiente de reasignación"
+        EN_DEVOLUCION = "en_devolucion", "Devolución al comercio"
+
+    ESTADOS_CERRADOS = frozenset((Estado.ENTREGADO, Estado.CANCELADO, Estado.CANCELADO_POR_CLIENTE))
+    ESTADOS_DEVOLUCION = frozenset((Estado.EN_DEVOLUCION, Estado.CANCELADO_POR_CLIENTE))
+
+    class CausaCancelacion(models.TextChoices):
+        FUERZA_MAYOR = "fuerza_mayor", "Fuerza mayor"
+        CLIENTE_AUSENTE = "cliente_ausente", "Cliente ausente"
+        CLIENTE_RECHAZA = "cliente_rechaza", "Cliente rechazó el pedido"
 
     class Tamanio(models.TextChoices):
         """Tamaño estimado del paquete."""
@@ -265,7 +282,22 @@ class Paquete(models.Model):
     fecha_origen = models.DateField()
     fecha_destino = models.DateField()
 
+    causa_cancelacion = models.CharField(max_length=20, choices=CausaCancelacion.choices, blank=True)
+    motivo_cancelacion = models.CharField(max_length=500, blank=True)
+    repartidor_original = models.ForeignKey(
+        Repartidor, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_liberados",
+    )
+    reasignacion_hasta = models.DateTimeField(null=True, blank=True)
+    retiro_latitud = models.FloatField(null=True, blank=True)
+    retiro_longitud = models.FloatField(null=True, blank=True)
+
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=In(Lower(Trim("estado")), list(ESTADOS_PAQUETE)),
+                name="paquete_estado_valido",
+            ),
+        ]
         db_table = "paquete"        # nombre de tabla del diagrama
         verbose_name = "paquete"
         ordering = ["-id"]          # los más nuevos primero

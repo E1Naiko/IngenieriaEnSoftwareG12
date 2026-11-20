@@ -3,7 +3,7 @@ import json
 from django.db import IntegrityError
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
 
 from core.models import Repartidor
 
@@ -148,7 +148,7 @@ def _normalizar_nombre(texto):
     return " ".join(str(texto or "").split()).title()
 
 
-@csrf_exempt  # Desactiva la validación CSRF para este endpoint.
+@never_cache
 @require_POST  # Acepta únicamente POST; los demás métodos reciben 405.
 def repartidores_alta(request):
     """POST /api/repartidores/ — da de alta un repartidor.
@@ -157,6 +157,9 @@ def repartidores_alta(request):
         201: Si el repartidor se creó correctamente.
         400: Si el JSON es inválido o hay errores de validación.
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Iniciá sesión como coordinador."}, status=403)
+
     # Lee y decodifica los datos enviados en el body.
     data = _parse_body(request)
 
@@ -200,7 +203,7 @@ def repartidores_alta(request):
     )
 
 
-@csrf_exempt
+@never_cache
 @require_http_methods(["GET", "PUT"])
 def repartidor_detalle(request, pk):
     """/api/repartidores/<pk>/ — datos y edición de un repartidor.
@@ -213,6 +216,9 @@ def repartidor_detalle(request, pk):
         400: Si el JSON es inválido o hay errores de validación.
         404: Si el repartidor no existe.
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Iniciá sesión como coordinador."}, status=403)
+
     # Busca el repartidor; si no existe, first() devuelve None.
     repartidor = Repartidor.objects.filter(pk=pk).first()
     if repartidor is None:

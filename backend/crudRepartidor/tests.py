@@ -2,7 +2,8 @@
 
 import json
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import Repartidor
@@ -17,6 +18,7 @@ from crudRepartidor.views import (
 
 class AltaRepartidorTests(TestCase):
     def setUp(self):
+        self.client.force_login(get_user_model().objects.create(username="coord"))
         self.url = reverse("crud-repartidor")
         # Datos de un alta válida
         self.datos = {
@@ -32,6 +34,9 @@ class AltaRepartidorTests(TestCase):
         return self.client.post(
             self.url, data=json.dumps(payload), content_type="application/json"
         )
+
+    def test_alta_requiere_sesion(self):
+        self.assertEqual(Client().post(self.url, self.datos, content_type="application/json").status_code, 403)
 
     def test_escenario_1_alta_exitosa(self):
         r = self._post(self.datos)
@@ -85,6 +90,7 @@ class EditarRepartidorTests(TestCase):
     """Tests de la HU #39: edición de repartidor."""
 
     def setUp(self):
+        self.client.force_login(get_user_model().objects.create(username="coord"))
         # Repartidor que vamos a editar
         self.repartidor = Repartidor.objects.create(
             nombre="Ana", apellido="Paz", dni=11111111,
@@ -180,6 +186,9 @@ class EditarRepartidorTests(TestCase):
         r = self._put(self.datos, url=url)
         self.assertEqual(r.status_code, 404)
         self.assertEqual(r.json()["message"], MSG_NO_ENCONTRADO)
+
+    def test_token_no_se_expone_sin_sesion(self):
+        self.assertEqual(Client().get(self.url).status_code, 403)
 
     def test_get_devuelve_solo_los_datos_de_la_hu(self):
         r = self.client.get(self.url)
