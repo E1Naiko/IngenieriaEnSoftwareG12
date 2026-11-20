@@ -52,7 +52,7 @@ class ReasignacionTests(TestCase):
         return self.client.get(reverse("paquetesEnCurso")).json()["paquetes"][0]["por_reasignar"]
 
     def _cola_manual(self):
-        return self.client.get(reverse("pedidos-por-reasignar"))
+        return self.client.get(reverse("dashboard-pedidos-por-reasignar"))
 
     def _asignar(self, repartidor, **kwargs):
         return self._post("asignarRepartidor", {"paquete": self.paquete.pk, "repartidor": repartidor.pk}, **kwargs)

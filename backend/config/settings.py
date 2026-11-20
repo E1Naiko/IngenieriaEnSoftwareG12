@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     "paquetesEnCurso",
     "actualizacionEstado",
     "pedidosAsignados",
+    "pedidosPorReasignar",
     "verPedidosPorAsignar.apps.VerPedidosPorAsignarConfig",
     "historialEnvios",
     "bajaRepartidor",
@@ -285,3 +286,26 @@ if not CORS_ALLOWED_ORIGINS:
 # cookies; con CORS_ALLOW_ALL_ORIGINS no se puede combinar (el navegador
 # rechaza `Access-Control-Allow-Credentials` junto con `*`).
 # CORS_ALLOW_CREDENTIALS = True
+
+# Plazo de oferta automática y radio (distancia en línea recta al retiro).
+REASIGNACION_MINUTOS = int(os.getenv("REASIGNACION_MINUTOS", "15"))
+REASIGNACION_RADIO_KM = float(os.getenv("REASIGNACION_RADIO_KM", "5"))
+
+# CSRF: las acciones del coordinador que modifican datos (por ejemplo, la baja
+# del repartidor de la HU #38 o la reasignación manual) viajan con la cookie de
+# sesión, así que Django exige el token CSRF. El proxy de Vite (y el rewrite de
+# Vercel) conservan el Origin del frontend, que no coincide con el Host que ve
+# Django: sin este origen en la lista, Django responde 403 "Origin checking
+# failed" antes de mirar el token.
+# El front lo lee de la cookie `csrftoken` y lo manda en el header
+# `X-CSRFToken`; para eso la cookie NO puede ser HttpOnly.
+#   CSRF_COOKIE_HTTPONLY = False  (valor por defecto de Django)
+#   CSRF_COOKIE_SAMESITE = "Lax"  (valor por defecto; alcanza porque el front
+#                                  llama por rutas relativas, mismo origen)
+# Si no se configura explícitamente, se confía en los mismos orígenes del
+# frontend ya habilitados para CORS. Si el front dejara de usar el proxy de
+# Vite y llamara a otro dominio, agregar ese dominio a CSRF_TRUSTED_ORIGINS
+# (con esquema, sin barra final):
+CSRF_TRUSTED_ORIGINS = _origenes(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)

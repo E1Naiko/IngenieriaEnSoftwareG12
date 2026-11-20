@@ -55,7 +55,7 @@ class ActualizarPedidoTests(TestCase):
             cuerpo["token"] = token
         return self.client.post(
             self.url,
-            data=json.dumps({"token": self.repartidor.token, **payload}),
+            data=json.dumps(cuerpo),
             content_type="application/json",
         )
 
@@ -308,6 +308,13 @@ class ValidarEntregaConDNITests(TestCase):
             comercio=self.comercio, cliente=self.cliente, repartidor=self.repartidor,
             fecha_origen=date(2026, 10, 1), fecha_destino=date(2026, 10, 2),
             estado=Paquete.Estado.EN_CAMINO,
+        )
+
+    def _post(self, payload):
+        return self.client.post(
+            self.url,
+            data=json.dumps({"token": self.repartidor.token, **payload}),
+            content_type="application/json",
         )
 
     def _entregar(self, **extra):
