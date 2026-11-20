@@ -72,19 +72,18 @@ def distancia_oferta(paquete, repartidor, ubicacion, ahora):
 
 
 class CancelacionInvalida(Exception):
-    def __init__(self, mensaje, *, estado_incompatible=False):
+    def __init__(self, mensaje, *, estado_incompatible=False, campo=None):
         super().__init__(mensaje)
         self.estado_incompatible = estado_incompatible
+        self.campo = campo
 
 
-def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
+def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada, destino):
     """Registra la cancelación de un paquete bloqueado y autorizado por el llamador."""
     if paquete.estado.strip().lower() not in ESTADOS_CANCELABLES:
         raise CancelacionInvalida("El pedido no está en condiciones de ser cancelado.", estado_incompatible=True)
-    if causa not in Paquete.CausaCancelacion.values:
-        raise CancelacionInvalida("Seleccioná una causa de cancelación válida.")
-    if not isinstance(motivo, str) or not 1 <= len(motivo.strip()) <= 500 or "\x00" in motivo:
-        raise CancelacionInvalida("Indicá el motivo de la cancelación (máximo 500 caracteres).")
+    if not isinstance(motivo, str) or len(motivo.strip()) > 500 or "\x00" in motivo:
+        raise CancelacionInvalida("Indicá un motivo válido (máximo 500 caracteres).", campo="motivo")
 
     ubicacion = ubicacion_valida(ubicacion_informada)
     if ubicacion_informada is not None and ubicacion is None:
@@ -109,8 +108,11 @@ def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
             if ubicacion else "Sin ubicación de retiro: el pedido quedó disponible para el coordinador."
         )
     else:
-        paquete.estado = Paquete.Estado.EN_DEVOLUCION
-        mensaje = "Devolvé el paquete al comercio y confirmá la devolución."
+        paquete.estado = destino
+        mensaje = (
+            "Devolvé el paquete al comercio y confirmá la devolución."
+            if destino == Paquete.Estado.EN_DEVOLUCION else "El pedido quedó cancelado."
+        )
 
     paquete.save(update_fields=[
         "estado", "causa_cancelacion", "motivo_cancelacion", "repartidor",

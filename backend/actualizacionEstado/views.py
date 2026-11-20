@@ -77,14 +77,38 @@ def cambiar_estado_pedido(request):
         estado = paquete.estado.strip().lower()
         if estado in Paquete.ESTADOS_CERRADOS:
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
-        if nuevo_estado == Paquete.Estado.CANCELADO and estado != Paquete.Estado.EN_DEVOLUCION:
+        confirmando_devolucion = (
+            estado == Paquete.Estado.EN_DEVOLUCION
+            and nuevo_estado == Paquete.Estado.CANCELADO
+            and "causa" not in data
+        )
+        if nuevo_estado in DESTINOS_CANCELACION and not confirmando_devolucion:
+            if "causa" in data:
+                causa = data["causa"]
+                if nuevo_estado != Paquete.Estado.CANCELADO or causa not in Paquete.CausaCancelacion.values:
+                    return JsonResponse({"message": "Causa de cancelación inválida.", "campo": "causa"}, status=400)
+                motivo = data.get("motivo")
+                if not isinstance(motivo, str) or not motivo.strip():
+                    return JsonResponse({"message": "Indicá el motivo de la cancelación.", "campo": "motivo"}, status=400)
+                destino = {
+                    Paquete.CausaCancelacion.FUERZA_MAYOR: Paquete.Estado.PENDIENTE_REASIGNACION,
+                    Paquete.CausaCancelacion.CLIENTE_AUSENTE: Paquete.Estado.EN_DEVOLUCION,
+                    Paquete.CausaCancelacion.CLIENTE_RECHAZA: Paquete.Estado.CANCELADO_POR_CLIENTE,
+                }[causa]
+            else:
+                causa = DESTINOS_CANCELACION[nuevo_estado]
+                motivo = data.get("motivo", "")
+                destino = nuevo_estado
             try:
                 mensaje = registrar_cancelacion(
-                    paquete, causa=data.get("causa"), motivo=data.get("motivo"),
+                    paquete, causa=causa, motivo=motivo, destino=destino,
                     ubicacion_informada=data.get("ubicacion"),
                 )
             except CancelacionInvalida as exc:
-                return error(str(exc), 409 if exc.estado_incompatible else 400)
+                respuesta = {"message": str(exc)}
+                if exc.campo:
+                    respuesta["campo"] = exc.campo
+                return JsonResponse(respuesta, status=409 if exc.estado_incompatible else 400)
             return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})
 
         siguiente = {
@@ -98,7 +122,7 @@ def cambiar_estado_pedido(request):
 
         paquete.estado = nuevo_estado
         campos = ["estado"]
-        if nuevo_estado == Paquete.Estado.ENTREGADO:
+        if nuevo_estado == Paquete.Estado.ENTREGADO or confirmando_devolucion:
             paquete.retiro_latitud = paquete.retiro_longitud = None
             campos += ["retiro_latitud", "retiro_longitud"]
         paquete.save(update_fields=campos)
