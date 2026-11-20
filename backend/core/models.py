@@ -205,6 +205,7 @@ class Paquete(models.Model):
         EN_DEVOLUCION = "en_devolucion", "Devolución al comercio"
 
     ESTADOS_CERRADOS = frozenset((Estado.ENTREGADO, Estado.CANCELADO, Estado.CANCELADO_POR_CLIENTE))
+    ESTADOS_DEVOLUCION = frozenset((Estado.EN_DEVOLUCION, Estado.CANCELADO_POR_CLIENTE))
 
     class CausaCancelacion(models.TextChoices):
         FUERZA_MAYOR = "fuerza_mayor", "Fuerza mayor"

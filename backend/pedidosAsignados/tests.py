@@ -71,6 +71,17 @@ class PedidosAsignadosTests(TestCase):
             "fecha_destino": "2026-10-30",
         })
 
+    def test_incluye_direccion_del_comercio_para_devoluciones(self):
+        estados = ("EN_DEVOLUCION", Paquete.Estado.CANCELADO_POR_CLIENTE)
+        pedidos = [self._paquete(self.repartidor, estado) for estado in estados]
+
+        respuesta = self._post({"token": self.repartidor.token})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            {p["id"]: p["direccion_comercio"] for p in respuesta.json()["paquetes"]},
+            {pedido.id: self.comercio.direccion for pedido in pedidos},
+        )
+
     def test_escenario_2_sin_pedidos(self):
         r = self._post({"token": self.repartidor.token})
         self.assertEqual(r.status_code, 200)
