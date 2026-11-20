@@ -53,6 +53,10 @@ function PaquetesEnCurso() {
   const [errorModal, setErrorModal] = useState("");
   const [mensajeModal, setMensajeModal] = useState("");
 
+  // Django exige CSRF solo para reasignar un pedido ya cancelado; el GET del
+  // modal devuelve el token junto con la lista de repartidores.
+  const [csrfToken, setCsrfToken] = useState("");
+
   // Devuelve el texto del repartidor.
   function obtenerRepartidorTexto(
     repartidor: string | number | null | undefined
@@ -112,11 +116,13 @@ function PaquetesEnCurso() {
     setRepartidorSeleccionado("");
     setErrorModal("");
     setMensajeModal("");
+    setCsrfToken("");
     setLoadingRepartidores(true);
 
     try {
       const res = await fetch(
-        `/api/dashboard/asignar-repartidor/?paquete=${paquete.id}`
+        `/api/dashboard/asignar-repartidor/?paquete=${paquete.id}`,
+        { credentials: "same-origin" }
       );
 
       const data = await res.json();
@@ -130,6 +136,7 @@ function PaquetesEnCurso() {
       }
 
       setRepartidores(data.repartidores ?? []);
+      setCsrfToken(data.csrf_token ?? "");
 
       if (data.mensaje) {
         setMensajeModal(data.mensaje);
@@ -155,14 +162,20 @@ function PaquetesEnCurso() {
     setAsignando(true);
     setErrorModal("");
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (csrfToken) {
+      headers["X-CSRFToken"] = csrfToken;
+    }
+
     try {
       const res = await fetch(
         "/api/dashboard/asignar-repartidor/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          credentials: "same-origin",
+          headers,
           body: JSON.stringify({
             paquete: paqueteSeleccionado.id,
             repartidor: Number(repartidorSeleccionado),
@@ -203,6 +216,7 @@ function PaquetesEnCurso() {
     setRepartidorSeleccionado("");
     setErrorModal("");
     setMensajeModal("");
+    setCsrfToken("");
   }
 
   useEffect(() => {
