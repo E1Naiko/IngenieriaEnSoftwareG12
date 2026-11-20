@@ -267,10 +267,6 @@ function PedidoItem({ paquete: p, token, onActualizado }: PedidoItemProps) {
                   <option value="en_devolucion">
                     Devolución al comercio
                   </option>
-
-                  <option value="cancelado">
-                    Cancelado
-                  </option>
                 </select>
               </label>
 
