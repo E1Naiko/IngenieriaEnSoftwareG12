@@ -75,7 +75,7 @@ def cambiar_estado_pedido(request):
             return error("El pedido no está asignado a este repartidor.", 403)
 
         estado = paquete.estado.strip().lower()
-        if estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
+        if estado in Paquete.ESTADOS_CERRADOS:
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
         if nuevo_estado == Paquete.Estado.CANCELADO and estado != Paquete.Estado.EN_DEVOLUCION:
             try:

@@ -172,6 +172,12 @@ class Comercio(models.Model):
         return self.nombre
 
 
+ESTADOS_PAQUETE = (
+    "retirado", "pendiente", "asignado", "en_camino", "entregado",
+    "cancelado", "cancelado_por_cliente", "pendiente_reasignacion", "en_devolucion",
+)
+
+
 class Paquete(models.Model):
     """
     La entrega. Es la tabla que une todo: un repartidor (opcional porque el
@@ -194,8 +200,11 @@ class Paquete(models.Model):
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
         CANCELADO = "cancelado", "Cancelado"
+        CANCELADO_POR_CLIENTE = "cancelado_por_cliente", "Cancelado por el cliente"
         PENDIENTE_REASIGNACION = "pendiente_reasignacion", "Pendiente de reasignación"
         EN_DEVOLUCION = "en_devolucion", "Devolución al comercio"
+
+    ESTADOS_CERRADOS = frozenset((Estado.ENTREGADO, Estado.CANCELADO, Estado.CANCELADO_POR_CLIENTE))
 
     class CausaCancelacion(models.TextChoices):
         FUERZA_MAYOR = "fuerza_mayor", "Fuerza mayor"
@@ -278,6 +287,12 @@ class Paquete(models.Model):
     retiro_longitud = models.FloatField(null=True, blank=True)
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=In(Lower(Trim("estado")), list(ESTADOS_PAQUETE)),
+                name="paquete_estado_valido",
+            ),
+        ]
         db_table = "paquete"        # nombre de tabla del diagrama
         verbose_name = "paquete"
         ordering = ["-id"]          # los más nuevos primero
