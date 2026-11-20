@@ -1,4 +1,3 @@
-"""Consulta pública de estado y transiciones del repartidor asignado."""
 """Vistas para actualizar el estado de los paquetes/pedidos (HU #34, #38 y #23).
 
 Dos caminos, con requisitos distintos:
@@ -38,7 +37,6 @@ como ``Comprobante`` asociado al paquete; si no, el paquete queda con
 ``comprobante = NULL``, igual que antes de esta historia. La foto nunca fue la
 regla de la HU: la regla es el número del DNI.
 
-from django.db import transaction
 La lectura del campo es tolerante con lo que ya manda el front: acepta
 ``dni_receptor`` y ``dni``, y valores como ``30111222``, ``"30.111.222"`` o
 ``" 30111222 "`` (se quedan solo los dígitos).
@@ -46,24 +44,22 @@ La lectura del campo es tolerante con lo que ya manda el front: acepta
 
 import base64
 import binascii
-import json
 import re
 
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from core.models import Paquete, Repartidor
+from core.estados import es_baja
+from core.models import Comprobante, Paquete, Repartidor
 from crudComercios.views import _parse_body
 from verPedidosPorAsignar.services import (
     DESTINOS_CANCELACION,
     CancelacionInvalida,
     registrar_cancelacion,
 )
-
-from core.estados import es_baja
-from core.models import Comprobante, Paquete, Repartidor
 
 MSG_TOKEN_FALTANTE = "Falta el token"
 MSG_TOKEN_INVALIDO = "Token inválido"
@@ -187,7 +183,6 @@ def _guardar_foto(paquete, foto):
     return None
 
 
-@csrf_exempt
 def error(mensaje, status=400):
     return JsonResponse({"message": mensaje}, status=status)
 
@@ -214,33 +209,8 @@ def cambiar_estado_pedido(request):
         lista = [to_dict(p) for p in paquetes]
         mensaje = "Paquetes obtenidos correctamente." if lista else "No hay paquetes registrados."
         return JsonResponse({"message": mensaje, "paquetes": lista})
-        cod_seguimiento = request.GET.get("cod_seguimiento")
-
-        if cod_seguimiento:
-            paquetes = Paquete.objects.filter(cod_seguimiento=cod_seguimiento)
-        else:
-            paquetes = Paquete.objects.all()
-
-        # Usamos .exists() para verificar si hay paquetes
-        if not paquetes.exists():
-            return JsonResponse(
-                {"message": "No hay paquetes registrados.", "paquetes": []},
-                status=200
-            )
-
-        lista_paquetes = [to_dict(p) for p in paquetes]
-        return JsonResponse(
-            {"message": "Paquetes obtenidos correctamente.", "paquetes": lista_paquetes},
-            status=200
-        )
 
     # --- POST: Actualizar estado de un paquete ---
-    # Parsear JSON
-    try:
-        data = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return JsonResponse({"message": "El cuerpo debe ser JSON válido."}, status=400)
-
     data = _parse_body(request)
     if data is None:
         return error("El cuerpo debe ser un objeto JSON válido.")
@@ -253,69 +223,38 @@ def cambiar_estado_pedido(request):
         return error("Falta el campo 'estado'.")
     if nuevo_estado not in Paquete.Estado.values:
         return error("Estado inválido.")
-    if not isinstance(data, dict):
-        return JsonResponse({"message": "El cuerpo debe ser un objeto JSON."}, status=400)
 
     # Quién pide el cambio: el token del repartidor que tiene la sesión abierta
     # en el dashboard. Se normaliza como en loginRepartidor.
+    if "token" not in data or data.get("token") is None:
+        return error(MSG_TOKEN_FALTANTE, 400)
     token = str(data.get("token") or "").strip().upper()
-    repartidor, error = _repartidor_por_token(token)
-    if error is not None:
-        return error
-
-    # Obtener id y nuevo estado
-    paquete_id = data.get("id")
-    nuevo_estado = data.get("estado")
-
-    if paquete_id is None:
-        return JsonResponse({"message": "Falta el campo 'id' del paquete."}, status=400)
-
-    if nuevo_estado is None:
-        return JsonResponse({"message": "Falta el campo 'estado'."}, status=400)
-
-    token = str(data.get("token") or "").strip().upper()
-    repartidor = Repartidor.objects.filter(token=token).first() if token else None
-    if repartidor is None:
-        return error("Sesión inválida.", 401)
-    if repartidor.estado.strip().lower() == Repartidor.Estado.BAJA:
-        return error("Repartidor dado de baja.", 403)
+    if not token:
+        # La clave vino vacía: equivale a un token que no identifica a nadie.
+        return JsonResponse({"message": MSG_TOKEN_INVALIDO}, status=401)
+    repartidor, error_auth = _repartidor_por_token(token)
+    if error_auth is not None:
+        return error_auth
 
     with transaction.atomic():
-    paquete = Paquete.objects.select_for_update().filter(pk=paquete_id).first()
+        paquete = Paquete.objects.select_for_update().filter(pk=paquete_id).first()
         if paquete is None:
             return error(f"No se encontró un paquete con id={paquete_id}.", 404)
-        if paquete.repartidor_id != repartidor.pk:
-            return error("El pedido no está asignado a este repartidor.", 403)
+        # Solo el repartidor asignado puede cambiar el estado de su paquete.
+        if not _paquete_del_repartidor(paquete, repartidor):
+            return error(MSG_PAQUETE_AJENO, 403)
 
-    # Usar .exists() para verificar si existe
-    if not paquetes.exists():
-        return JsonResponse(
-            {"message": f"No se encontró un paquete con id={paquete_id}."},
-            status=404
-        )
-
-    # Obtener el paquete y actualizar
-    paquete = paquetes.first()
-
-    # Solo el repartidor asignado puede cambiar el estado de su paquete.
-    if not _paquete_del_repartidor(paquete, repartidor):
-        return JsonResponse({"message": MSG_PAQUETE_AJENO}, status=403)
-
-    # Validación extra: no se puede modificar un paquete ya entregado o cancelado
-    if paquete.estado in [Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO]:
-        return JsonResponse(
-            {"message": f"No se puede modificar el estado de un paquete '{paquete.estado}'."},
-            status=400
-        )
         estado = paquete.estado.strip().lower()
         if estado in Paquete.ESTADOS_CERRADOS:
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
+
         confirmando_devolucion = (
             estado == Paquete.Estado.EN_DEVOLUCION
             and nuevo_estado == Paquete.Estado.CANCELADO
             and "causa" not in data
         )
         if nuevo_estado in DESTINOS_CANCELACION and not confirmando_devolucion:
+            # Cancelación desde el desplegable del dashboard (HU #35).
             if "causa" in data:
                 causa = data["causa"]
                 if nuevo_estado != Paquete.Estado.CANCELADO or causa not in Paquete.CausaCancelacion.values:
@@ -350,57 +289,40 @@ def cambiar_estado_pedido(request):
             Paquete.Estado.EN_CAMINO: Paquete.Estado.ENTREGADO,
             Paquete.Estado.EN_DEVOLUCION: Paquete.Estado.CANCELADO,
         }
-        if nuevo_estado != siguiente.get(estado):
+        if nuevo_estado != siguiente.get(estado) and nuevo_estado != estado:
             return error("No se puede modificar el pedido a ese estado.", 409)
 
-    # --- HU #23: la entrega se valida con el DNI del receptor ---
-    # El paquete NO cambia de estado si falta el DNI o si no coincide.
-    if nuevo_estado == Paquete.Estado.ENTREGADO:
-        dni_receptor = _dni_del_cuerpo(data)
-        if dni_receptor is None:
-            return JsonResponse({"message": MSG_DNI_REQUERIDO}, status=400)
+        # --- HU #23: la entrega se valida con el DNI del receptor ---
+        # El paquete NO cambia de estado si falta el DNI o si no coincide.
+        if nuevo_estado == Paquete.Estado.ENTREGADO:
+            dni_receptor = _dni_del_cuerpo(data)
+            if dni_receptor is None:
+                return JsonResponse({"message": MSG_DNI_REQUERIDO}, status=400)
 
-        dni_cliente = str(paquete.cliente.dni)
-        if dni_receptor != dni_cliente:
-            return JsonResponse(
-                {"message": MSG_DNI_INCORRECTO.format(dni=dni_cliente)},
-                status=400,
-            )
+            dni_cliente = str(paquete.cliente.dni)
+            if dni_receptor != dni_cliente:
+                return JsonResponse(
+                    {"message": MSG_DNI_INCORRECTO.format(dni=dni_cliente)},
+                    status=400,
+                )
 
-        error_foto = _guardar_foto(paquete, data.get("foto_dni"))
-        if error_foto is not None:
-            return error_foto
+            error_foto = _guardar_foto(paquete, data.get("foto_dni"))
+            if error_foto is not None:
+                return error_foto
 
-        # `paquete` viene de un queryset sin select_related: se guardan el
-        # estado y la FK del comprobante juntos.
         paquete.estado = nuevo_estado
         campos = ["estado"]
+        if nuevo_estado == Paquete.Estado.ENTREGADO:
+            campos.append("comprobante")
         if nuevo_estado == Paquete.Estado.ENTREGADO or confirmando_devolucion:
             paquete.retiro_latitud = paquete.retiro_longitud = None
             campos += ["retiro_latitud", "retiro_longitud"]
         paquete.save(update_fields=campos)
-        return JsonResponse({
-            "message": "Devolución al comercio confirmada." if estado == Paquete.Estado.EN_DEVOLUCION
-            else "Estado del paquete actualizado correctamente.",
-            "paquete": to_dict(paquete),
-        })
 
-        paquete.save(update_fields=["estado", "comprobante"])
-        return JsonResponse(
-            {
-                "message": "Entrega validada con el DNI del receptor.",
-                "paquete": to_dict(paquete),
-            },
-            status=200,
-        )
-
-    paquete.estado = nuevo_estado
-    paquete.save()
-
-    return JsonResponse(
-        {
-            "message": "Estado del paquete actualizado correctamente.",
-            "paquete": to_dict(paquete),
-        },
-        status=200
-    )
+        if confirmando_devolucion:
+            mensaje = "Devolución al comercio confirmada."
+        elif nuevo_estado == Paquete.Estado.ENTREGADO:
+            mensaje = "Entrega validada con el DNI del receptor."
+        else:
+            mensaje = "Estado del paquete actualizado correctamente."
+        return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})

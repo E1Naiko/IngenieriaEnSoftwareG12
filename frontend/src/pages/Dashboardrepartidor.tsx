@@ -88,7 +88,7 @@ function PedidoItem({
   async function enviarCambio(
     estado: string,
     extra?: { dni?: string; foto?: File; motivo?: string }
-  )
+  ) {
     setAviso("");
     setExito("");
     setEnviando(true);
@@ -157,7 +157,6 @@ function PedidoItem({
   function avanzar() {
     if (!siguiente) return;
 
-    // Antes de pasar a Entregado se solicita la foto del DNI.
     // Antes de pasar a Entregado se pide el DNI del receptor (HU #23).
     if (siguiente === "entregado") {
       setPidiendoEntrega(true);
@@ -493,7 +492,6 @@ function DashboardRepartidor() {
       });
 
       // Token inexistente o repartidor dado de baja: se cierra la sesión.
-      // Token inexistente o repartidor dado de baja.
       if (res.status === 404 || res.status === 403) {
         const data = await res.json().catch(() => null);
 
@@ -598,9 +596,6 @@ function DashboardRepartidor() {
   }
 
   // Si no hay sesión iniciada, vuelve al login.
-  if (!repartidor) {
-    return <Navigate to="/loginrepartidor" replace />;
-  }
   if (!repartidor) {
     return <Navigate to="/loginrepartidor" replace />;
   }
