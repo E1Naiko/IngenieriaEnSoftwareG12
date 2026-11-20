@@ -131,7 +131,8 @@
 }
 
 .repartidor-actualizar textarea,
-.repartidor-actualizar input[type="file"] {
+.repartidor-actualizar input[type="file"],
+.repartidor-actualizar input[type="text"] {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
@@ -141,10 +142,17 @@
   font-size: 0.9rem;
 }
 
+/* El DNI se tipea mientras el cliente lo muestra: más grande y espaciado. */
+.repartidor-actualizar input[type="text"] {
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
 .repartidor-actualizar textarea { resize: vertical; }
 
 .repartidor-actualizar textarea:focus,
-.repartidor-actualizar input[type="file"]:focus {
+.repartidor-actualizar input[type="file"]:focus,
+.repartidor-actualizar input[type="text"]:focus {
   outline: 2px solid #1f6feb;
   outline-offset: 1px;
 }

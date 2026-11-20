@@ -88,6 +88,54 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 ```
 
+### Entrega validada con el DNI del receptor (HU #23)
+
+`POST /api/cambiar-estado-pedido/` con `estado: "entregado"` **exige** el DNI del
+receptor y lo compara con el DNI del cliente del paquete:
+
+```json
+{
+  "token": "A7K2Q9",
+  "id": 1,
+  "estado": "entregado",
+  "dni_receptor": "33.444.555",
+  "foto_dni": "data:image/png;base64,..."
+}
+```
+
+El `token` no es opcional desde la HU #38: el endpoint valida quién pide el
+cambio (`400` sin token, `401` si no existe, `403` si el repartidor está de baja
+o el paquete no es suyo). El `GET` sigue siendo público para la pantalla de
+seguimiento.
+
+| Caso | Código | Respuesta |
+|---|---|---|
+| DNI correcto | `200` | `{"message": "Entrega validada con el DNI del receptor.", "paquete": {...}}` |
+| Falta el DNI | `400` | `{"message": "Necesario el numero del DNI del cliente para finalizar la entrega"}` |
+| DNI de otra persona | `400` | `{"message": "El DNI ingresado no coincide ... El DNI del cliente es 35666777."}` |
+| `foto_dni` mal formada o de más de 5 MB | `400` | `{"foto_dni": "..."}` |
+
+Detalles que importan:
+
+- **En los rechazos el paquete no cambia de estado.** La validación corre antes
+  del `save()`.
+- El DNI se normaliza a dígitos (`"30.111.222"` → `"30111222"`) y se acepta
+  también el campo `dni` además de `dni_receptor`.
+- `foto_dni` es **opcional**: si llega (JPEG, PNG o WebP en data URL base64 o
+  base64 pelado), se guarda como `Comprobante` del paquete
+  (`media/comprobantes/AAAA/MM/dni-<código>.<ext>`); si no llega, el paquete
+  queda sin comprobante. Antes el front la exigía y el backend la descartaba en
+  silencio.
+- Solo aplica a `entregado`: los demás estados no piden DNI.
+- No requiere migración: usa el modelo `Comprobante` existente.
+
+Tests (35 en la app, 19 de la validación de DNI):
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test actualizacionEstado
+```
+
 ### Pedidos "Por Reasignar" (HU #36)
 
 App `pedidosPorReasignar`, **sin cambios en el esquema**: no hay estado nuevo,
@@ -478,3 +526,22 @@ Usa DNIs ficticios 99001000–99001011, correos `@example.invalid` y teléfonos
 `0000000000`. Puede repetirse sin duplicar registros ni sobrescribir los
 existentes. Si un DNI ya pertenece a otro registro, lo omite con una advertencia.
 No reinicia datos demo que se hayan editado. No ejecutar en producción.
+
+### Datos para la demo del sprint
+
+```bash
+python manage.py preparar_demo --confirmar-desarrollo
+```
+
+Arma el escenario de la presentación (ver
+[Info/Demo-Sprint2-2026-11-20.md](../Info/Demo-Sprint2-2026-11-20.md)): 3
+repartidores (2 activos y 1 dado de baja), 3 comercios con tildes y guiones en
+los teléfonos, 3 clientes y 7 paquetes con códigos fijos `SRFR-DEMO0001`…
+`SRFR-DEMO0007`: dos `cancelado` para "Por Reasignar", uno sin repartidor, uno
+`entregado` y el resto en curso.
+
+A diferencia de `cargar_repartidores_demo`, **restaura los estados**: si un
+ensayo dejó los paquetes avanzados o un repartidor inactivo, volver a ejecutarlo
+deja todo como al inicio, sin duplicar registros. Imprime los tokens de los
+repartidores, que no se pueden listar desde el panel. Tests:
+`core.tests.PrepararDemoTests`. No ejecutar en producción.

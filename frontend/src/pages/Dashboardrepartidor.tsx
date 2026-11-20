@@ -67,8 +67,9 @@ function PedidoItem({
   token,
   onActualizado,
 }: PedidoItemProps) {
+  const [dni, setDni] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
-  const [pidiendoFoto, setPidiendoFoto] = useState(false);
+  const [pidiendoEntrega, setPidiendoEntrega] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -80,7 +81,7 @@ function PedidoItem({
 
   async function enviarCambio(
     estado: string,
-    extra?: { foto?: File; motivo?: string }
+    extra?: { dni?: string; foto?: File; motivo?: string }
   ) {
     setAviso("");
     setExito("");
@@ -97,6 +98,11 @@ function PedidoItem({
         cuerpo.motivo = extra.motivo;
       }
 
+      if (extra?.dni) {
+        cuerpo.dni_receptor = extra.dni;
+      }
+
+      // La foto es opcional: la HU #23 pide el número del DNI, no la imagen.
       if (extra?.foto) {
         cuerpo.foto_dni = await archivoABase64(extra.foto);
       }
@@ -125,9 +131,10 @@ function PedidoItem({
       onActualizado(p.id, estado);
 
       setExito(`Estado actualizado a "${ETIQUETAS_ESTADO[estado]}".`);
+      setDni("");
       setFoto(null);
       setMotivo("");
-      setPidiendoFoto(false);
+      setPidiendoEntrega(false);
       setCancelando(false);
     } catch {
       setAviso("No se pudo conectar con el servidor");
@@ -139,9 +146,9 @@ function PedidoItem({
   function avanzar() {
     if (!siguiente) return;
 
-    // Antes de pasar a Entregado se pide la foto del DNI.
+    // Antes de pasar a Entregado se pide el DNI del receptor (HU #23).
     if (siguiente === "entregado") {
-      setPidiendoFoto(true);
+      setPidiendoEntrega(true);
       setAviso("");
       setExito("");
       return;
@@ -151,14 +158,16 @@ function PedidoItem({
   }
 
   function confirmarEntrega() {
-    if (!foto) {
+    // El backend también lo valida; acá se evita el ida y vuelta innecesario.
+    const dniLimpio = dni.replace(/\D/g, "");
+    if (!dniLimpio) {
       setAviso(
-        "Tenés que adjuntar la foto del DNI del receptor para marcar como Entregado."
+        "Necesario el numero del DNI del cliente para finalizar la entrega"
       );
       return;
     }
 
-    enviarCambio("entregado", { foto });
+    enviarCambio("entregado", { dni: dniLimpio, foto: foto ?? undefined });
   }
 
   function confirmarCancelacion() {
@@ -203,10 +212,23 @@ function PedidoItem({
         </p>
       ) : (
         <div className="repartidor-actualizar">
-          {pidiendoFoto ? (
+          {pidiendoEntrega ? (
             <>
               <label>
-                Foto del DNI del receptor
+                DNI del receptor
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Número de DNI del cliente"
+                  value={dni}
+                  onChange={(e) => setDni(e.target.value)}
+                  disabled={enviando}
+                  autoFocus
+                />
+              </label>
+
+              <label>
+                Foto del DNI (opcional)
                 <input
                   type="file"
                   accept="image/*"
@@ -230,7 +252,8 @@ function PedidoItem({
                   type="button"
                   className="repartidor-secundario"
                   onClick={() => {
-                    setPidiendoFoto(false);
+                    setPidiendoEntrega(false);
+                    setDni("");
                     setFoto(null);
                     setAviso("");
                   }}
