@@ -365,20 +365,22 @@ function PedidoItem({
                   : TEXTO_BOTON[p.estado]}
               </button>
 
-              <button
-                type="button"
-                className="repartidor-secundario"
-                onClick={() => {
-                  setCancelando(true);
-                  setEstadoCancelacion("");
-                  setMotivo("");
-                  setAviso("");
-                  setExito("");
-                }}
-                disabled={enviando}
-              >
-                Cancelar pedido
-              </button>
+              {p.estado !== "en_devolucion" && (
+                <button
+                  type="button"
+                  className="repartidor-secundario"
+                  onClick={() => {
+                    setCancelando(true);
+                    setEstadoCancelacion("");
+                    setMotivo("");
+                    setAviso("");
+                    setExito("");
+                  }}
+                  disabled={enviando}
+                >
+                  Cancelar pedido
+                </button>
+              )}
             </div>
           )}
 
