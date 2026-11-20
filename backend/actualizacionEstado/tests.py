@@ -144,3 +144,129 @@ class ActualizarPedidoTests(TestCase):
         )
         self.assertEqual(r.status_code, 400)
         self.assertIn("JSON válido", r.json()["message"])
+    # --- Cancelación desde el panel del repartidor ---
+    def test_cancelacion_directa_del_desplegable_acepta_motivo_opcional(self):
+        for estado, motivo in (("pendiente_reasignacion", ""), ("en_devolucion", None), ("cancelado", "  Otro motivo  ")):
+            with self.subTest(estado=estado):
+                Paquete.objects.filter(pk=self.paquete.pk).update(
+                    estado=Paquete.Estado.EN_CAMINO,
+                    repartidor=self.repartidor,
+                )
+                cuerpo = {"id": self.paquete.id, "estado": estado}
+                if motivo is not None:
+                    cuerpo["motivo"] = motivo
+                r = self._post(cuerpo)
+                self.assertEqual(r.status_code, 200)
+                self.assertEqual(r.json()["paquete"]["estado"], estado)
+                self.paquete.refresh_from_db()
+                self.assertEqual(self.paquete.motivo_cancelacion, (motivo or "").strip())
+                if estado == "pendiente_reasignacion":
+                    self.assertIsNone(self.paquete.repartidor_id)
+                    self.assertEqual(self.paquete.repartidor_original_id, self.repartidor.pk)
+                else:
+                    self.assertEqual(self.paquete.repartidor_id, self.repartidor.pk)
+                    self.assertIsNone(self.paquete.reasignacion_hasta)
+
+    def test_cancelacion_compatible_rechaza_una_causa_explicita_invalida(self):
+        r = self._post({"id": self.paquete.id, "estado": "cancelado", "motivo": "Se rompió", "causa": None})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["campo"], "causa")
+
+    def test_el_desplegable_permite_confirmar_una_devolucion_sin_causa(self):
+        paquete = {"id": self.paquete.pk}
+        self.assertEqual(self._post({**paquete, "estado": "en_devolucion"}).status_code, 200)
+        self.assertEqual(self._post({**paquete, "estado": "pendiente_reasignacion"}).status_code, 409)
+        r = self._post({**paquete, "estado": "cancelado"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["paquete"]["estado"], "cancelado")
+
+    def test_cancelar_por_fuerza_mayor_libera_el_pedido(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "motivo": "  Se pinchó la rueda ",
+            "causa": "fuerza_mayor", "ubicacion": {"latitud": -34.92, "longitud": -57.95},
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["message"], "El pedido se publicó en Pedidos cercanos.")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.PENDIENTE_REASIGNACION)
+        self.assertIsNone(self.paquete.repartidor_id)
+        self.assertEqual(self.paquete.motivo_cancelacion, "Se pinchó la rueda")
+
+    def test_cancelar_por_ausencia_deja_el_paquete_en_devolucion(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "motivo": "No estaba",
+            "causa": "cliente_ausente",
+        })
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.EN_DEVOLUCION)
+
+        # Segundo paso: confirmar la devolución, sin causa ni motivo.
+        r = self._post({"id": self.paquete.id, "estado": "cancelado"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["message"], "Devolución al comercio confirmada.")
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO)
+
+    def test_motivo_invalido_indica_el_campo(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado", "causa": "fuerza_mayor", "motivo": "   ",
+        })
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()["campo"], "motivo")
+
+    def test_estado_retirado_avanza_a_en_camino(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(estado=Paquete.Estado.RETIRADO)
+        r = self._post({"id": self.paquete.id, "estado": "en_camino"})
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.EN_CAMINO)
+
+    # --- Separación de los dos cierres por cancelación ---
+    def test_rechazo_del_cliente_cierra_como_cancelado_por_cliente(self):
+        r = self._post({
+            "id": self.paquete.id, "estado": "cancelado",
+            "causa": "cliente_rechaza", "motivo": "No lo quiso recibir",
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["paquete"]["estado"], Paquete.Estado.CANCELADO_POR_CLIENTE)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO_POR_CLIENTE)
+        # Sigue en manos del repartidor: no hay reasignación ni oferta.
+        self.assertEqual(self.paquete.repartidor_id, self.repartidor.pk)
+        self.assertIsNone(self.paquete.reasignacion_hasta)
+        self.assertIsNone(self.paquete.repartidor_original_id)
+
+    def test_cancelado_por_cliente_no_admite_mas_cambios(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(
+            estado=Paquete.Estado.CANCELADO_POR_CLIENTE
+        )
+        for nuevo in ("en_camino", "entregado", "cancelado"):
+            with self.subTest(nuevo=nuevo):
+                r = self._post({"id": self.paquete.id, "estado": nuevo})
+                self.assertEqual(r.status_code, 400)
+                self.assertIn("No se puede modificar", r.json()["message"])
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO_POR_CLIENTE)
+
+    def test_los_dos_cierres_son_estados_distintos(self):
+        """El cierre genérico se distingue del rechazo explícito."""
+        self.assertNotEqual(
+            Paquete.Estado.CANCELADO, Paquete.Estado.CANCELADO_POR_CLIENTE
+        )
+        self.assertIn(Paquete.Estado.CANCELADO.lower(), Paquete.ESTADOS_CERRADOS)
+        self.assertIn(Paquete.Estado.CANCELADO_POR_CLIENTE.lower(), Paquete.ESTADOS_CERRADOS)
+        self.assertNotIn(Paquete.Estado.EN_DEVOLUCION.lower(), Paquete.ESTADOS_CERRADOS)
+        self.assertNotIn(Paquete.Estado.PENDIENTE_REASIGNACION.lower(), Paquete.ESTADOS_CERRADOS)
+
+    def test_confirmar_devolucion_limpia_el_punto_de_retiro(self):
+        Paquete.objects.filter(pk=self.paquete.pk).update(
+            estado=Paquete.Estado.EN_DEVOLUCION,
+            retiro_latitud=-34.92, retiro_longitud=-57.95,
+        )
+        r = self._post({"id": self.paquete.id, "estado": "cancelado"})
+        self.assertEqual(r.status_code, 200)
+        self.paquete.refresh_from_db()
+        self.assertEqual(self.paquete.estado, Paquete.Estado.CANCELADO)
+        self.assertIsNone(self.paquete.retiro_latitud)
+        self.assertIsNone(self.paquete.retiro_longitud)

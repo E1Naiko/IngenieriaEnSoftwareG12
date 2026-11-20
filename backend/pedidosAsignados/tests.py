@@ -38,6 +38,10 @@ class PedidosAsignadosTests(TestCase):
         )
 
     def test_escenario_1_lista_solo_sus_pedidos_activos(self):
+        # El rechazo del cliente sigue a su cargo: todavía debe devolverlo.
+        # Va primero para no correr los índices que el test usa más abajo
+        # (el listado ordena por -id: el más nuevo primero).
+        rechazado = self._paquete(self.repartidor, Paquete.Estado.CANCELADO_POR_CLIENTE)
         asignado = self._paquete(self.repartidor, "ASIGNADO")  # como los datos DEV
         retirado = self._paquete(self.repartidor, "RETIRADO")
         en_camino = self._paquete(self.repartidor, Paquete.Estado.EN_CAMINO)
@@ -52,7 +56,8 @@ class PedidosAsignadosTests(TestCase):
         self.assertEqual(r.status_code, 200)
         paquetes = r.json()["paquetes"]
         self.assertEqual(
-            {p["id"] for p in paquetes}, {asignado.id, retirado.id, en_camino.id}
+            {p["id"] for p in paquetes},
+            {asignado.id, retirado.id, en_camino.id, rechazado.id},
         )
         self.assertEqual(paquetes[2]["estado"], "asignado")
         self.assertEqual(paquetes[0], {

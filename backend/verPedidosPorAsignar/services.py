@@ -14,6 +14,13 @@ from core.models import Paquete, Repartidor
 ESTADOS_DISPONIBLES = {Repartidor.Estado.ACTIVO.upper(), "DISPONIBLE"}
 ESTADOS_CANCELABLES = {Paquete.Estado.ASIGNADO, Paquete.Estado.RETIRADO, Paquete.Estado.EN_CAMINO}
 
+# El desplegable envía el estado, sin distinguir ausencia y rechazo.
+DESTINOS_CANCELACION = {
+    Paquete.Estado.PENDIENTE_REASIGNACION: Paquete.CausaCancelacion.FUERZA_MAYOR,
+    Paquete.Estado.EN_DEVOLUCION: "",
+    Paquete.Estado.CANCELADO: "",
+}
+
 
 def ubicacion_valida(ubicacion):
     if not isinstance(ubicacion, dict):
@@ -65,30 +72,64 @@ def distancia_oferta(paquete, repartidor, ubicacion, ahora):
 
 
 class CancelacionInvalida(Exception):
-    def __init__(self, mensaje, *, estado_incompatible=False):
+    """Rechazo con un motivo que el frontend puede usar para guiar al usuario.
+
+    ``campo`` nombra el campo culpable (``"causa"``, ``"motivo"``,
+    ``"ubicacion"``) para que el cliente resalte justo ese dato en vez de
+    mostrar un error genérico; ``estado_incompatible`` marca los rechazos que
+    dependen del estado actual del paquete (409).
+    """
+
+    def __init__(self, mensaje, *, estado_incompatible=False, campo=None):
         super().__init__(mensaje)
         self.estado_incompatible = estado_incompatible
+        self.campo = campo
 
 
-def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
+def registrar_cancelacion(paquete, *, motivo, ubicacion_informada, causa=None, destino=None):
     """Registra la cancelación de un paquete bloqueado y autorizado por el llamador."""
     if paquete.estado.strip().lower() not in ESTADOS_CANCELABLES:
         raise CancelacionInvalida("El pedido no está en condiciones de ser cancelado.", estado_incompatible=True)
-    if causa not in Paquete.CausaCancelacion.values:
-        raise CancelacionInvalida("Seleccioná una causa de cancelación válida.")
-    if not isinstance(motivo, str) or not 1 <= len(motivo.strip()) <= 500 or "\x00" in motivo:
-        raise CancelacionInvalida("Indicá el motivo de la cancelación (máximo 500 caracteres).")
+
+    if destino is None:
+        # Contrato anterior: la causa explícita determina el estado final.
+        destinos_por_causa = {
+            Paquete.CausaCancelacion.FUERZA_MAYOR: Paquete.Estado.PENDIENTE_REASIGNACION,
+            Paquete.CausaCancelacion.CLIENTE_AUSENTE: Paquete.Estado.EN_DEVOLUCION,
+            Paquete.CausaCancelacion.CLIENTE_RECHAZA: Paquete.Estado.CANCELADO_POR_CLIENTE,
+        }
+        if causa not in Paquete.CausaCancelacion.values:
+            raise CancelacionInvalida(
+                "Seleccioná una causa de cancelación válida "
+                f"({', '.join(Paquete.CausaCancelacion.values)}).",
+                campo="causa",
+            )
+        destino = destinos_por_causa[causa]
+        if not isinstance(motivo, str) or not motivo.strip():
+            raise CancelacionInvalida("Indicá el motivo de la cancelación.", campo="motivo")
+    else:
+        # Contrato del desplegable: el estado es explícito y el motivo es opcional.
+        if causa is not None:
+            raise CancelacionInvalida("Enviá la causa o elegí el estado de cancelación, no ambos.", campo="causa")
+        causa = DESTINOS_CANCELACION[destino]
+        if motivo is None:
+            motivo = ""
+
+    if not isinstance(motivo, str) or len(motivo.strip()) > 500 or "\x00" in motivo:
+        raise CancelacionInvalida(
+            "El motivo debe ser un texto de hasta 500 caracteres.", campo="motivo"
+        )
 
     ubicacion = ubicacion_valida(ubicacion_informada)
     if ubicacion_informada is not None and ubicacion is None:
-        raise CancelacionInvalida("La ubicación indicada no es válida.")
+        raise CancelacionInvalida("La ubicación indicada no es válida.", campo="ubicacion")
 
     paquete.causa_cancelacion = causa
     paquete.motivo_cancelacion = motivo.strip()
     paquete.retiro_latitud = paquete.retiro_longitud = None
     paquete.reasignacion_hasta = None
-    if causa == Paquete.CausaCancelacion.FUERZA_MAYOR:
-        paquete.estado = Paquete.Estado.PENDIENTE_REASIGNACION
+    paquete.estado = destino
+    if destino == Paquete.Estado.PENDIENTE_REASIGNACION:
         paquete.repartidor_original_id = paquete.repartidor_id
         paquete.repartidor_id = None
         ahora = timezone.now()
@@ -101,9 +142,17 @@ def registrar_cancelacion(paquete, *, causa, motivo, ubicacion_informada):
             "El pedido se publicó en Pedidos cercanos."
             if ubicacion else "Sin ubicación de retiro: el pedido quedó disponible para el coordinador."
         )
-    else:
-        paquete.estado = Paquete.Estado.EN_DEVOLUCION
+    elif destino == Paquete.Estado.CANCELADO_POR_CLIENTE:
+        # El paquete queda en manos del repartidor, que lo lleva de vuelta al
+        # comercio. No hay reasignación: el destino es su origen.
+        mensaje = (
+            "El cliente rechazó el pedido: devolvelo al comercio. "
+            "El paquete sigue a tu cargo hasta que lo entregues en el origen."
+        )
+    elif destino == Paquete.Estado.EN_DEVOLUCION:
         mensaje = "Devolvé el paquete al comercio y confirmá la devolución."
+    else:
+        mensaje = "El pedido quedó cancelado sin reasignación."
 
     paquete.save(update_fields=[
         "estado", "causa_cancelacion", "motivo_cancelacion", "repartidor",

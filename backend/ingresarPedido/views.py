@@ -52,7 +52,12 @@ CAMPOS_CLIENTE = ("nombre", "apellido", "telefono", "direccion", "dni")
 # así que también se avisa si el similar ya fue entregado.
 # shortcut: la base de dev guarda estados en mayúscula (mismo parche que #33);
 # sacar el Upper/Trim cuando se normalicen los datos.
-ESTADO_EXCLUIDO = Paquete.Estado.CANCELADO.upper()
+# Se excluyen los dos cierres por cancelación: el pedido devuelto al comercio
+# y el que el cliente rechazó (ese también vuelve al origen).
+ESTADOS_EXCLUIDOS = {
+    Paquete.Estado.CANCELADO.upper(),
+    Paquete.Estado.CANCELADO_POR_CLIENTE.upper(),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +165,7 @@ def pedidos_list(request):
     similar = (
         Paquete.objects.annotate(estado_normalizado=Upper(Trim("estado")))
         .filter(comercio=comercio, cliente=cliente, fecha_destino=fecha_destino)
-        .exclude(estado_normalizado=ESTADO_EXCLUIDO)
+        .exclude(estado_normalizado__in=ESTADOS_EXCLUIDOS)
         .first()
     )
     if similar and data.get("forzar") is not True:

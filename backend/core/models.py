@@ -23,7 +23,7 @@ import string
 
 from django.db import models
 from django.db.models.functions import Lower, Trim
-from django.db.models.lookups import Exact
+from django.db.models.lookups import Exact, In
 
 
 class Repartidor(models.Model):
@@ -172,6 +172,33 @@ class Comercio(models.Model):
         return self.nombre
 
 
+# Valores válidos de ``Paquete.estado`` escritos una sola vez acá, porque el
+# ``Meta`` de ``Paquete`` no puede referirse a la clase mientras se declara.
+# Tiene que coincidir con ``Paquete.Estado``: hay un test que lo verifica
+# (``core.tests.EstadoCheckConstraintTests``).
+ESTADOS_PAQUETE = (
+    "retirado",
+    "pendiente",
+    "asignado",
+    "en_camino",
+    "entregado",
+    "cancelado",
+    "cancelado_por_cliente",
+    "pendiente_reasignacion",
+    "en_devolucion",
+)
+
+def _estado_normalizado_in(valores):
+    """Condición SQL ``lower(trim(estado)) IN (...)``.
+
+    El runtime compara siempre así —``paquete.estado.strip().lower()`` y
+    ``Lower(Trim("estado"))`` en los querysets—, así que el CHECK tiene que
+    usar el mismo criterio: si la base tiene ``" PENDIENTE"`` o ``"En_Camino"``
+    el código lo acepta, entonces el constraint también.
+    """
+    return In(Lower(Trim("estado")), list(valores))
+
+
 class Paquete(models.Model):
     """
     La entrega. Es la tabla que une todo: un repartidor (opcional porque el
@@ -193,14 +220,28 @@ class Paquete(models.Model):
         ASIGNADO = "asignado", "Asignado"  # el coordinador ya le asignó repartidor
         EN_CAMINO = "en_camino", "En camino"
         ENTREGADO = "entregado", "Entregado"
+        # Un cierre general y otro que conserva el rechazo explícito del cliente.
         CANCELADO = "cancelado", "Cancelado"
+        CANCELADO_POR_CLIENTE = "cancelado_por_cliente", "Cancelado por el cliente"
         PENDIENTE_REASIGNACION = "pendiente_reasignacion", "Pendiente de reasignación"
         EN_DEVOLUCION = "en_devolucion", "Devolución al comercio"
 
     class CausaCancelacion(models.TextChoices):
+        """Por qué se canceló. Solo ``fuerza_mayor`` vuelve a la flota."""
+
         FUERZA_MAYOR = "fuerza_mayor", "Fuerza mayor"
         CLIENTE_AUSENTE = "cliente_ausente", "Cliente ausente"
         CLIENTE_RECHAZA = "cliente_rechaza", "Cliente rechazó el pedido"
+
+    # Estados terminales: el paquete ya no se mueve ni se reasigna.
+    ESTADOS_CERRADOS = frozenset({
+        "entregado", "cancelado", "cancelado_por_cliente",
+    })
+
+    # Estados para los que se informa al repartidor la dirección del comercio.
+    ESTADOS_DEVOLUCION = frozenset({
+        "en_devolucion", "cancelado_por_cliente",
+    })
 
     class Tamanio(models.TextChoices):
         """Tamaño estimado del paquete."""
@@ -281,6 +322,17 @@ class Paquete(models.Model):
         db_table = "paquete"        # nombre de tabla del diagrama
         verbose_name = "paquete"
         ordering = ["-id"]          # los más nuevos primero
+        constraints = [
+            # La columna es varchar(255) libre: sin esto, un UPDATE por SQL o
+            # por queryset puede dejar el estado en cualquier texto y romper
+            # las transiciones del repartidor. Se valida sobre lower(trim()),
+            # igual que el runtime, así los históricos de DEV con mayúsculas o
+            # espacios (" PENDIENTE", "ENTREGADO") siguen siendo válidos.
+            models.CheckConstraint(
+                condition=_estado_normalizado_in(ESTADOS_PAQUETE),
+                name="paquete_estado_valido",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.cod_seguimiento} ({self.estado})"

@@ -13,7 +13,9 @@ def paquete_to_dict(paquete):
         "fecha_destino": paquete.fecha_destino.isoformat(),
     }
 
-    if paquete.estado.lower() == Paquete.Estado.EN_DEVOLUCION:
+    # Tanto en devolución como en el rechazo del cliente el repartidor tiene
+    # que llevarlo al comercio: necesita la dirección adonde volver.
+    if paquete.estado.lower() in Paquete.ESTADOS_DEVOLUCION:
         data["direccion_comercio"] = paquete.comercio.direccion
     if paquete.retiro_latitud is not None and paquete.retiro_longitud is not None:
         data["retiro"] = {"latitud": paquete.retiro_latitud, "longitud": paquete.retiro_longitud}
