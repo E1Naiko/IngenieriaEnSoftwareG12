@@ -189,6 +189,10 @@ class Paquete(models.Model):
     se autogenera con el formato SRFR-XXXXXXXX. ``fecha_origen`` y
     ``fecha_destino`` son fechas obligatorias. El historial de un repartidor
     sale de filtrar los paquetes entregados, no de otra tabla.
+
+    Los pedidos ``cancelado`` son los que se publican para reasignación
+    (HU #36): la FK ``repartidor`` sigue apuntando al último repartidor que
+    tuvo el paquete, y de ahí se lee su nombre y apellido en la lista.
     """
 
     class Estado(models.TextChoices):

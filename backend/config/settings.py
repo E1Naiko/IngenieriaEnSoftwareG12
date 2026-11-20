@@ -99,13 +99,14 @@ INSTALLED_APPS = [
     "asignarRepartidor",
     
     "consultarEstadoEnvio",
-    
+    "disponibilidadRepartidor",
     "ingresarPedido",
     "paquetesEnCurso",
     "actualizacionEstado",
     "pedidosAsignados",
     "verPedidosPorAsignar.apps.VerPedidosPorAsignarConfig",
     "historialEnvios",
+    "bajaRepartidor",
 ]
 
 MIDDLEWARE = [
@@ -284,17 +285,3 @@ if not CORS_ALLOWED_ORIGINS:
 # cookies; con CORS_ALLOW_ALL_ORIGINS no se puede combinar (el navegador
 # rechaza `Access-Control-Allow-Credentials` junto con `*`).
 # CORS_ALLOW_CREDENTIALS = True
-
-# Plazo de oferta automática y radio (distancia en línea recta al retiro).
-REASIGNACION_MINUTOS = int(os.getenv("REASIGNACION_MINUTOS", "15"))
-REASIGNACION_RADIO_KM = float(os.getenv("REASIGNACION_RADIO_KM", "5"))
-
-# CSRF: la reasignación manual se autoriza con la sesión del coordinador y su
-# token CSRF. El proxy de Vite (y el rewrite de Vercel) conservan el Origin del
-# frontend, que no coincide con el Host que ve Django: sin este origen en la
-# lista, Django responde 403 "Origin checking failed" antes de mirar el token.
-# Si no se configura explícitamente, se confía en los mismos orígenes del
-# frontend ya habilitados para CORS.
-CSRF_TRUSTED_ORIGINS = _origenes(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
-if not CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)

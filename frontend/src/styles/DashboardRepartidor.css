@@ -131,7 +131,8 @@
 }
 
 .repartidor-actualizar textarea,
-.repartidor-actualizar input[type="file"] {
+.repartidor-actualizar input[type="file"],
+.repartidor-actualizar input[type="text"] {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
@@ -141,10 +142,17 @@
   font-size: 0.9rem;
 }
 
+/* El DNI se tipea mientras el cliente lo muestra: más grande y espaciado. */
+.repartidor-actualizar input[type="text"] {
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
 .repartidor-actualizar textarea { resize: vertical; }
 
 .repartidor-actualizar textarea:focus,
-.repartidor-actualizar input[type="file"]:focus {
+.repartidor-actualizar input[type="file"]:focus,
+.repartidor-actualizar input[type="text"]:focus {
   outline: 2px solid #1f6feb;
   outline-offset: 1px;
 }
@@ -169,6 +177,181 @@
 
   .repartidor-acciones > button { flex: 1 1 100%; }
 }
+
+
+/* =========================================
+   DISPONIBILIDAD DEL REPARTIDOR
+========================================= */
+
+.disponibilidad-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.disponibilidad-info h2 {
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  color: #1f2937;
+}
+
+.disponibilidad-info p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.disponibilidad-estado {
+  display: inline-block;
+  padding: 6px 13px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.disponibilidad-activa {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.disponibilidad-inactiva {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.disponibilidad-boton {
+  border: none;
+  border-radius: 8px;
+  padding: 11px 18px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.disponibilidad-boton:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.disponibilidad-boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   MODALES DE DISPONIBILIDAD
+========================================= */
+
+.disponibilidad-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.disponibilidad-modal {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.disponibilidad-modal h2 {
+  margin: 0 0 15px;
+  color: #1f2937;
+  font-size: 1.35rem;
+}
+
+.disponibilidad-modal p {
+  margin: 0 0 24px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.disponibilidad-modal-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.disponibilidad-cancelar,
+.disponibilidad-confirmar {
+  border: none;
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.disponibilidad-cancelar {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.disponibilidad-cancelar:hover {
+  background: #cbd5e1;
+}
+
+.disponibilidad-confirmar {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.disponibilidad-confirmar:hover {
+  background: #1d4ed8;
+}
+
+.disponibilidad-confirmar:disabled,
+.disponibilidad-cancelar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   DISEÑO RESPONSIVE
+========================================= */
+
+@media (max-width: 600px) {
+  .disponibilidad-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .disponibilidad-boton {
+    width: 100%;
+  }
+
+  .disponibilidad-modal {
+    padding: 22px;
+  }
+
+  .disponibilidad-modal-acciones {
+    flex-direction: column;
+  }
+
+  .disponibilidad-cancelar,
+  .disponibilidad-confirmar {
+    width: 100%;
+  }
+}
+
 
 /* =========================================
    FORMULARIO DE CANCELACIÓN

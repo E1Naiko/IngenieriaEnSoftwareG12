@@ -90,6 +90,107 @@ cd backend
 DATABASE_MODE=sqlite python manage.py test paquetesEnCurso
 ```
 
+### Entrega validada con el DNI del receptor (HU #23)
+
+`POST /api/cambiar-estado-pedido/` con `estado: "entregado"` **exige** el DNI del
+receptor y lo compara con el DNI del cliente del paquete:
+
+```json
+{
+  "token": "A7K2Q9",
+  "id": 1,
+  "estado": "entregado",
+  "dni_receptor": "33.444.555",
+  "foto_dni": "data:image/png;base64,..."
+}
+```
+
+El `token` no es opcional desde la HU #38: el endpoint valida quién pide el
+cambio (`400` sin token, `401` si no existe, `403` si el repartidor está de baja
+o el paquete no es suyo). El `GET` sigue siendo público para la pantalla de
+seguimiento.
+
+| Caso | Código | Respuesta |
+|---|---|---|
+| DNI correcto | `200` | `{"message": "Entrega validada con el DNI del receptor.", "paquete": {...}}` |
+| Falta el DNI | `400` | `{"message": "Necesario el numero del DNI del cliente para finalizar la entrega"}` |
+| DNI de otra persona | `400` | `{"message": "El DNI ingresado no coincide ... El DNI del cliente es 35666777."}` |
+| `foto_dni` mal formada o de más de 5 MB | `400` | `{"foto_dni": "..."}` |
+
+Detalles que importan:
+
+- **En los rechazos el paquete no cambia de estado.** La validación corre antes
+  del `save()`.
+- El DNI se normaliza a dígitos (`"30.111.222"` → `"30111222"`) y se acepta
+  también el campo `dni` además de `dni_receptor`.
+- `foto_dni` es **opcional**: si llega (JPEG, PNG o WebP en data URL base64 o
+  base64 pelado), se guarda como `Comprobante` del paquete
+  (`media/comprobantes/AAAA/MM/dni-<código>.<ext>`); si no llega, el paquete
+  queda sin comprobante. Antes el front la exigía y el backend la descartaba en
+  silencio.
+- Solo aplica a `entregado`: los demás estados no piden DNI.
+- No requiere migración: usa el modelo `Comprobante` existente.
+
+Tests (35 en la app, 19 de la validación de DNI):
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test actualizacionEstado
+```
+
+### Pedidos "Por Reasignar" (HU #36)
+
+App `pedidosPorReasignar`, **sin cambios en el esquema**: no hay estado nuevo,
+ni campos nuevos, ni migración. La lista son los paquetes `cancelado`, que es
+lo que deja el botón "Confirmar cancelación" del dashboard; como ese flujo no
+limpia `paquete.repartidor`, el nombre y apellido del último repartidor se lee
+directamente de esa FK.
+
+```text
+POST /api/pedidos-por-reasignar/               body {"token": "ABC123"}
+POST /api/pedidos-por-reasignar/aceptar/<id>/ body {"token": "ABC123"}
+```
+
+El filtro por zona cercana quedó descartado: entran **todos** los `cancelado`.
+Cada ítem tiene `id`, `direccion_retiro`, `direccion_destino`, `tamanio` y
+`ultimo_repartidor: {nombre, apellido} | null`. Sin pedidos, `200` con
+`{"mensaje": "...", "pedidos": []}`.
+
+Aceptar es un `UPDATE` condicional atómico (`WHERE estado='cancelado'`), así
+que el primer repartidor se lo queda y el segundo recibe `409`; el pedido pasa
+a `asignado` (y la FK apunta al nuevo repartidor), con lo cual aparece
+automáticamente en `POST /api/paquetes-repartidor/`. No hay límite de pedidos
+ya asignados. "Operativo" se valida como `ACTIVO` normalizado, con el token en
+cada request.
+
+Contrato completo, decisiones y efectos sobre otras HUs:
+[pedidosPorReasignar/README.md](pedidosPorReasignar/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test pedidosPorReasignar
+```
+
+### Baja de repartidores (HU #38)
+
+`GET /api/repartidores/<id>/detalle-baja/` devuelve los datos del modal de
+confirmación y `POST /api/repartidores/<id>/baja/` aplica la **baja lógica**
+(`estado='baja'`, sin borrar la fila ni regenerar el token). Ambas piden sesión
+de coordinador (`401` si falta).
+
+El `POST` es `@csrf_exempt` porque el pedido llega proxificado en el despliegue
+(rewrite de Vercel → Render) y la verificación CSRF de Django compara el
+`Origin` con el host del backend, devolviendo `403` aunque el token sea
+correcto. Es el mismo criterio que el resto de las acciones del coordinador
+(ver [crudComercios/README.md](crudComercios/README.md#9-seguridad-y-configuración));
+la defensa es `SESSION_COOKIE_SAMESITE="Lax"`. Detalle, contrato JSON y
+efectos en las otras HUs: [bajaRepartidor/README.md](bajaRepartidor/README.md).
+
+```bash
+cd backend
+DATABASE_MODE=sqlite python manage.py test bajaRepartidor
+```
+
 `backend/.env.example` selecciona `DATABASE_MODE=postgres` y debe contener
 **solo** credenciales del proyecto Supabase de desarrollo. La producción usa
 otro proyecto y otras credenciales; no se deben mezclar. Una variable
@@ -450,3 +551,22 @@ La app `verPedidosPorAsignar` concentra la publicación, el vencimiento, las ofe
 `REASIGNACION_MINUTOS` (por defecto `15`) y `REASIGNACION_RADIO_KM` (por defecto `5`, en línea recta) se configuran en el backend. El vencimiento se calcula desde el plazo persistido; no exige un cron ni un worker. Aplicar `python manage.py migrate` en la base del ambiente correspondiente.
 
 La reasignación manual usa CSRF: el `GET /api/dashboard/asignar-repartidor/?paquete=<id>` devuelve `csrf_token` y el frontend lo envía como cabecera `X-CSRFToken` en el `POST`. Si el frontend se sirve a través de un proxy con un origen distinto al que ve Django (Vite en `http://localhost:5173`, Vercel), el origen debe estar en `CSRF_TRUSTED_ORIGINS`. Si la variable está vacía se reutilizan los orígenes de `CORS_ALLOWED_ORIGINS`, que ya incluyen los del frontend de desarrollo; en producción conviene declararla explícitamente.
+
+### Datos para la demo del sprint
+
+```bash
+python manage.py preparar_demo --confirmar-desarrollo
+```
+
+Arma el escenario de la presentación (ver
+[Info/Demo-Sprint2-2026-11-20.md](../Info/Demo-Sprint2-2026-11-20.md)): 3
+repartidores (2 activos y 1 dado de baja), 3 comercios con tildes y guiones en
+los teléfonos, 3 clientes y 7 paquetes con códigos fijos `SRFR-DEMO0001`…
+`SRFR-DEMO0007`: dos `cancelado` para "Por Reasignar", uno sin repartidor, uno
+`entregado` y el resto en curso.
+
+A diferencia de `cargar_repartidores_demo`, **restaura los estados**: si un
+ensayo dejó los paquetes avanzados o un repartidor inactivo, volver a ejecutarlo
+deja todo como al inicio, sin duplicar registros. Imprime los tokens de los
+repartidores, que no se pueden listar desde el panel. Tests:
+`core.tests.PrepararDemoTests`. No ejecutar en producción.

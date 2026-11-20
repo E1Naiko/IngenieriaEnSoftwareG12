@@ -47,6 +47,13 @@ Conjuntos derivados en `core.models.Paquete`:
 - `ESTADOS_DEVOLUCION`: `en_devolucion`, `cancelado`, `cancelado_por_cliente`.
   El paquete vuelve al comercio con el repartidor que lo tiene.
 
+`cancelado` es, además, el estado que **publica un pedido para reasignación**
+(HU #36): lo deja el botón "Confirmar cancelación" del dashboard del
+repartidor. Ese flujo no limpia `paquete.repartidor`, así que la FK sigue
+apuntando al último repartidor que tuvo el paquete y de ahí se lee su nombre
+y apellido en la lista. No se agregó un estado `por_reasignar` ni campos de
+historial: **la HU #36 no cambia el esquema**.
+
 El valor predeterminado sigue siendo `pendiente`. `retirado` debe asignarse
 explícitamente, por ejemplo desde el formulario de `/admin/` o desde el ORM:
 
@@ -96,8 +103,22 @@ mayúsculas. `cancelado` y `en_devolucion` son intermedios y por eso también se
 listan. Devuelve `id`, `destinatario`,
 `direccion`, `repartidor` y `estado` ("Sin asignar" cuando la FK `repartidor`
 es `NULL`). La property
+El modelo no cambia estados automáticamente ni impone transiciones u orden.
+`GET /api/dashboard/paquetes-en-curso/` (HU #40) excluye solo `entregado`,
+comparando el estado sin distinguir mayúsculas: `cancelado` sigue apareciendo
+porque no es un estado final. Devuelve
+`id`, `destinatario`, `direccion`, `repartidor` y `estado` ("Sin asignar"
+cuando la FK `repartidor` es `NULL`). La property
 `repartidor.historial_asociado` sigue incluyendo solo paquetes `entregado`;
 `retirado` no se considera entregado.
+
+Los endpoints de la HU #36 (`POST /api/pedidos-por-reasignar/` y
+`.../aceptar/<id>/`) filtran por `estado__iexact="cancelado"` y están
+documentados en
+[backend/pedidosPorReasignar/README.md](../backend/pedidosPorReasignar/README.md).
+Al aceptar un pedido, un `UPDATE` condicional lo pasa a `asignado` y cambia
+la FK `repartidor` al nuevo repartidor; eso hace que desaparezca de la lista
+y aparezca en sus pedidos asignados.
 
 ## Puesta en marcha
 

@@ -632,3 +632,89 @@ class EstadoCheckConstraintTests(TestCase):
                 Paquete.objects.filter(pk=paquete.pk).update(estado="volando")
         paquete.refresh_from_db()
         self.assertEqual(paquete.estado, "pendiente")
+
+
+class PrepararDemoTests(TestCase):
+    """El comando de preparación de la demo del Sprint 2.
+
+    Lo importante no es que cree datos: es que se pueda volver a correr
+    después de un ensayo (donde los paquetes quedaron en otros estados) y que
+    deje todo exactamente como al principio, sin duplicar.
+    """
+
+    def _correr(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        salida = StringIO()
+        call_command("preparar_demo", confirmar_desarrollo=True, stdout=salida)
+        return salida.getvalue()
+
+    def test_requiere_confirmacion(self):
+        from django.core.management import call_command, CommandError
+
+        with self.assertRaises(CommandError):
+            call_command("preparar_demo")
+        self.assertEqual(Repartidor.objects.count(), 0)
+        self.assertEqual(Paquete.objects.count(), 0)
+
+    def test_crea_los_datos_de_la_demo(self):
+        self._correr()
+        self.assertEqual(Repartidor.objects.count(), 3)
+        self.assertEqual(Comercio.objects.count(), 3)
+        self.assertEqual(Cliente.objects.count(), 3)
+        self.assertEqual(Paquete.objects.count(), 7)
+        # Dos cancelados: es lo que muestra "Por Reasignar" (HU #36).
+        self.assertEqual(
+            Paquete.objects.filter(estado=Paquete.Estado.CANCELADO).count(), 2
+        )
+        # Un pendiente sin repartidor: filtro "sin asignar" y asignación manual.
+        self.assertTrue(Paquete.objects.filter(repartidor=None).exists())
+        # Un dado de baja para la HU #38.
+        self.assertTrue(
+            Repartidor.objects.filter(estado=Repartidor.Estado.BAJA).exists()
+        )
+
+    def test_es_idempotente(self):
+        self._correr()
+        self._correr()
+        self.assertEqual(Repartidor.objects.count(), 3)
+        self.assertEqual(Comercio.objects.count(), 3)
+        self.assertEqual(Cliente.objects.count(), 3)
+        self.assertEqual(Paquete.objects.count(), 7)
+
+    def test_restaura_los_estados_despues_de_un_ensayo(self):
+        self._correr()
+        # Un ensayo de la demo deja los paquetes avanzados y un repartidor
+        # inactivo. update() no dispara save(), que es lo que hace el endpoint.
+        Paquete.objects.update(estado=Paquete.Estado.ENTREGADO, repartidor=None)
+        Repartidor.objects.update(estado=Repartidor.Estado.INACTIVO)
+
+        salida = self._correr()
+
+        self.assertIn("restaurado", salida)
+        self.assertTrue(
+            Paquete.objects.filter(estado=Paquete.Estado.CANCELADO).exists()
+        )
+        self.assertTrue(Paquete.objects.filter(repartidor=None).exists())
+        self.assertEqual(
+            Repartidor.objects.filter(estado=Repartidor.Estado.ACTIVO).count(), 2
+        )
+        self.assertEqual(
+            Repartidor.objects.filter(estado=Repartidor.Estado.BAJA).count(), 1
+        )
+
+    def test_muestra_los_tokens_en_la_salida(self):
+        salida = self._correr()
+        for repartidor in Repartidor.objects.all():
+            self.assertIn(repartidor.token, salida)
+
+    def test_los_datos_permiten_probar_las_busquedas(self):
+        self._correr()
+        # Tildes y guiones a propósito: son los casos de #41 y #42.
+        self.assertTrue(Cliente.objects.filter(apellido="Gómez").exists())
+        self.assertTrue(
+            Comercio.objects.filter(telefono__contains="221-555").exists()
+        )
+        self.assertTrue(Comercio.objects.filter(direccion__contains="#").exists())
