@@ -432,17 +432,7 @@ No reinicia datos demo que se hayan editado. No ejecutar en producción.
 
 La app `verPedidosPorAsignar` concentra la publicación, el vencimiento, las ofertas cercanas y la cola manual. Los modelos y la migración continúan en `core`. Esta app solo expone la API; no modifica el frontend.
 
-- `POST /api/cambiar-estado-pedido/`: el repartidor asignado solicita la cancelación con `id`, `estado: "cancelado"`, `token`, `causa` y `motivo`. La `causa` decide el desenlace:
-
-  | `causa` | Estado resultante | ¿Se reasigna? |
-  | --- | --- | --- |
-  | `fuerza_mayor` | `pendiente_reasignacion` | Sí: se libera del repartidor y se publica |
-  | `cliente_ausente` | `en_devolucion` | No: el repartidor lo devuelve al comercio |
-  | `cliente_rechaza` | `cancelado_por_cliente` | No: cierre, el repartidor lo devuelve al comercio |
-
-  Para `fuerza_mayor` se puede enviar `ubicacion: {"latitud": ..., "longitud": ...}` con el punto de retiro (sin ella, el pedido va directo a la cola del coordinador). En `cliente_ausente` el repartidor conserva el paquete hasta confirmar la devolución, enviando `estado: "cancelado"` sin causa ni motivo: recién ahí el paquete queda `cancelado`.
-
-  **Los dos cierres por cancelación son estados distintos**: `cancelado` es la devolución cerrada (el paquete volvió al comercio) y `cancelado_por_cliente` el cliente que rechazó el pedido. Ninguno se reasigna: en ambos casos el paquete vuelve a su origen. Los dos están en `Paquete.ESTADOS_CERRADOS`; `cancelado_por_cliente` sigue apareciendo en la lista del repartidor (todavía lo tiene que devolver, y ve `direccion_comercio`) pero ya no en "Paquetes en curso" ni entre los asignables.
+- `POST /api/cambiar-estado-pedido/`: el repartidor asignado solicita la cancelación con `id`, `estado: "cancelado"`, `token`, `causa` y `motivo`. Para `fuerza_mayor` puede enviar `ubicacion: {"latitud": ..., "longitud": ...}` con el punto de retiro. El paquete queda **Pendiente de reasignación** y se libera del repartidor original. `cliente_ausente` y `cliente_rechaza` dejan el paquete en **Devolución al comercio**; el repartidor lo conserva hasta confirmar la devolución, enviando `estado: "cancelado"` sin causa ni motivo adicionales.
 - `POST /api/pedidos-cercanos/`: con `token` y `ubicacion`, lista las ofertas para un repartidor disponible cuyo vehículo pueda transportar el paquete. Al enviar también el `id` de una oferta, intenta tomarla. El punto exacto de retiro solo se muestra al repartidor una vez asignado.
 - `GET /api/dashboard/pedidos-por-reasignar/`: lista los pedidos que un coordinador autenticado puede reasignar manualmente porque venció el plazo o no se pudo obtener el punto de retiro. `GET /api/dashboard/paquetes-en-curso/` sigue informando `por_reasignar` en los pedidos pendientes de reasignación. La reasignación manual usa `POST /api/dashboard/asignar-repartidor/` con sesión y CSRF.
 

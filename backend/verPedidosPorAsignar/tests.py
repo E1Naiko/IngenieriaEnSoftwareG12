@@ -131,6 +131,28 @@ class ReasignacionTests(TestCase):
         self.assertEqual(self.paquete.repartidor_id, self.vecino.pk)
         self.assertIsNone(self.paquete.reasignacion_hasta)
 
+    def test_desplegable_deriva_a_cola_manual_sin_gps(self):
+        respuesta = self._post("cambiar-estado-pedido", {
+            "id": self.paquete.pk,
+            "token": self.original.token,
+            "estado": "pendiente_reasignacion",
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertTrue(self._en_cola_manual())
+        self.assertEqual(self._cercanos(self.vecino).json()["paquetes"], [])
+
+    def test_estado_directo_con_ubicacion_publica_la_oferta(self):
+        respuesta = self._post("cambiar-estado-pedido", {
+            "id": self.paquete.pk,
+            "token": self.original.token,
+            "estado": "pendiente_reasignacion",
+            "ubicacion": self.ubicacion,
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(self._en_cola_manual())
+        oferta, = self._cercanos(self.vecino).json()["paquetes"]
+        self.assertEqual(oferta["id"], self.paquete.pk)
+
     def test_sin_ubicacion_pasa_directo_al_coordinador(self):
         self.assertEqual(self._cancelar(ubicacion=None).status_code, 200)
         self.assertTrue(self._en_cola_manual())
@@ -186,7 +208,7 @@ class ReasignacionTests(TestCase):
             ({"motivo": " "}, 400), ({"causa": None}, 400), ({"motivo": "x" * 501}, 400),
             ({"ubicacion": {"latitud": 999, "longitud": 50}}, 400),
             ({"token": ""}, 401), ({"token": self.vecino.token}, 403),
-            ({"estado": "pendiente_reasignacion"}, 409),
+            ({"estado": "pendiente_reasignacion"}, 400),
         ):
             with self.subTest(cambios=cambios):
                 self.assertEqual(self._cancelar(**cambios).status_code, status)

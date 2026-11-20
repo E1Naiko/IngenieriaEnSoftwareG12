@@ -7,7 +7,11 @@ from django.views.decorators.http import require_http_methods
 
 from core.models import Paquete, Repartidor
 from crudComercios.views import _parse_body
-from verPedidosPorAsignar.services import CancelacionInvalida, registrar_cancelacion
+from verPedidosPorAsignar.services import (
+    DESTINOS_CANCELACION,
+    CancelacionInvalida,
+    registrar_cancelacion,
+)
 
 
 def to_dict(paquete):
@@ -71,10 +75,8 @@ def cambiar_estado_pedido(request):
             return error("El pedido no está asignado a este repartidor.", 403)
 
         estado = paquete.estado.strip().lower()
-        if estado in Paquete.ESTADOS_CERRADOS:
+        if estado in (Paquete.Estado.ENTREGADO, Paquete.Estado.CANCELADO):
             return error(f"No se puede modificar el estado de un paquete '{paquete.estado}'.")
-        # La devolución al comercio se confirma como "cancelado" (cerrado).
-        # El rechazo del cliente ya nace cerrado y no se toca.
         if nuevo_estado == Paquete.Estado.CANCELADO and estado != Paquete.Estado.EN_DEVOLUCION:
             try:
                 mensaje = registrar_cancelacion(
@@ -82,10 +84,7 @@ def cambiar_estado_pedido(request):
                     ubicacion_informada=data.get("ubicacion"),
                 )
             except CancelacionInvalida as exc:
-                cuerpo = {"message": str(exc)}
-                if exc.campo:
-                    cuerpo["campo"] = exc.campo
-                return JsonResponse(cuerpo, status=409 if exc.estado_incompatible else 400)
+                return error(str(exc), 409 if exc.estado_incompatible else 400)
             return JsonResponse({"message": mensaje, "paquete": to_dict(paquete)})
 
         siguiente = {
@@ -99,8 +98,7 @@ def cambiar_estado_pedido(request):
 
         paquete.estado = nuevo_estado
         campos = ["estado"]
-        if nuevo_estado == Paquete.Estado.ENTREGADO or estado == Paquete.Estado.EN_DEVOLUCION:
-            # El paquete ya no está en la calle: el punto de retiro no sirve más.
+        if nuevo_estado == Paquete.Estado.ENTREGADO:
             paquete.retiro_latitud = paquete.retiro_longitud = None
             campos += ["retiro_latitud", "retiro_longitud"]
         paquete.save(update_fields=campos)
