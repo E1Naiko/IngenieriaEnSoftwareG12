@@ -317,3 +317,163 @@
     padding: 12px 16px;
   }
 }
+/* ==========================================
+   FORMULARIOS DE ALTA: COMERCIO Y CLIENTE
+========================================== */
+
+.pedido-popup-alta form {
+  display: grid;
+  gap: 1.25rem;
+  width: 100%;
+  font-family: system-ui, sans-serif;
+}
+
+/* Campos */
+.pedido-popup-alta form label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pedido-popup-alta form input,
+.pedido-popup-alta form select,
+.pedido-popup-alta form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-family: inherit;
+  color: #1e293b;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Foco */
+.pedido-popup-alta form input:focus,
+.pedido-popup-alta form select:focus,
+.pedido-popup-alta form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Botones */
+.pedido-popup-alta form button[type="submit"] {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  background: #1f4e8c;
+  color: white;
+  cursor: pointer;
+}
+
+.pedido-popup-alta form button[type="button"] {
+  padding: 10px 14px;
+  font-size: 16px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+
+/* Errores */
+.pedido-popup-alta form .error,
+.pedido-popup-alta form .pedido-error {
+  color: red;
+  margin: 0;
+}
+/* ==========================================
+   ESTILOS COMPARTIDOS PARA ALTAS
+========================================== */
+
+.alta-formulario form {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  font-family: system-ui, sans-serif;
+}
+
+.alta-formulario form h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #1e293b;
+}
+
+.alta-formulario form label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.alta-formulario form input,
+.alta-formulario form select,
+.alta-formulario form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.alta-formulario form input:focus,
+.alta-formulario form select:focus,
+.alta-formulario form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.alta-formulario form button[type="submit"] {
+  padding: 11px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #1f4e8c;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.alta-formulario form button[type="button"] {
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #334155;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.alta-formulario form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alta-formulario form .modal-field,
+.alta-formulario form .pedido-campo {
+  display: grid;
+  gap: 7px;
+}
+
+.alta-formulario .modal-field-error,
+.alta-formulario .pedido-error {
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.alta-formulario .modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.alta-formulario .modal-actions button {
+  flex: 1;
+}

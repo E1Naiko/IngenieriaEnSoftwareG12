@@ -1,11 +1,13 @@
+
 import { useEffect, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
 import "../styles/IngresarPedido.css";
 import FormularioComercio from "../components/formularios/FormularioComercio";
 import FormularioCliente from "../components/formularios/FormularioCliente";
 import { createPortal } from "react-dom";
+
 /* ---------- Tipos ---------- */
-// Valores que acepta el back (el texto que ve el usuario puede ser otro)
+
 export type Tamano = "chico" | "mediano" | "grande";
 
 export interface Comercio {
@@ -24,7 +26,6 @@ export interface Cliente {
   telefono?: string;
 }
 
-// Pedido que devuelve el back dentro del 409
 interface PedidoSimilar {
   id: number;
   cod_seguimiento: string;
@@ -41,9 +42,8 @@ interface AvisoSimilar {
   similar?: PedidoSimilar;
 }
 
-// Props que reciben los formularios de alta
 export interface FormularioAltaProps {
-  onGuardado: () => void; // se llama cuando se guarda bien
+  onGuardado: () => void;
   onCancelar: () => void;
 }
 
@@ -55,7 +55,6 @@ const URL_PEDIDOS = "/api/pedidos/";
 
 /* ---------- Utilidades ---------- */
 
-// Quita tildes y pasa a minúsculas para comparar textos.
 function normalizar(texto: string) {
   return texto
     .normalize("NFD")
@@ -73,36 +72,50 @@ interface PopupProps {
 }
 
 function Popup({ titulo, onCerrar, children, pie }: PopupProps) {
-  // Portal: el popup se dibuja fuera del <form> del pedido, porque los
-  // formularios de alta tienen su propio <form> y HTML no permite anidarlos.
   return createPortal(
     <div
       className="pedido-fondo"
       onClick={onCerrar}
-      // En React el submit igual sube al form del pedido aunque haya portal: se corta acá
       onSubmit={(e) => e.stopPropagation()}
     >
-      <div className="pedido-popup" role="dialog" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="pedido-popup"
+        role="dialog"
+        aria-label={titulo}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="pedido-popup-head">
           <strong>{titulo}</strong>
-          <button type="button" onClick={onCerrar} aria-label="Cerrar">✕</button>
+
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
         </div>
+
         {children}
-        <div className="pedido-popup-foot">{pie}</div>
+
+        {pie && (
+          <div className="pedido-popup-foot">
+            {pie}
+          </div>
+        )}
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }
 
-/* ---------- Botón select con popup (sirve para comercio y cliente) ---------- */
+/* ---------- Selector con popup ---------- */
 
 interface SelectorProps<T extends { id: number }> {
-  etiqueta: string;          // "Comercio", "Cliente"
-  singular: string;          // "comercio", "cliente"
+  etiqueta: string;
+  singular: string;
   url: string;
   texto: (item: T) => string;
-  // Si se pasa, el popup muestra un buscador que filtra con este texto.
   textoBusqueda?: (item: T) => string;
   placeholderBusqueda?: string;
   valor: T | null;
@@ -111,9 +124,17 @@ interface SelectorProps<T extends { id: number }> {
 }
 
 function SelectorConPopup<T extends { id: number }>({
-  etiqueta, singular, url, texto, textoBusqueda, placeholderBusqueda,
-  valor, onChange, FormularioAlta,
+  etiqueta,
+  singular,
+  url,
+  texto,
+  textoBusqueda,
+  placeholderBusqueda,
+  valor,
+  onChange,
+  FormularioAlta,
 }: SelectorProps<T>) {
+
   const [abierto, setAbierto] = useState(false);
   const [agregando, setAgregando] = useState(false);
   const [items, setItems] = useState<T[]>([]);
@@ -124,100 +145,194 @@ function SelectorConPopup<T extends { id: number }>({
   async function cargar() {
     setCargando(true);
     setError("");
+
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error();
+
+      if (!res.ok) {
+        throw new Error();
+      }
+
       const data = await res.json();
+
       setItems(data.results ?? data);
+
     } catch {
       setError(`No se pudieron cargar los ${singular}s. Reintentá.`);
+
     } finally {
       setCargando(false);
     }
   }
 
   useEffect(() => {
-    if (abierto && !agregando) cargar();
+    if (abierto && !agregando) {
+      cargar();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierto, agregando]);
 
-  const cerrar = () => { setAbierto(false); setAgregando(false); setBusqueda(""); };
+  const cerrar = () => {
+    setAbierto(false);
+    setAgregando(false);
+    setBusqueda("");
+  };
 
-  // Abre el formulario de alta y limpia la búsqueda para que el
-  // elemento nuevo no quede oculto al volver a la lista.
-  const empezarAlta = () => { setBusqueda(""); setAgregando(true); };
+  const empezarAlta = () => {
+    setBusqueda("");
+    setAgregando(true);
+  };
 
-  // Aplica el buscador (si el selector lo tiene habilitado).
+  // Guarda correctamente el alta y actualiza el listado.
+  async function altaGuardada() {
+    await cargar();
+    setAgregando(false);
+  }
+
   const textoLimpio = busqueda.trim();
+
   const itemsFiltrados =
     textoBusqueda && textoLimpio
       ? items.filter((it) =>
-          normalizar(textoBusqueda(it)).includes(normalizar(textoLimpio))
+          normalizar(textoBusqueda(it)).includes(
+            normalizar(textoLimpio)
+          )
         )
       : items;
 
   return (
     <div className="pedido-campo">
-      <span className="pedido-label">{etiqueta}</span>
-      <button type="button" className="pedido-control" onClick={() => setAbierto(true)}>
+
+      <span className="pedido-label">
+        {etiqueta}
+      </span>
+
+      <button
+        type="button"
+        className="pedido-control"
+        onClick={() => setAbierto(true)}
+      >
         {valor ? texto(valor) : `Seleccionar ${singular}`}
       </button>
 
       {abierto && (
         <Popup
-          titulo={agregando ? `Agregar ${singular}` : `Elegir ${singular}`}
+          titulo={
+            agregando
+              ? `Agregar ${singular}`
+              : `Elegir ${singular}`
+          }
           onCerrar={cerrar}
           pie={
-            agregando ? null : (
-              <button type="button" className="pedido-primario" onClick={empezarAlta} disabled={!FormularioAlta}>
-                Agregar {singular}
-              </button>
-            )
+            agregando
+              ? null
+              : (
+                <button
+                  type="button"
+                  className="pedido-primario"
+                  onClick={empezarAlta}
+                  disabled={!FormularioAlta}
+                >
+                  Agregar {singular}
+                </button>
+              )
           }
         >
+
           {agregando && FormularioAlta ? (
+
             <div className="pedido-popup-alta">
-              <FormularioAlta onGuardado={() => setAgregando(false)} onCancelar={() => setAgregando(false)} />
+
+              <div className="alta-formulario">
+
+                <FormularioAlta
+                  onGuardado={altaGuardada}
+                  onCancelar={() => setAgregando(false)}
+                />
+
+              </div>
+
             </div>
+
           ) : (
+
             <>
               {textoBusqueda && (
                 <div className="pedido-buscador">
+
                   <input
                     type="search"
                     className="pedido-buscador-input"
-                    placeholder={placeholderBusqueda ?? `Buscar ${singular}...`}
+                    placeholder={
+                      placeholderBusqueda ??
+                      `Buscar ${singular}...`
+                    }
                     value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
+                    onChange={(e) =>
+                      setBusqueda(e.target.value)
+                    }
                     aria-label={`Buscar ${singular}`}
                     autoFocus
                   />
+
                 </div>
               )}
 
               <ul className="pedido-lista">
-                {cargando && <li className="pedido-vacio">Cargando…</li>}
-                {error && <li className="pedido-vacio">{error}</li>}
-                {!cargando && !error && items.length === 0 && (
-                  <li className="pedido-vacio">Todavía no hay {singular}s cargados.</li>
-                )}
-                {!cargando && !error && items.length > 0 && itemsFiltrados.length === 0 && (
+
+                {cargando && (
                   <li className="pedido-vacio">
-                    No se encontraron {singular}s para “{textoLimpio}”.
+                    Cargando…
                   </li>
                 )}
+
+                {error && (
+                  <li className="pedido-vacio">
+                    {error}
+                  </li>
+                )}
+
+                {!cargando &&
+                  !error &&
+                  items.length === 0 && (
+                    <li className="pedido-vacio">
+                      Todavía no hay {singular}s cargados.
+                    </li>
+                  )}
+
+                {!cargando &&
+                  !error &&
+                  items.length > 0 &&
+                  itemsFiltrados.length === 0 && (
+                    <li className="pedido-vacio">
+                      No se encontraron {singular}s para “{textoLimpio}”.
+                    </li>
+                  )}
+
                 {itemsFiltrados.map((it) => (
                   <li key={it.id}>
-                    <button type="button" className="pedido-item" onClick={() => { onChange(it); cerrar(); }}>
+
+                    <button
+                      type="button"
+                      className="pedido-item"
+                      onClick={() => {
+                        onChange(it);
+                        cerrar();
+                      }}
+                    >
                       {texto(it)}
                     </button>
+
                   </li>
                 ))}
+
               </ul>
             </>
           )}
+
         </Popup>
       )}
+
     </div>
   );
 }
@@ -225,60 +340,100 @@ function SelectorConPopup<T extends { id: number }>({
 /* ---------- Pantalla principal ---------- */
 
 export default function IngresarPedido() {
+
   const [tamano, setTamano] = useState<Tamano | "">("");
   const [comercio, setComercio] = useState<Comercio | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [fecha, setFecha] = useState(""); // fecha de entrega, formato AAAA-MM-DD
+  const [fecha, setFecha] = useState("");
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
-  const [ok, setOk] = useState(""); // código de seguimiento del último pedido guardado
+  const [ok, setOk] = useState("");
   const [aviso, setAviso] = useState<AvisoSimilar | null>(null);
 
-  const completo = tamano !== "" && comercio !== null && cliente !== null && fecha !== "";
+  const completo =
+    tamano !== "" &&
+    comercio !== null &&
+    cliente !== null &&
+    fecha !== "";
 
   async function enviar(forzar: boolean) {
-    if (tamano === "" || !comercio || !cliente || fecha === "") return;
+
+    if (
+      tamano === "" ||
+      !comercio ||
+      !cliente ||
+      fecha === ""
+    ) {
+      return;
+    }
+
     setError("");
     setOk("");
     setGuardando(true);
+
     try {
+
       const body: Record<string, unknown> = {
         comercio: comercio.id,
         cliente: cliente.id,
         tamanio: tamano,
         fecha_destino: fecha,
       };
-      if (forzar) body.forzar = true;
+
+      if (forzar) {
+        body.forzar = true;
+      }
 
       const res = await fetch(URL_PEDIDOS, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
 
-      // Ya existe un pedido similar: se pregunta si se carga igualmente
+      // Pedido similar.
       if (res.status === 409) {
+
         const data = await res.json().catch(() => ({}));
+
         setAviso({
-          detail: data.detail ?? "Hay un pedido similar ¿Desea cargarlo igualmente?",
+          detail:
+            data.detail ??
+            "Hay un pedido similar ¿Desea cargarlo igualmente?",
           similar: data.similar,
         });
+
         return;
       }
 
       if (!res.ok) {
-        setError(JSON.stringify(await res.json().catch(() => ({}))));
+
+        setError(
+          JSON.stringify(
+            await res.json().catch(() => ({}))
+          )
+        );
+
         return;
       }
 
       const creado = await res.json();
+
       setOk(creado.cod_seguimiento);
+
       setTamano("");
       setComercio(null);
       setCliente(null);
       setFecha("");
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
+
+      setError(
+        err instanceof Error ? err.message : "Error"
+      );
+
     } finally {
       setGuardando(false);
     }
@@ -295,108 +450,196 @@ export default function IngresarPedido() {
   }
 
   return (
-    <form className="pedido-form" onSubmit={guardar}>
-      <h1 className="pedido-titulo">Ingresar pedido</h1>
+
+    <form
+      className="pedido-form"
+      onSubmit={guardar}
+    >
+
+      <h1 className="pedido-titulo">
+        Ingresar pedido
+      </h1>
+
+      {/* Tamaño del paquete */}
 
       <div className="pedido-campo">
-        <label className="pedido-label" htmlFor="tamano">Tamaño del paquete</label>
+
+        <label
+          className="pedido-label"
+          htmlFor="tamano"
+        >
+          Tamaño del paquete
+        </label>
+
         <select
           id="tamano"
           className="pedido-control"
           value={tamano}
-          onChange={(e) => setTamano(e.target.value as Tamano)}
+          onChange={(e) =>
+            setTamano(e.target.value as Tamano)
+          }
         >
-          <option value="" disabled>Elegir tamaño</option>
+          <option value="" disabled>
+            Elegir tamaño
+          </option>
+
           <option value="chico">Chico</option>
           <option value="mediano">Mediano</option>
           <option value="grande">Grande</option>
+
         </select>
+
       </div>
+
+      {/* Comercio */}
 
       <SelectorConPopup<Comercio>
         etiqueta="Comercio"
         singular="comercio"
         url={URL_COMERCIOS}
         texto={(c) => c.nombre}
-        textoBusqueda={(c) => `${c.nombre} ${c.direccion ?? ""} ${c.telefono ?? ""}`}
+        textoBusqueda={(c) =>
+          `${c.nombre} ${c.direccion ?? ""} ${c.telefono ?? ""}`
+        }
         placeholderBusqueda="Buscar comercio por nombre, dirección o teléfono..."
         valor={comercio}
         onChange={setComercio}
         FormularioAlta={FormularioComercio}
       />
 
+      {/* Cliente */}
+
       <SelectorConPopup<Cliente>
         etiqueta="Cliente"
         singular="cliente"
         url={URL_CLIENTES}
-        texto={(c) => `${c.nombre} ${c.apellido} – DNI ${c.dni}`}
+        texto={(c) =>
+          `${c.nombre} ${c.apellido} – DNI ${c.dni}`
+        }
         valor={cliente}
         onChange={setCliente}
         FormularioAlta={FormularioCliente}
       />
 
+      {/* Fecha de entrega */}
+
       <div className="pedido-campo">
-        <label className="pedido-label" htmlFor="fecha">Fecha de entrega</label>
+
+        <label
+          className="pedido-label"
+          htmlFor="fecha"
+        >
+          Fecha de entrega
+        </label>
+
         <input
           id="fecha"
           type="date"
           className="pedido-control"
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
-          onClick={(e) => e.currentTarget.showPicker?.()}
+          onClick={(e) =>
+            e.currentTarget.showPicker?.()
+          }
           required
         />
+
       </div>
 
-      {error && <p className="pedido-error">{error}</p>}
-      {ok && (
-        <p className="pedido-ok">
-          Pedido guardado. Código de seguimiento: <strong>{ok}</strong>
+      {/* Mensajes */}
+
+      {error && (
+        <p className="pedido-error">
+          {error}
         </p>
       )}
+
+      {ok && (
+        <p className="pedido-ok">
+          Pedido guardado. Código de seguimiento:{" "}
+          <strong>{ok}</strong>
+        </p>
+      )}
+
+      {/* Guardar pedido */}
 
       <button
         type="submit"
         className="pedido-primario"
         disabled={!completo || guardando}
       >
-        {guardando ? "Guardando…" : "Guardar pedido"}
+        {guardando
+          ? "Guardando…"
+          : "Guardar pedido"}
       </button>
 
+      {/* Popup de pedido similar */}
+
       {aviso && (
+
         <Popup
           titulo="Pedido similar"
           onCerrar={() => setAviso(null)}
           pie={
+
             <div className="pedido-botones">
-              <button type="button" className="pedido-secundario" onClick={() => setAviso(null)}>
+
+              <button
+                type="button"
+                className="pedido-secundario"
+                onClick={() => setAviso(null)}
+              >
                 Cancelar
               </button>
-              <button type="button" className="pedido-primario" onClick={cargarIgualmente}>
+
+              <button
+                type="button"
+                className="pedido-primario"
+                onClick={cargarIgualmente}
+              >
                 Cargar igualmente
               </button>
+
             </div>
+
           }
         >
+
           <div className="pedido-similar">
-            <p className="pedido-similar-texto">{aviso.detail}</p>
+
+            <p className="pedido-similar-texto">
+              {aviso.detail}
+            </p>
+
             {aviso.similar && (
+
               <dl className="pedido-similar-datos">
+
                 <dt>Código</dt>
                 <dd>{aviso.similar.cod_seguimiento}</dd>
+
                 <dt>Estado</dt>
                 <dd>{aviso.similar.estado}</dd>
+
                 <dt>Tamaño</dt>
                 <dd>{aviso.similar.tamanio}</dd>
+
                 <dt>Fecha de carga</dt>
                 <dd>{aviso.similar.fecha_origen}</dd>
+
                 <dt>Fecha de entrega</dt>
                 <dd>{aviso.similar.fecha_destino}</dd>
+
               </dl>
+
             )}
+
           </div>
+
         </Popup>
+
       )}
+
     </form>
   );
 }
